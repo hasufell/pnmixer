@@ -104,7 +104,8 @@ void run_command(gchar* cmd) {
     act.sa_sigaction = &mix_hdlr;
     act.sa_flags = SA_SIGINFO;
 
-	cur_cmd = g_strdup(cmd); /* global, freed in idle_report_error() */
+	/* global, freed in idle_report_error() or in child process */
+	cur_cmd = g_strdup(cmd);
 
     if (sigaction(SIGUSR1, &act, NULL) < 0) {
       report_error(_("Unable to run command: sigaction failed: %s"),strerror(errno));
@@ -118,6 +119,8 @@ void run_command(gchar* cmd) {
     else if (pid == 0) { // child command, try to exec
 		if (system(cmd) > 0)
 			kill(parent_pid, SIGUSR1);
+		else
+			g_free(cur_cmd);
 		_exit(errno);
     }
   }
