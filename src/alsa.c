@@ -1,10 +1,10 @@
 /* alsa.c
  * PNmixer is written by Nick Lanham, a fork of OBmixer
- * which was programmed by Lee Ferrett, derived 
+ * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
- * This program is free software; you can redistribute 
- * it and/or modify it under the terms of the GNU General 
- * Public License v3. source code is available at 
+ * This program is free software; you can redistribute
+ * it and/or modify it under the terms of the GNU General
+ * Public License v3. source code is available at
  * <http://github.com/nicklan/pnmixer>
  */
 
@@ -44,7 +44,7 @@ static void get_cards() {
   snd_ctl_t *ctl;
   char buf[10];
   struct acard *cur_card, *default_card;
-  
+
   if (cards != NULL)
     g_slist_free_full(cards,card_free);
 
@@ -61,7 +61,7 @@ static void get_cards() {
   snd_ctl_card_info_alloca(&info);
   num = -1;
   for (;;) {
-    err = snd_card_next(&num); 
+    err = snd_card_next(&num);
     if (err < 0) {
       report_error("Can't get sounds cards: %s\n",snd_strerror(err));
       return;
@@ -192,7 +192,7 @@ static void set_io_watch(snd_mixer_t *mixer) {
     if (pcount <= 0)
       report_error("Warning: Couldn't get any poll descriptors.  Won't respond to external volume changes");
     for (i = 0;i < pcount;i++) {
-      if (gioc) {	
+      if (gioc) {
 	g_io_channel_unref(gioc);
 	gioc = NULL;
       }
@@ -207,10 +207,10 @@ static int close_mixer(snd_mixer_t **mixer, const char* card) {
 
   DEBUG_PRINT("Closing mixer for card: %s\n",card);
 
-  if ((err = snd_mixer_detach(*mixer,card)) < 0) 
+  if ((err = snd_mixer_detach(*mixer,card)) < 0)
     report_error("Mixer detach error: %s", snd_strerror(err));
   snd_mixer_free(*mixer);
-  if ((err = snd_mixer_close(*mixer)) < 0) 
+  if ((err = snd_mixer_close(*mixer)) < 0)
     report_error("Mixer close error: %s", snd_strerror(err));
   return err;
 }

@@ -3,7 +3,7 @@
 SUBDIRS = src po
 
 EXTRA_DIST = \
-	autogen.sh 
+	autogen.sh
 
 # Install "pnmixer.desktop" file
 desktopdir = $(datadir)/applications
@@ -15,7 +15,7 @@ ui_DATA = data/about.xml data/popup_window.xml data/prefs.xml
 
 uninstall-local:
 	@$(NORMAL_UNINSTALL)
-	rm -rf $(DESTDIR)$(pkgdatadir)	
+	rm -rf $(DESTDIR)$(pkgdatadir)
 
 install-data-local:
 	@$(NORMAL_INSTALL)

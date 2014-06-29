@@ -1,10 +1,10 @@
 /* prefs.h
  * PNmixer is written by Nick Lanham, a fork of OBmixer
- * which was programmed by Lee Ferrett, derived 
+ * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
- * This program is free software; you can redistribute 
- * it and/or modify it under the terms of the GNU General 
- * Public License v3. source code is available at 
+ * This program is free software; you can redistribute
+ * it and/or modify it under the terms of the GNU General
+ * Public License v3. source code is available at
  * <http://github.com/nicklan/pnmixer>
  */
 
@@ -50,18 +50,18 @@ void do_notify(gint level,gboolean muted) {
 
   if (muted)
     summary = g_strdup("Volume muted");
-  else 
+  else
     summary = g_strdup_printf("Volume: %d%%\n",level);
 
   if (muted)
     icon = "audio-volume-muted";
-  else if (level < 33) 
+  else if (level < 33)
     icon = "audio-volume-low";
   else if (level < 66)
     icon = "audio-volume-medium";
-  else 
+  else
     icon = "audio-volume-high";
-  
+
   if (notification == NULL)
     notification = notify_notification_new(summary,NULL,icon
 #if NOTIFY_CHECK_VERSION (0, 7, 0)
@@ -74,7 +74,7 @@ void do_notify(gint level,gboolean muted) {
 
   notify_notification_set_hint_int32(notification,"value",level);
   notify_notification_set_hint_string(notification,"x-canonical-private-synchronous","");
-  
+
   if (!notify_notification_show(notification,&error)) {
     g_warning("Could not send notification: %s",error->message);
     report_error(_("Could not send notification: %s\n"),error->message);
