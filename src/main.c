@@ -85,10 +85,15 @@ static gboolean idle_report_error(gpointer data) {
 }
 
 static void mix_hdlr(int sig, siginfo_t *siginfo, void *context) {
+  int stat;
+
   switch(sig) {
-  case SIGUSR1:
+  case SIGUSR1: /* system command failed */
     g_idle_add(idle_report_error, cur_cmd);
     break;
+  case SIGCHLD:
+	waitpid(siginfo->si_pid,&stat,0);
+	break;
   default:
     g_warning("Unexpected signal received: %i\n",sig);
   }
@@ -108,6 +113,11 @@ void run_command(gchar* cmd) {
 	cur_cmd = g_strdup(cmd);
 
     if (sigaction(SIGUSR1, &act, NULL) < 0) {
+      report_error(_("Unable to run command: sigaction failed: %s"),strerror(errno));
+      return;
+    }
+
+    if (sigaction(SIGCHLD, &act, NULL) < 0) {
       report_error(_("Unable to run command: sigaction failed: %s"),strerror(errno));
       return;
     }
