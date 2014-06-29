@@ -35,6 +35,7 @@ static GtkWidget *popup_menu;
 static GdkPixbuf* status_icons[4];
 
 static char err_buf[512];
+static gchar *cur_cmd;
 
 void report_error(char* err,...) {
   va_list ap;
@@ -77,21 +78,46 @@ void warn_sound_conn_lost() {
     fprintf(stderr,_("Warning: Connection to sound system failed, you probably need to restart pnmixer\n"));
 }
 
+static gboolean idle_report_error(gpointer data) {
+  report_error("Error running command\n%s", data);
+  g_free(data);
+  return FALSE;
+}
+
+static void mix_hdlr(int sig, siginfo_t *siginfo, void *context) {
+  switch(sig) {
+  case SIGUSR1:
+    g_idle_add(idle_report_error, cur_cmd);
+    break;
+  default:
+    g_warning("Unexpected signal received: %i\n",sig);
+  }
+}
+
 void run_command(gchar* cmd) {
-  pid_t pid;
+  pid_t pid, parent_pid;
+
+  parent_pid = getpid(); /* child will send us SIGUSR1 */
 
   if (cmd) {
+    struct sigaction act;
+    act.sa_sigaction = &mix_hdlr;
+    act.sa_flags = SA_SIGINFO;
+
+	cur_cmd = g_strdup(cmd); /* global, freed in idle_report_error() */
+
+    if (sigaction(SIGUSR1, &act, NULL) < 0) {
+      report_error(_("Unable to run command: sigaction failed: %s"),strerror(errno));
+      return;
+    }
+
     pid = fork();
 
     if (pid < 0)
       report_error(_("Unable to run command: fork failed"));
     else if (pid == 0) { // child command, try to exec
-		FILE *shell_cmd = popen(cmd, "r");
-		if (!shell_cmd)
-			report_error("Error creating fork/pipe for cmd:\n%s", cmd);
-		else
-			if (pclose(shell_cmd) == -1)
-				report_error("Failed to close pipe of command:\n%s", cmd);
+		if (system(cmd) > 0)
+			kill(parent_pid, SIGUSR1);
 		_exit(errno);
     }
   }
