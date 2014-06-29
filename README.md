@@ -39,6 +39,17 @@ Latest version can always be found at:
 
 Compilation and Install
 -----------------------
+Needed dependencies:
+* gtk+-3.6 or later
+* glib-2
+* alsa-lib
+* libX11
+* libnotify (optional)
+* gettext (build-time only)
+* pkg-config (build-time only)
+* autoconf (build-time only)
+* automake (build-time only)
+
 To install this program cd to this directory and run:
 
 ./autogen.sh
