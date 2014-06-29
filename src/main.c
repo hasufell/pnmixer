@@ -77,49 +77,22 @@ void warn_sound_conn_lost() {
     fprintf(stderr,_("Warning: Connection to sound system failed, you probably need to restart pnmixer\n"));
 }
 
-static gboolean idle_report_error(gpointer data) {
-  report_error("Error running command:\n%s",data);
-  g_free(data);
-  return FALSE;
-}
-
-static void mix_hdlr(int sig, siginfo_t *siginfo, void *context) {
-  int stat;
-  signed char exit_stat;
-  switch(sig) {
-  case SIGCHLD:
-    waitpid(siginfo->si_pid,&stat,0);
-    exit_stat = (signed char)(WEXITSTATUS(stat));
-    if (exit_stat) 
-      g_idle_add(idle_report_error, g_strdup(strerror(exit_stat)));
-    break;
-  default:
-    g_warning("Unexpected signal received: %i\n",sig);
-  }
-}
-
 void run_command(gchar* cmd) {
   pid_t pid;
 
   if (cmd) {
-    struct sigaction act;
-    act.sa_sigaction = &mix_hdlr;
-    act.sa_flags = SA_SIGINFO;
-
-    if (sigaction(SIGCHLD, &act, NULL) < 0) {
-      report_error(_("Unable to run command: sigaction failed: %s"),strerror(errno));
-      return;
-    }
-
     pid = fork();
-    
+
     if (pid < 0)
       report_error(_("Unable to run command: fork failed"));
     else if (pid == 0) { // child command, try to exec
-      gchar **cmdargv = g_strsplit(cmd," ",0);
-      execvp (cmdargv[0], cmdargv);
-      g_strfreev(cmdargv);
-      _exit(errno);
+		FILE *shell_cmd = popen(cmd, "r");
+		if (!shell_cmd)
+			report_error("Error creating fork/pipe for cmd:\n%s", cmd);
+		else
+			if (pclose(shell_cmd) == -1)
+				report_error("Failed to close pipe of command:\n%s", cmd);
+		_exit(errno);
     }
   }
 
@@ -507,7 +480,7 @@ int main (int argc, char *argv[]) {
   g_signal_connect(G_OBJECT(tray_icon), "button-release-event", G_CALLBACK(tray_icon_button), NULL);
 
   gtk_main ();
-  uninit_libnotify();
   alsa_close();
+  uninit_libnotify();
   return 0;
 }
