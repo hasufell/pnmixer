@@ -73,7 +73,7 @@ AS_IF([test "x$with_libnotify" != xno],
 ,)
 
 if test "$with_libnotify" = "yes" || test "$HAVE_LIBN" = "1"; then
-   PKG_CHECK_MODULES(LIBNOTIFY, [libnotify],
+   PKG_CHECK_MODULES(LIBNOTIFY, [libnotify], 
                      [],
                      AS_IF([test "x$with_libnotify" != xcheck],[AC_MSG_FAILURE(["--with-libnotify was given but test for libnotify failed"])]))
    HAVE_LIBN=1
