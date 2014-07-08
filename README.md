@@ -57,3 +57,7 @@ To install this program cd to this directory and run:
 make
 
 sudo make install
+
+Build Status
+------------
+[![Build Status](https://travis-ci.org/hasufell/pnmixer.png)](https://travis-ci.org/hasufell/pnmixer)
