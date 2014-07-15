@@ -454,17 +454,33 @@ gboolean hide_me(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
 #else
 			!gdk_window_at_pointer(&x, &y)
 #endif
-		   )
-		gtk_widget_hide(popup_window);
+		   ) {
+			gtk_widget_hide(popup_window);
+#ifdef WITH_GTK3
+			gdk_device_ungrab(device, GDK_CURRENT_TIME);
+#else
+			gdk_pointer_ungrab(GDK_CURRENT_TIME);
+#endif
+		}
 	} else if (event->type == GDK_KEY_PRESS) {
 		switch (event->key.keyval) {
 		case GDK_KEY_Escape: {
 			gtk_widget_hide(popup_window);
+#ifdef WITH_GTK3
+			gdk_device_ungrab(device, GDK_CURRENT_TIME);
+#else
+			gdk_pointer_ungrab(GDK_CURRENT_TIME);
+#endif
 			break;
 	    }
     }
   } else {
       gtk_widget_hide(popup_window);
+#ifdef WITH_GTK3
+	  gdk_device_ungrab(device, GDK_CURRENT_TIME);
+#else
+	  gdk_pointer_ungrab(GDK_CURRENT_TIME);
+#endif
   }
   return FALSE;
 }
