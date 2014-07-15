@@ -281,6 +281,53 @@ void tray_icon_on_click(GtkStatusIcon *status_icon, gpointer user_data) {
 }
 
 /**
+ * Handles the 'show' signal of the GtkWindow popup_window,
+ * grabs focus and connects the signals button-press-event,
+ * key-press-event and grab-broken-event with the hide_me()
+ * callback. This is a workaround for various glitches, see
+ * https://github.com/nicklan/pnmixer/issues/37
+ *
+ * @param w the widget that received the signal
+ * @param user_data user data set when the signal handler was connected
+ */
+void popup_grab_focus(GtkWidget *w, gpointer user_data) {
+	/* ungrabbed in hide_me */
+	if (GDK_GRAB_SUCCESS !=
+#ifdef WITH_GTK3
+			gdk_device_grab(gtk_get_current_event_device(),
+				gtk_widget_get_window(GTK_WIDGET(w)),
+				GDK_OWNERSHIP_NONE,
+				TRUE,
+				GDK_BUTTON_PRESS_MASK,
+				NULL,
+				GDK_CURRENT_TIME)
+#else
+		gdk_pointer_grab(gtk_widget_get_window(GTK_WIDGET(w)),
+					TRUE,
+					GDK_BUTTON_PRESS_MASK,
+					NULL,
+					NULL,
+					GDK_CURRENT_TIME)
+#endif
+			)
+		fprintf(stderr, "Failed to grab device!\n");
+
+	g_signal_connect(G_OBJECT(w),
+			"button-press-event",
+			G_CALLBACK(hide_me),
+			NULL);
+	g_signal_connect(G_OBJECT(w),
+			"key-press-event",
+			G_CALLBACK(hide_me),
+			NULL);
+	g_signal_connect(G_OBJECT(w),
+			"grab-broken-event",
+			G_CALLBACK(hide_me),
+			NULL);
+}
+
+
+/**
  * Returns the size of the tray icon.
  *
  * @return size of the tray icon or 48 if there is none
@@ -544,7 +591,8 @@ int get_mute_state(gboolean set_check) {
 
 /**
  * Hides the volume popup_window, connected via the signals
- * button-press-event, key-press-event and grab-broken-event.
+ * button-press-event, key-press-event and grab-broken-event in
+ * popup_grab_focus().
  *
  * @param widget the object which received the signal
  * @param event the GdkEventButton which triggered the signal
