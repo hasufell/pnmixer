@@ -819,6 +819,7 @@ main(int argc, char *argv[])
 	GError *error = NULL;
 	GOptionContext *context;
 	want_debug = FALSE;
+	gboolean reg_status;
 
 #ifdef ENABLE_NLS
 	bindtextdomain(GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -833,7 +834,19 @@ main(int argc, char *argv[])
 	g_option_context_add_main_entries(context, args, GETTEXT_PACKAGE);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 	g_option_context_parse(context, &argc, &argv, &error);
-	gtk_init(&argc, &argv);
+
+	gtkapp = gtk_application_new(NULL, G_APPLICATION_FLAGS_NONE);
+	reg_status = g_application_register (G_APPLICATION(gtkapp),
+			NULL, &error);
+	if (reg_status == FALSE) {
+		if (error != NULL) {
+			report_error("Unable to register GApplication: %s", error->message);
+			error = NULL;
+		} else {
+			report_error("Registering GApplication failed!");
+		}
+		exit(1);
+	}
 
 	g_option_context_free(context);
 
@@ -851,7 +864,6 @@ main(int argc, char *argv[])
 	load_prefs();
 	cards = NULL;		// so we don't try and free on first run
 	alsa_init();
-	init_libnotify();
 	create_popups();
 	add_filter();
 
@@ -873,7 +885,6 @@ main(int argc, char *argv[])
 	apply_prefs(0);
 
 	gtk_main();
-	uninit_libnotify();
 	alsa_close();
 	return 0;
 }

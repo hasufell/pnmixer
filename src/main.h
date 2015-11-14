@@ -26,6 +26,7 @@ GtkWidget *vol_scale;
 GtkWidget *mute_check_popup_window;
 GtkWidget *mute_check_popup_menu;
 GtkAdjustment *vol_adjustment;
+GtkApplication *gtkapp;
 
 void create_popups(void);
 void create_about(void);

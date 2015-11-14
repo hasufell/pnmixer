@@ -314,7 +314,6 @@ on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsData *data)
 	g_key_file_set_integer(keyFile, "PNMixer", "VolDownKey", keycode);
 	g_key_file_set_integer(keyFile, "PNMixer", "VolDownMods", mods);
 
-#ifdef HAVE_LIBN
 	// notification prefs
 	GtkWidget *nc = data->enable_noti_check;
 	gint noti_spin;
@@ -342,7 +341,6 @@ on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsData *data)
 	noti_spin = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(nc));
 	g_key_file_set_integer(keyFile, "PNMixer", "NotificationTimeout",
 			       noti_spin);
-#endif
 
 	gchar *filename = g_strconcat(g_get_user_config_dir(),
 				      "/pnmixer/config", NULL);

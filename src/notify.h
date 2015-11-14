@@ -21,14 +21,9 @@
 #ifndef NOTIFY_H_
 #define NOTIFY_H_
 
-#ifdef HAVE_LIBN
-// only include if we have libnotify
-#include <libnotify/notify.h>
-#endif				// HAVE_LIBN
+#include <glib.h>
 
-void init_libnotify(void);
-void uninit_libnotify(void);
 void do_notify_volume(gint level, gboolean muted);
-void do_notify_text(const gchar *body, const gchar *text);
+void do_notify_text(const gchar *title, const gchar *text);
 
 #endif				// NOTIFY_H_

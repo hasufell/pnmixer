@@ -25,64 +25,6 @@
 #include "prefs.h"
 #include "support.h"
 
-#ifdef HAVE_LIBN
-
-// code for when we have libnotify
-
-#if NOTIFY_CHECK_VERSION (0, 7, 0)
-#define NOTIFICATION_NEW(summary, body, icon)	\
-  notify_notification_new(summary, body, icon)
-#define NOTIFICATION_SET_HINT_STRING(notification, key, value)		\
-  notify_notification_set_hint(notification, key, g_variant_new_string(value))
-#define NOTIFICATION_SET_HINT_INT32(notification, key, value)		\
-  notify_notification_set_hint(notification, key, g_variant_new_int32(value))
-#else
-#define NOTIFICATION_NEW(summary, body, icon)		\
-  notify_notification_new(summary, body, icon, NULL)
-#define NOTIFICATION_SET_HINT_STRING(notification, key, value)	\
-  notify_notification_set_hint_string(notification, key, value)
-#define NOTIFICATION_SET_HINT_INT32(notification, key, value)	\
-  notify_notification_set_hint_int32(notification, key, value)
-#endif
-
-/**
- * We need to report error in idle moment
- * since we can't report_error before gtk_main is called.
- * This function is attached via g_idle_add() in init_libnotify().
- *
- * @param data passed to the function,
- * set when the source was created
- * @return FALSE if the source should be removed,
- * TRUE otherwise
- */
-static gboolean
-idle_report_error(G_GNUC_UNUSED gpointer data)
-{
-	report_error("Unable to initialize libnotify. Notifications will not be sent.");
-	return FALSE;
-}
-
-/**
- * Initializes libnotify if it's not already
- * initialized.
- */
-void
-init_libnotify()
-{
-	if (!notify_is_initted())
-		if (!notify_init(PACKAGE))
-			g_idle_add(idle_report_error, NULL);
-}
-
-/**
- * Uninitializes libnotify if it is initialized.
- */
-void
-uninit_libnotify()
-{
-	if (notify_is_initted())
-		notify_uninit();
-}
 
 /**
  * Send a volume notification. This is mainly called
@@ -95,20 +37,17 @@ uninit_libnotify()
 void
 do_notify_volume(gint level, gboolean muted)
 {
-	static NotifyNotification *notification = NULL;
-	gchar *summary, *icon, *active_card_name;
+	GNotification *notification;
+	gchar *title, *body, *icon_file, *active_card_name;
 	const char *active_channel;
-	GError *error = NULL;
+	GIcon *icon;
 
 	active_card_name = (alsa_get_active_card())->name;
 	active_channel = alsa_get_active_channel();
 
-	if (notification == NULL) {
-		notification = NOTIFICATION_NEW("", NULL, NULL);
-		notify_notification_set_timeout(notification, noti_timeout);
-		NOTIFICATION_SET_HINT_STRING(notification,
-					     "x-canonical-private-synchronous", "");
-	}
+	title = g_strdup_printf("%s (%s)", active_card_name, active_channel);
+
+	notification = g_notification_new(title);
 
 	if (level < 0)
 		level = 0;
@@ -116,83 +55,48 @@ do_notify_volume(gint level, gboolean muted)
 		level = 100;
 
 	if (muted)
-		summary = g_strdup("Volume muted");
+		body = g_strdup("Volume muted");
 	else
-		summary =
-			g_strdup_printf("%s (%s)\nVolume: %d%%\n",
-					active_card_name, active_channel, level);
+		body = g_strdup_printf("Volume: %d%%\n", level);
+
+	g_notification_set_body(notification, body);
 
 	if (muted)
-		icon = "audio-volume-muted";
+		icon_file = "audio-volume-muted";
 	else if (level == 0)
-		icon = "audio-volume-off";
+		icon_file = "audio-volume-off";
 	else if (level < 33)
-		icon = "audio-volume-low";
+		icon_file = "audio-volume-low";
 	else if (level < 66)
-		icon = "audio-volume-medium";
+		icon_file = "audio-volume-medium";
 	else
-		icon = "audio-volume-high";
+		icon_file = "audio-volume-high";
 
-	notify_notification_update(notification, summary, NULL, icon);
-	NOTIFICATION_SET_HINT_INT32(notification, "value", level);
+	icon = g_themed_icon_new(icon_file);
+	g_notification_set_icon(notification, icon);
 
-	if (!notify_notification_show(notification, &error)) {
-		report_error(_("Could not send notification: %s"), error->message);
-		g_error_free(error);
-	}
+	g_application_send_notification(G_APPLICATION(gtkapp),
+			"volume-change", notification);
 
-	g_free(summary);
+	g_free(title);
+	g_free(body);
+	g_object_unref(icon);
 }
 
 /**
  * Send a text notification.
  *
- * @param summary the notification summary
- * @param _body the notification body
+ * @param title the notification title
+ * @param body the notification body
  */
 void
-do_notify_text(const gchar *summary, const gchar *body)
+do_notify_text(const gchar *title, const gchar *body)
 {
-	static NotifyNotification *notification = NULL;
-	GError *error = NULL;
+	GNotification *notification;
 
-	if (notification == NULL) {
-		notification = NOTIFICATION_NEW("", NULL, NULL);
-		notify_notification_set_timeout(notification, noti_timeout * 2);
-		NOTIFICATION_SET_HINT_STRING(notification,
-					     "x-canonical-private-synchronous", "");
-	}
+	notification = g_notification_new(title);
+	g_notification_set_body(notification, body);
 
-	notify_notification_update(notification, summary, body, NULL);
-
-	if (!notify_notification_show(notification, &error)) {
-		report_error(_("Could not send notification: %s"), error->message);
-		g_error_free(error);
-	}
+	g_application_send_notification(G_APPLICATION(gtkapp),
+			"text-notify", notification);
 }
-
-#else
-
-// without libnotify everything is a no-op
-void
-init_libnotify(void)
-{
-}
-
-void
-uninit_libnotify(void)
-{
-}
-
-void
-do_notify_volume(G_GNUC_UNUSED gint level, G_GNUC_UNUSED gboolean muted)
-{
-}
-
-void
-do_notify_text(G_GNUC_UNUSED const gchar *summary,
-		G_GNUC_UNUSED const gchar *body)
-{
-}
-
-#endif				// HAVE_LIBN

@@ -71,24 +71,6 @@ fi
 AM_CONDITIONAL([WITH_GTK3], [test "$with_gtk3" = "yes"])
 
 # ======================================================= #
-#                  Libnotify support                      #
-# ======================================================= #
-AC_ARG_WITH([libnotify],
-            [AS_HELP_STRING([--with-libnotify], [Enable sending of notifications @<:@default=check@:>@])],
-            [with_libnotify=$withval],
-            [with_libnotify="check"])
-
-AS_IF([test "$with_libnotify" != no],
-      [PKG_CHECK_EXISTS([libnotify], HAVE_LIBN=1, )]
-     ,)
-
-if test "$with_libnotify" = "yes" || test "$HAVE_LIBN" = "1"; then
-	pkg_modules="$pkg_modules libnotify"
-	AC_DEFINE([HAVE_LIBN], 1, [Defined if you have libnotify])
-	HAVE_LIBN=1
-fi
-
-# ======================================================= #
 #                  Check for modules                      #
 # ======================================================= #
 PKG_CHECK_MODULES(PACKAGE, [$pkg_modules])

@@ -608,7 +608,6 @@ on_middle_changed(GtkComboBox *box, PrefsData *data)
  * @param button the button which received the signal
  * @param data user data set when the signal handler was connected
  */
-#ifdef HAVE_LIBN
 void
 on_notification_toggle(GtkToggleButton *button, PrefsData *data)
 {
@@ -618,13 +617,6 @@ on_notification_toggle(GtkToggleButton *button, PrefsData *data)
 	gtk_widget_set_sensitive(data->popup_noti_check, active);
 	gtk_widget_set_sensitive(data->external_noti_check, active);
 }
-#else
-void
-on_notification_toggle(G_GNUC_UNUSED GtkToggleButton *button,
-		G_GNUC_UNUSED PrefsData *data)
-{
-}
-#endif
 
 /**
  * Handler for the signal 'toggled' on the GtkCheckButton
@@ -943,14 +935,12 @@ create_prefs_window(void)
 	GO(mute_hotkey_label);
 	GO(up_hotkey_label);
 	GO(down_hotkey_label);
-#ifdef HAVE_LIBN
 	GO(enable_noti_check);
 	GO(noti_timeout_spin);
 	GO(hotkey_noti_check);
 	GO(mouse_noti_check);
 	GO(popup_noti_check);
 	GO(external_noti_check);
-#endif
 #undef GO
 
 	// vol text display
@@ -1073,16 +1063,10 @@ create_prefs_window(void)
 
 	gtk_notebook_append_page(GTK_NOTEBOOK(gtk_builder_get_object(builder,
 					      "notebook1")),
-#ifdef HAVE_LIBN
 				 GTK_WIDGET(gtk_builder_get_object(builder,
 						 "notification_vbox")),
-#else
-				 GTK_WIDGET(gtk_builder_get_object
-					    (builder, "no_notification_label")),
-#endif
 				 gtk_label_new(_("Notifications")));
 
-#ifdef HAVE_LIBN
 	// notification checkboxes
 	set_notification_options();
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
@@ -1100,7 +1084,6 @@ create_prefs_window(void)
 			       prefs_data);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(prefs_data->noti_timeout_spin),
 				  noti_timeout);
-#endif
 
 	gtk_builder_connect_signals(builder, prefs_data);
 	g_object_unref(G_OBJECT(builder));
