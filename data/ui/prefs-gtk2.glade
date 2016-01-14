@@ -28,21 +28,27 @@
       </row>
     </data>
   </object>
-  <object class="GtkLabel" id="no_notification_label">
+  <object class="GtkVBox" id="noti_vbox_disabled">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="label" translatable="yes">Notification support not enabled at compile time.</property>
-    <property name="justify">center</property>
-    <attributes>
-      <attribute name="weight" value="bold"/>
-    </attributes>
+    <child>
+      <object class="GtkLabel" id="noti_disabled_label">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">Notification support not enabled at compile time.</property>
+        <property name="justify">center</property>
+        <attributes>
+          <attribute name="weight" value="bold"/>
+        </attributes>
+      </object>
+    </child>
   </object>
   <object class="GtkAdjustment" id="noti_timeout_adjustment">
     <property name="upper">1000000000</property>
     <property name="step_increment">100</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkVBox" id="notification_vbox">
+  <object class="GtkVBox" id="noti_vbox_enabled">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <child>
@@ -62,13 +68,13 @@
                 <property name="can_focus">False</property>
                 <property name="spacing">3</property>
                 <child>
-                  <object class="GtkCheckButton" id="enable_noti_check">
+                  <object class="GtkCheckButton" id="noti_enable_check">
                     <property name="label" translatable="yes">Enable Notifications</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="draw_indicator">True</property>
-                    <signal name="toggled" handler="on_notification_toggle" swapped="no"/>
+                    <signal name="toggled" handler="on_noti_enable_toggled" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -141,7 +147,7 @@
                     <property name="can_focus">False</property>
                     <property name="left_padding">10</property>
                     <child>
-                      <object class="GtkCheckButton" id="hotkey_noti_check">
+                      <object class="GtkCheckButton" id="noti_hotkey_check">
                         <property name="label" translatable="yes">HotKeys</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -162,7 +168,7 @@
                     <property name="can_focus">False</property>
                     <property name="left_padding">10</property>
                     <child>
-                      <object class="GtkCheckButton" id="mouse_noti_check">
+                      <object class="GtkCheckButton" id="noti_mouse_check">
                         <property name="label" translatable="yes">Mouse Scroll</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -183,7 +189,7 @@
                     <property name="can_focus">False</property>
                     <property name="left_padding">10</property>
                     <child>
-                      <object class="GtkCheckButton" id="popup_noti_check">
+                      <object class="GtkCheckButton" id="noti_popup_check">
                         <property name="label" translatable="yes">Adjustment in Volume Popup</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -204,7 +210,7 @@
                     <property name="can_focus">False</property>
                     <property name="left_padding">10</property>
                     <child>
-                      <object class="GtkCheckButton" id="external_noti_check">
+                      <object class="GtkCheckButton" id="noti_ext_check">
                         <property name="label" translatable="yes">External Change</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -262,7 +268,6 @@
     <property name="default_width">350</property>
     <property name="default_height">500</property>
     <property name="icon_name">preferences-system</property>
-    <signal name="key-press-event" handler="on_key_press" swapped="no"/>
     <child>
       <object class="GtkAlignment" id="alignment1">
         <property name="visible">True</property>
@@ -319,7 +324,7 @@
                                   </packing>
 				</child>
                                 <child>
-				  <object class="GtkComboBoxText" id="slider_orientation_combo">
+				  <object class="GtkComboBoxText" id="vol_orientation_combo">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
 				    <property name="active">0</property>
@@ -423,14 +428,14 @@
                                 <property name="n_columns">2</property>
                                 <property name="row_spacing">15</property>
                                 <child>
-                                  <object class="GtkCheckButton" id="draw_vol_check">
+                                  <object class="GtkCheckButton" id="vol_meter_draw_check">
                                     <property name="label" translatable="yes">Draw Volume Meter on Tray Icon
 (Will cause slightly higher CPU usage)</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_draw_vol_toggle" swapped="no"/>
+                                    <signal name="toggled" handler="on_vol_meter_draw_toggle" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
@@ -909,7 +914,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="model">middle_click_liststore</property>
-                                    <signal name="changed" handler="on_middle_changed" swapped="no"/>
+                                    <signal name="changed" handler="on_middle_click_changed" swapped="no"/>
                                     <child>
                                       <object class="GtkCellRendererText" id="middle_text_rend"/>
                                       <attributes>
@@ -1003,20 +1008,20 @@
                                 <property name="column_spacing">5</property>
                                 <property name="row_spacing">15</property>
                                 <child>
-                                  <object class="GtkCheckButton" id="enable_hotkeys_check">
+                                  <object class="GtkCheckButton" id="hotkeys_enable_check">
                                     <property name="label" translatable="yes">Enable HotKeys</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_hotkey_toggle" swapped="no"/>
+                                    <signal name="toggled" handler="on_hotkeys_enabled_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkLabel" id="hotkey_vol_label">
+                                  <object class="GtkLabel" id="hotkeys_vol_label">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="xalign">0.079999998211860657</property>
@@ -1028,7 +1033,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkSpinButton" id="hotkey_vol_spin">
+                                  <object class="GtkSpinButton" id="hotkeys_vol_spin">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="invisible_char">•</property>
@@ -1162,9 +1167,9 @@
                                   <object class="GtkEventBox" id="mute_eventbox">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <signal name="button-press-event" handler="on_hotkey_button_click" swapped="no"/>
+                                    <signal name="button-press-event" handler="on_hotkey_event_box_button_pressed" swapped="no"/>
                                     <child>
-                                      <object class="GtkLabel" id="mute_hotkey_label">
+                                      <object class="GtkLabel" id="hotkeys_mute_label">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="label" translatable="yes">(None)</property>
@@ -1185,9 +1190,9 @@
                                   <object class="GtkEventBox" id="up_eventbox">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <signal name="button-press-event" handler="on_hotkey_button_click" swapped="no"/>
+                                    <signal name="button-press-event" handler="on_hotkey_event_box_button_pressed" swapped="no"/>
                                     <child>
-                                      <object class="GtkLabel" id="up_hotkey_label">
+                                      <object class="GtkLabel" id="hotkeys_up_label">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="label" translatable="yes">(None)</property>
@@ -1208,9 +1213,9 @@
                                   <object class="GtkEventBox" id="down_eventbox">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <signal name="button-press-event" handler="on_hotkey_button_click" swapped="no"/>
+                                    <signal name="button-press-event" handler="on_hotkey_event_box_button_pressed" swapped="no"/>
                                     <child>
-                                      <object class="GtkLabel" id="down_hotkey_label">
+                                      <object class="GtkLabel" id="hotkeys_down_label">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="label" translatable="yes">(None)</property>
@@ -1317,7 +1322,7 @@
       </object>
     </child>
   </object>
-  <object class="GtkDialog" id="hotkey_dialog">
+  <object class="GtkDialog" id="hotkeys_dialog">
     <property name="width_request">300</property>
     <property name="height_request">200</property>
     <property name="can_focus">False</property>
@@ -1328,8 +1333,8 @@
     <property name="icon_name">input-keyboard</property>
     <property name="type_hint">dialog</property>
     <property name="transient_for">prefs_window</property>
-    <signal name="key-release-event" handler="hotkey_released" swapped="no"/>
-    <signal name="key-press-event" handler="hotkey_pressed" swapped="no"/>
+    <signal name="key-release-event" handler="on_hotkey_released" swapped="no"/>
+    <signal name="key-press-event" handler="on_hotkey_pressed" swapped="no"/>
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox3">
         <property name="visible">True</property>
@@ -1452,7 +1457,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="hotkey_key_label">
+          <object class="GtkLabel" id="hotkeys_key_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="yalign">0.10000000149011612</property>
