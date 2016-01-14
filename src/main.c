@@ -39,6 +39,7 @@
 #include "support.h"
 #include "hotkeys.h"
 #include "prefs.h"
+#include "ui-prefs.h"
 
 #ifdef WITH_GTK3
 #define GTKX "gtk3"
@@ -447,6 +448,121 @@ popup_callback(GtkStatusIcon *status_icon, guint button,
 		       button, activate_time);
 }
 
+
+
+
+
+/**
+ * Sets the global options enable_noti, hotkey_noti, mouse_noti, popup_noti,
+ * noti_timeout and external_noti from the user settings.
+ */
+static void
+set_notification_options(void)
+{
+	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
+	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
+	mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
+	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
+	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
+	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
+}
+
+/**
+ * Applies the preferences, usually triggered by on_ok_button_clicked()
+ * in callbacks.c, but also initially called from main().
+ *
+ * @param alsa_change whether we want to trigger alsa-reinitalization
+ */
+void
+apply_prefs(gint alsa_change)
+{
+	gdouble *vol_meter_clrs;
+
+	scroll_step = prefs_get_integer("ScrollStep", 5);
+	gtk_adjustment_set_page_increment(vol_adjustment, scroll_step);
+
+	fine_scroll_step = prefs_get_integer("FineScrollStep", 1);
+	gtk_adjustment_set_step_increment(vol_adjustment, fine_scroll_step);
+
+	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
+		gint mk, uk, dk, mm, um, dm, hstep;
+		mk = prefs_get_integer("VolMuteKey", -1);
+		uk = prefs_get_integer("VolUpKey", -1);
+		dk = prefs_get_integer("VolDownKey", -1);
+		mm = prefs_get_integer("VolMuteMods", 0);
+		um = prefs_get_integer("VolUpMods", 0);
+		dm = prefs_get_integer("VolDownMods", 0);
+		hstep = prefs_get_integer("HotkeyVolumeStep", 1);
+		grab_keys(mk, uk, dk, mm, um, dm, hstep);
+	} else
+		// will actually just ungrab everything
+		grab_keys(-1, -1, -1, 0, 0, 0, 1);
+
+	set_notification_options();
+
+	vol_meter_clrs = prefs_get_vol_meter_colors();
+	set_vol_meter_color(vol_meter_clrs[0], vol_meter_clrs[1],
+			    vol_meter_clrs[2]);
+	g_free(vol_meter_clrs);
+
+	update_status_icons();
+	update_vol_text();
+
+	if (alsa_change)
+		do_alsa_reinit();
+}
+
+static gboolean
+on_prefs_ok_clicked(G_GNUC_UNUSED GtkButton *button, UiPrefsData *data)
+{
+	/* Save values to preferences */
+	ui_prefs_retrieve_values(data);
+	ui_prefs_destroy_window(data);
+
+	/* Save preferences to file */
+	prefs_save();
+
+	/* Make it effective */
+	apply_prefs(1);
+
+	return TRUE;
+}
+
+static gboolean
+on_prefs_cancel_clicked(G_GNUC_UNUSED GtkButton *button, UiPrefsData *data)
+{
+	ui_prefs_destroy_window(data);
+
+	return TRUE;
+}
+
+/**
+ * Callback function when a key is hit in prefs_window. Currently handles
+ * Esc key (calls on_cancel_button_clicked())
+ * and
+ * Return key (calls on_ok_button_clicked()).
+ *
+ * @param widget the widget that received the signal
+ * @param event the key event that was triggered
+ * @param data struct holding the GtkWidgets of the preferences windows
+ * @return TRUE to stop other handlers from being invoked for the event.
+ * False to propagate the event further
+ */
+static gboolean
+on_key_pressed(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, UiPrefsData *data)
+{
+	switch (event->keyval) {
+	case GDK_KEY_Escape:
+		return on_prefs_cancel_clicked(NULL, data);
+		break;
+	case GDK_KEY_Return:
+		return on_prefs_ok_clicked(NULL, data);
+		break;
+	default:
+		return FALSE;
+	}
+}
+
 /**
  * Brings up the preferences window, either triggered by clicking
  * on the GtkImageMenuItem 'Preferences' in the context menu
@@ -456,9 +572,9 @@ popup_callback(GtkStatusIcon *status_icon, guint button,
 void
 do_prefs(void)
 {
-	GtkWidget *pref_window = ui_prefs_create_window();
-	if (pref_window)
-		gtk_widget_show(pref_window);
+	ui_prefs_create_window(G_CALLBACK(on_prefs_ok_clicked),
+	                       G_CALLBACK(on_prefs_cancel_clicked),
+	                       G_CALLBACK(on_key_pressed));
 }
 
 /**
@@ -867,66 +983,6 @@ update_vol_text(void)
 		gtk_scale_set_value_pos(GTK_SCALE(vol_scale), pos);
 	} else
 		gtk_scale_set_draw_value(GTK_SCALE(vol_scale), FALSE);
-}
-
-/**
- * Sets the global options enable_noti, hotkey_noti, mouse_noti, popup_noti,
- * noti_timeout and external_noti from the user settings.
- */
-static void
-set_notification_options(void)
-{
-	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
-	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
-	mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
-	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
-	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
-	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
-}
-
-/**
- * Applies the preferences, usually triggered by on_ok_button_clicked()
- * in callbacks.c, but also initially called from main().
- *
- * @param alsa_change whether we want to trigger alsa-reinitalization
- */
-void
-apply_prefs(gint alsa_change)
-{
-	gdouble *vol_meter_clrs;
-
-	scroll_step = prefs_get_integer("ScrollStep", 5);
-	gtk_adjustment_set_page_increment(vol_adjustment, scroll_step);
-
-	fine_scroll_step = prefs_get_integer("FineScrollStep", 1);
-	gtk_adjustment_set_step_increment(vol_adjustment, fine_scroll_step);
-
-	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
-		gint mk, uk, dk, mm, um, dm, hstep;
-		mk = prefs_get_integer("VolMuteKey", -1);
-		uk = prefs_get_integer("VolUpKey", -1);
-		dk = prefs_get_integer("VolDownKey", -1);
-		mm = prefs_get_integer("VolMuteMods", 0);
-		um = prefs_get_integer("VolUpMods", 0);
-		dm = prefs_get_integer("VolDownMods", 0);
-		hstep = prefs_get_integer("HotkeyVolumeStep", 1);
-		grab_keys(mk, uk, dk, mm, um, dm, hstep);
-	} else
-		// will actually just ungrab everything
-		grab_keys(-1, -1, -1, 0, 0, 0, 1);
-
-	set_notification_options();
-
-	vol_meter_clrs = prefs_get_vol_meter_colors();
-	set_vol_meter_color(vol_meter_clrs[0], vol_meter_clrs[1],
-			    vol_meter_clrs[2]);
-	g_free(vol_meter_clrs);
-
-	update_status_icons();
-	update_vol_text();
-
-	if (alsa_change)
-		do_alsa_reinit();
 }
 
 static gboolean version = FALSE;
