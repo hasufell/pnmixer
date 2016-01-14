@@ -23,8 +23,6 @@
 #include "support.h"
 
 gint scroll_step, fine_scroll_step;
-gboolean enable_noti, hotkey_noti, mouse_noti, popup_noti, external_noti;
-gint noti_timeout;
 GtkIconTheme *icon_theme;
 
 gboolean prefs_get_boolean(gchar *key, gboolean def);
@@ -45,9 +43,5 @@ void prefs_set_vol_meter_colors(gdouble *colors, gsize n);
 void prefs_load(void);
 void prefs_save(void);
 void prefs_ensure_save_dir(void);
-
-GtkWidget *create_prefs_window(void);
-void apply_prefs(gint);
-void acquire_hotkey(const char *, PrefsData *);
 
 #endif				// PREFS_H_

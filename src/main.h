@@ -27,6 +27,9 @@ GtkWidget *mute_check_popup_window;
 GtkWidget *mute_check_popup_menu;
 GtkAdjustment *vol_adjustment;
 
+gboolean enable_noti, hotkey_noti, mouse_noti, popup_noti, external_noti;
+gint noti_timeout;
+
 void create_popups(void);
 void create_about(void);
 void do_prefs(void);

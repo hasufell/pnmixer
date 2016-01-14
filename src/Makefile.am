@@ -15,7 +15,8 @@ pnmixer_SOURCES = \
 	alsa.c alsa.h \
 	callbacks.c callbacks.h \
 	prefs.c prefs.h \
-	debug.h
+	debug.h \
+	ui-prefs.c ui-prefs.h
 
 pnmixer_LDADD = @PACKAGE_LIBS@ $(INTLLIBS)
 

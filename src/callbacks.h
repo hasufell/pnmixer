@@ -27,10 +27,6 @@ gboolean on_mute_clicked(GtkButton *button, GdkEvent *event,
 gboolean vol_scroll_event(GtkRange *range,
 			  GtkScrollType scroll, gdouble value, gpointer user_data);
 
-void on_ok_button_clicked(GtkButton *button, PrefsData *data);
-
-void on_cancel_button_clicked(GtkButton *button, PrefsData *data);
-
 gboolean on_scroll(GtkStatusIcon *status_icon, GdkEventScroll *event,
 		   gpointer user_data);
 

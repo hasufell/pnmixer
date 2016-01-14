@@ -456,7 +456,7 @@ popup_callback(GtkStatusIcon *status_icon, guint button,
 void
 do_prefs(void)
 {
-	GtkWidget *pref_window = create_prefs_window();
+	GtkWidget *pref_window = ui_prefs_create_window();
 	if (pref_window)
 		gtk_widget_show(pref_window);
 }
@@ -867,6 +867,66 @@ update_vol_text(void)
 		gtk_scale_set_value_pos(GTK_SCALE(vol_scale), pos);
 	} else
 		gtk_scale_set_draw_value(GTK_SCALE(vol_scale), FALSE);
+}
+
+/**
+ * Sets the global options enable_noti, hotkey_noti, mouse_noti, popup_noti,
+ * noti_timeout and external_noti from the user settings.
+ */
+static void
+set_notification_options(void)
+{
+	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
+	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
+	mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
+	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
+	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
+	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
+}
+
+/**
+ * Applies the preferences, usually triggered by on_ok_button_clicked()
+ * in callbacks.c, but also initially called from main().
+ *
+ * @param alsa_change whether we want to trigger alsa-reinitalization
+ */
+void
+apply_prefs(gint alsa_change)
+{
+	gdouble *vol_meter_clrs;
+
+	scroll_step = prefs_get_integer("ScrollStep", 5);
+	gtk_adjustment_set_page_increment(vol_adjustment, scroll_step);
+
+	fine_scroll_step = prefs_get_integer("FineScrollStep", 1);
+	gtk_adjustment_set_step_increment(vol_adjustment, fine_scroll_step);
+
+	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
+		gint mk, uk, dk, mm, um, dm, hstep;
+		mk = prefs_get_integer("VolMuteKey", -1);
+		uk = prefs_get_integer("VolUpKey", -1);
+		dk = prefs_get_integer("VolDownKey", -1);
+		mm = prefs_get_integer("VolMuteMods", 0);
+		um = prefs_get_integer("VolUpMods", 0);
+		dm = prefs_get_integer("VolDownMods", 0);
+		hstep = prefs_get_integer("HotkeyVolumeStep", 1);
+		grab_keys(mk, uk, dk, mm, um, dm, hstep);
+	} else
+		// will actually just ungrab everything
+		grab_keys(-1, -1, -1, 0, 0, 0, 1);
+
+	set_notification_options();
+
+	vol_meter_clrs = prefs_get_vol_meter_colors();
+	set_vol_meter_color(vol_meter_clrs[0], vol_meter_clrs[1],
+			    vol_meter_clrs[2]);
+	g_free(vol_meter_clrs);
+
+	update_status_icons();
+	update_vol_text();
+
+	if (alsa_change)
+		do_alsa_reinit();
 }
 
 static gboolean version = FALSE;
