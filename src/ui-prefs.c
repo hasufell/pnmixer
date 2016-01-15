@@ -876,8 +876,6 @@ build_window(void)
 	GError *error = NULL;
 	UiPrefsData *prefs_data = NULL;
 
-	DEBUG_PRINT("Building prefs window");
-
 	/* Get the path to the ui file */
 	uifile = get_ui_file(PREFS_UI_FILE);
 	if (!uifile) {
@@ -886,7 +884,7 @@ build_window(void)
 		goto clean_exit;
 	}
 
-	DEBUG_PRINT("Using ui file '%s'", uifile);
+	DEBUG_PRINT("Building prefs window using ui file '%s'", uifile);
 
 	/* Build the preferences window from ui file */
 	builder = gtk_builder_new();

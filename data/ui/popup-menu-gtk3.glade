@@ -34,13 +34,13 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Mute/Unmute Volume</property>
-                    <signal name="activate" handler="on_mute_item_clicked" swapped="no"/>
+                    <signal name="activate" handler="popup_menu_on_mute_clicked" swapped="no"/>
                     <child>
                       <object class="GtkBox" id="box0">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkCheckButton" id="mute_check_popup_menu">
+                          <object class="GtkCheckButton" id="popup_menu_mute_check">
                             <property name="use_action_appearance">False</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -74,7 +74,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Open Volume Control</property>
-                    <signal name="activate" handler="on_mixer" swapped="no"/>
+                    <signal name="activate" handler="popup_menu_on_mixer_clicked" swapped="no"/>
                     <child>
                       <object class="GtkBox" id="box1">
                         <property name="visible">True</property>
@@ -112,7 +112,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Preferences</property>
-                    <signal name="activate" handler="do_prefs" swapped="no"/>
+                    <signal name="activate" handler="popup_menu_on_prefs_clicked" swapped="no"/>
                     <child>
                       <object class="GtkBox" id="box2">
                         <property name="visible">True</property>
@@ -150,7 +150,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Reload Alsa</property>
-                    <signal name="activate" handler="do_alsa_reinit" swapped="no"/>
+                    <signal name="activate" handler="popup_menu_on_reload_clicked" swapped="no"/>
                     <child>
                       <object class="GtkBox" id="box3">
                         <property name="visible">True</property>
@@ -188,7 +188,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">About</property>
-                    <signal name="activate" handler="create_about" swapped="no"/>
+                    <signal name="activate" handler="popup_menu_on_about_clicked" swapped="no"/>
                     <child>
                       <object class="GtkBox" id="box4">
                         <property name="visible">True</property>

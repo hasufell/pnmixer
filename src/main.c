@@ -40,6 +40,7 @@
 #include "hotkeys.h"
 #include "prefs.h"
 #include "ui-prefs.h"
+#include "ui-popup-menu.h"
 
 #ifdef WITH_GTK3
 #define GTKX "gtk3"
@@ -47,10 +48,8 @@
 #define GTKX "gtk2"
 #endif
 
-#define UI_FILE_POPUP_MENU              "popup-menu-" GTKX ".glade"
 #define UI_FILE_POPUP_VOLUME_HORIZONTAL "popup-window-horizontal-" GTKX ".glade"
 #define UI_FILE_POPUP_VOLUME_VERTICAL   "popup-window-vertical-" GTKX ".glade"
-#define UI_FILE_ABOUT                   "about-" GTKX ".glade"
 
 enum {
 	VOLUME_MUTED,
@@ -62,17 +61,17 @@ enum {
 };
 
 static GtkStatusIcon *tray_icon = NULL;
-static GtkWidget *popup_menu;
 static GdkPixbuf *status_icons[N_VOLUME_ICONS] = { NULL };
 
 static char err_buf[512];
 
+static PopupMenu *popup_menu;
 /**
  * Signal handler for the 'Mute' GtkCheckMenuItem in the right-click menu.
  * We save the handler in the main() function to be able to block the signals
  * in update_mute_checkboxes().
  */
-gulong mute_check_popup_menu_handler;
+gulong popup_menu_mute_check_handler;
 
 /**
  * Signal handler for the 'Mute' GtkCheckButton in the left-click popup window.
@@ -147,7 +146,7 @@ warn_sound_conn_lost(void)
  *
  * @param cmd the command to run
  */
-void
+static void
 run_command(const gchar *cmd)
 {
 	GError *error = NULL;
@@ -161,30 +160,6 @@ run_command(const gchar *cmd)
 		g_error_free(error);
 		error = NULL;
 	}
-}
-
-/**
- * Opens the specified mixer application which can be triggered either
- * by clicking the 'Volume Control' GtkImageMenuItem in the context
- * menu, the GtkButton 'Mixer' in the left-click popup_window or
- * by middle-click if the Middle Click Action in the preferences
- * is set to 'Volume Control'.
- */
-void
-on_mixer(void)
-{
-	gchar *cmd;
-
-	cmd = prefs_get_vol_command();
-
-	if (cmd) {
-		run_command(cmd);
-		g_free(cmd);
-	} else
-		report_error(_
-			     ("No mixer application was found on your system. "
-			      "Please open preferences and set the command you want "
-			      "to run for volume control."));
 }
 
 /* FIXME: return type should be gboolean */
@@ -217,7 +192,7 @@ tray_icon_button(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 		do_prefs();
 		break;
 	case 2:
-		on_mixer();
+		do_mixer();
 		break;
 	case 3: {
 		gchar *cmd;
@@ -393,41 +368,6 @@ create_popup_window(void)
 }
 
 /**
- * Creates the menu popup window.
- */
-void
-create_popup_menu(void)
-{
-	GtkBuilder *builder;
-	GError *error = NULL;
-	gchar *uifile;
-
-	uifile = get_ui_file(UI_FILE_POPUP_MENU);
-
-	if (!uifile) {
-		report_error(_
-			     ("Can't find the menu popup window interface file. "
-			      "Please ensure PNMixer is installed correctly. Exiting."));
-		exit(1);
-	}
-
-	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_file(builder, uifile, &error)) {
-		g_warning("%s", error->message);
-		report_error(error->message);
-		exit(1);
-	}
-
-	g_free(uifile);
-
-	mute_check_popup_menu = GTK_WIDGET(gtk_builder_get_object(builder, "mute_check_popup_menu"));
-	popup_menu = GTK_WIDGET(gtk_builder_get_object(builder, "popup_menu"));
-
-	gtk_builder_connect_signals(builder, NULL);
-	g_object_unref(G_OBJECT(builder));
-}
-
-/**
  * Handles the 'popup-menu' signal on the tray_icon, which brings
  * up the context menu, usually activated by right-click.
  *
@@ -563,6 +503,37 @@ on_key_pressed(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, UiPrefsData 
 	}
 }
 
+void
+do_mute(gboolean notify)
+{
+        setmute(notify);
+        on_volume_has_changed();
+}
+
+/**
+ * Opens the specified mixer application which can be triggered either
+ * by clicking the 'Volume Control' GtkImageMenuItem in the context
+ * menu, the GtkButton 'Mixer' in the left-click popup_window or
+ * by middle-click if the Middle Click Action in the preferences
+ * is set to 'Volume Control'.
+ */
+void
+do_mixer(void)
+{
+	gchar *cmd;
+
+	cmd = prefs_get_vol_command();
+
+	if (cmd) {
+		run_command(cmd);
+		g_free(cmd);
+	} else
+		report_error(_
+			     ("No mixer application was found on your system. "
+			      "Please open preferences and set the command you want "
+			      "to run for volume control."));
+}
+
 /**
  * Brings up the preferences window, either triggered by clicking
  * on the GtkImageMenuItem 'Preferences' in the context menu
@@ -587,49 +558,6 @@ do_alsa_reinit(void)
 	update_status_icons();
 	update_vol_text();
 	on_volume_has_changed();
-}
-
-/**
- * Creates and opens the about window from about-gtk3.glade or
- * about-gtk2.glade, triggered by clicking on the GtkImageMenuItem
- * 'About' in the context menu.
- */
-void
-create_about(void)
-{
-	GtkBuilder *builder;
-	GError *error = NULL;
-	GtkWidget *about;
-	gchar *uifile;
-
-#ifdef WITH_GTK3
-	uifile = get_ui_file("about-gtk3.glade");
-#else
-	uifile = get_ui_file("about-gtk2.glade");
-#endif
-	if (!uifile) {
-		report_error(_
-			     ("Can't find about interface file. Please ensure "
-			      "PNMixer is installed correctly."));
-		return;
-	}
-	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_file(builder, uifile, &error)) {
-		g_warning("%s", error->message);
-		report_error(error->message);
-		g_error_free(error);
-		g_free(uifile);
-		g_object_unref(G_OBJECT(builder));
-		return;
-	}
-	g_free(uifile);
-	gtk_builder_connect_signals(builder, NULL);
-	about = GTK_WIDGET(gtk_builder_get_object(builder, "about_dialog"));
-	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about), VERSION);
-	g_object_unref(G_OBJECT(builder));
-
-	gtk_dialog_run(GTK_DIALOG(about));
-	gtk_widget_destroy(about);
 }
 
 /**
@@ -737,15 +665,15 @@ update_tray_icon(void)
 
 /**
  * Updates all mute checkboxes and synchronizes them. This includes
- * mute_check_popup_window and mute_check_popup_menu. Usually called after
+ * mute_check_popup_window and popup_menu_mute_check. Usually called after
  * volume has been muted or changed.
  */
 void
 update_mute_checkboxes(void)
 {
 	/* we only want to update the icons and not emit any signals */
-	g_signal_handler_block(G_OBJECT(mute_check_popup_menu),
-				mute_check_popup_menu_handler);
+	g_signal_handler_block(G_OBJECT(popup_menu->mute_check),
+				popup_menu_mute_check_handler);
 	g_signal_handler_block(G_OBJECT(mute_check_popup_window),
 				mute_check_popup_window_handler);
 
@@ -755,11 +683,11 @@ update_mute_checkboxes(void)
 				FALSE);
 #ifdef WITH_GTK3
 		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(mute_check_popup_menu),
+				GTK_TOGGLE_BUTTON(popup_menu->mute_check),
 				FALSE);
 #else
 		gtk_check_menu_item_set_active(
-				GTK_CHECK_MENU_ITEM(mute_check_popup_menu),
+				GTK_CHECK_MENU_ITEM(popup_menu->mute_check),
 				FALSE);
 #endif
 
@@ -770,32 +698,21 @@ update_mute_checkboxes(void)
 
 #ifdef WITH_GTK3
 		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(mute_check_popup_menu),
+				GTK_TOGGLE_BUTTON(popup_menu->mute_check),
 				TRUE);
 
 #else
 		gtk_check_menu_item_set_active(
-				GTK_CHECK_MENU_ITEM(mute_check_popup_menu),
+				GTK_CHECK_MENU_ITEM(popup_menu->mute_check),
 				TRUE);
 #endif
 	}
 
 	/* release the signal block */
-	g_signal_handler_unblock(G_OBJECT(mute_check_popup_menu),
-			mute_check_popup_menu_handler);
+	g_signal_handler_unblock(G_OBJECT(popup_menu->mute_check),
+			popup_menu_mute_check_handler);
 	g_signal_handler_unblock(G_OBJECT(mute_check_popup_window),
 			mute_check_popup_window_handler);
-}
-
-/**
- * Propagates the activate signal on mute_item (GtkMenuItem) in the right-click
- * popup menu to the underlying mute_check_popup_menu (GtkCheckButton) as
- * toggled signal.
- */
-void
-on_mute_item_clicked(void)
-{
-	gtk_toggle_button_toggled(GTK_TOGGLE_BUTTON(mute_check_popup_window));
 }
 
 /**
@@ -1047,7 +964,14 @@ main(int argc, char *argv[])
 	alsa_init();
 	init_libnotify();
 	create_popup_window();
-	create_popup_menu();
+
+	// Popup menu
+	popup_menu = popup_menu_create();
+	// TODO: is it only for GTK2 ?
+//	popup_menu_mute_check_handler =
+//		g_signal_connect(G_OBJECT(popup_menu->mute_check),
+//		                 "toggled", G_CALLBACK(on_mute_clicked), NULL);
+
 	hotkeys_add_filter();
 
 	tray_icon = create_tray_icon();
@@ -1058,16 +982,13 @@ main(int argc, char *argv[])
 			 G_CALLBACK(tray_icon_on_click), NULL);
 	g_signal_connect(G_OBJECT(tray_icon), "button-release-event",
 			 G_CALLBACK(tray_icon_button), NULL);
-	mute_check_popup_menu_handler =
-		g_signal_connect(G_OBJECT(mute_check_popup_menu),
-				"toggled", G_CALLBACK(on_mute_clicked), NULL);
-	mute_check_popup_window_handler =
-		g_signal_connect(G_OBJECT(mute_check_popup_window),
-				"toggled", G_CALLBACK(on_mute_clicked), NULL);
 
 	apply_prefs(0);
 
 	gtk_main();
+
+	popup_menu_destroy(popup_menu);
+
 	uninit_libnotify();
 	alsa_close();
 	return 0;

@@ -33,27 +33,6 @@ int volume;
 extern int volume;
 
 /**
- * Callback function when the mute_check_popup_window (GtkCheckButton) in the
- * volume popup window received the pressed signal or
- * when the mute_check_popup_menu (GtkCheckMenuItem) in the right-click
- * menu received the activate signal.
- *
- * @param button the object that received the signal
- * @param event the GdkEvent which triggered this signal
- * @param user_data user data set when the signal handler was connected
- */
-gboolean
-on_mute_clicked(G_GNUC_UNUSED GtkButton *button,
-		G_GNUC_UNUSED GdkEvent *event,
-		G_GNUC_UNUSED gpointer user_data)
-{
-
-	setmute(popup_noti);
-	on_volume_has_changed();
-	return TRUE;
-}
-
-/**
  * Callback function when the vol_scale (GtkScale) in the volume
  * popup window received the change-value signal
  * (either via mouse or keyboard).
