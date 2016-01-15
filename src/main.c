@@ -41,15 +41,7 @@
 #include "prefs.h"
 #include "ui-prefs.h"
 #include "ui-popup-menu.h"
-
-#ifdef WITH_GTK3
-#define GTKX "gtk3"
-#else
-#define GTKX "gtk2"
-#endif
-
-#define UI_FILE_POPUP_VOLUME_HORIZONTAL "popup-window-horizontal-" GTKX ".glade"
-#define UI_FILE_POPUP_VOLUME_VERTICAL   "popup-window-vertical-" GTKX ".glade"
+#include "ui-popup-window.h"
 
 enum {
 	VOLUME_MUTED,
@@ -66,20 +58,7 @@ static GdkPixbuf *status_icons[N_VOLUME_ICONS] = { NULL };
 static char err_buf[512];
 
 static PopupMenu *popup_menu;
-/**
- * Signal handler for the 'Mute' GtkCheckMenuItem in the right-click menu.
- * We save the handler in the main() function to be able to block the signals
- * in update_mute_checkboxes().
- */
-gulong popup_menu_mute_check_handler;
-
-/**
- * Signal handler for the 'Mute' GtkCheckButton in the left-click popup window.
- * We save the handler in the main() function to be able to block the signals
- * in update_mute_checkboxes().
- */
-gulong mute_check_popup_window_handler;
-
+static PopupWindow *popup_window;
 
 /**
  * Reports an error, usually via a dialog window or
@@ -95,7 +74,7 @@ report_error(char *err, ...)
 	va_start(ap, err);
 	if (popup_window) {
 		vsnprintf(err_buf, 512, err, ap);
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(popup_window),
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(popup_window->window),
 				    GTK_DIALOG_DESTROY_WITH_PARENT,
 				    GTK_MESSAGE_ERROR,
 				    GTK_BUTTONS_CLOSE,
@@ -120,7 +99,7 @@ warn_sound_conn_lost(void)
 {
 	if (popup_window) {
 		gint resp;
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(popup_window),
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(popup_window->window),
 				    GTK_DIALOG_DESTROY_WITH_PARENT,
 				    GTK_MESSAGE_ERROR,
 				    GTK_BUTTONS_YES_NO,
@@ -153,7 +132,7 @@ run_command(const gchar *cmd)
 
 	g_assert(cmd != NULL);
 
-	gtk_widget_hide(popup_window);
+	gtk_widget_hide(popup_window->window);
 
 	if (g_spawn_command_line_async(cmd, &error) == FALSE) {
 		report_error(_("Unable to run command: %s"), error->message);
@@ -224,16 +203,16 @@ tray_icon_on_click(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 		G_GNUC_UNUSED gpointer user_data)
 {
 	get_current_levels();
-	if (!gtk_widget_get_visible(GTK_WIDGET(popup_window))) {
-		gtk_widget_show_now(popup_window);
-		gtk_widget_grab_focus(vol_scale);
+	if (!gtk_widget_get_visible(GTK_WIDGET(popup_window->window))) {
+		gtk_widget_show_now(popup_window->window);
+		gtk_widget_grab_focus(popup_window->vol_scale);
 #ifdef WITH_GTK3
 		GdkDevice *pointer_dev = gtk_get_current_event_device();
 		if (pointer_dev != NULL) {
 			GdkDevice *keyboard_dev =
 				gdk_device_get_associated_device(pointer_dev);
 			if (gdk_device_grab(pointer_dev,
-					    gtk_widget_get_window(GTK_WIDGET(popup_window)),
+					    gtk_widget_get_window(GTK_WIDGET(popup_window->window)),
 					    GDK_OWNERSHIP_NONE,
 					    TRUE,
 					    GDK_BUTTON_PRESS_MASK,
@@ -242,7 +221,7 @@ tray_icon_on_click(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 					  gdk_device_get_name(pointer_dev));
 			if (keyboard_dev != NULL) {
 				if (gdk_device_grab(keyboard_dev,
-						    gtk_widget_get_window(GTK_WIDGET(popup_window)),
+						    gtk_widget_get_window(GTK_WIDGET(popup_window->window)),
 						    GDK_OWNERSHIP_NONE,
 						    TRUE,
 						    GDK_KEY_PRESS_MASK,
@@ -252,13 +231,13 @@ tray_icon_on_click(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 			}
 		}
 #else
-		gdk_keyboard_grab(gtk_widget_get_window(popup_window),
+		gdk_keyboard_grab(gtk_widget_get_window(popup_window->window),
 				  TRUE, GDK_CURRENT_TIME);
-		gdk_pointer_grab(gtk_widget_get_window(popup_window), TRUE,
+		gdk_pointer_grab(gtk_widget_get_window(popup_window->window), TRUE,
 				 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);
 #endif
 	} else {
-		gtk_widget_hide(popup_window);
+		gtk_widget_hide(popup_window->window);
 	}
 }
 
@@ -303,6 +282,8 @@ tray_icon_resized(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 GtkStatusIcon *
 create_tray_icon(void)
 {
+	DEBUG_PRINT("Creating tray icon");
+	
 	tray_icon = gtk_status_icon_new();
 
 	/* catch scroll-wheel events */
@@ -313,58 +294,6 @@ create_tray_icon(void)
 
 	gtk_status_icon_set_visible(tray_icon, TRUE);
 	return tray_icon;
-}
-
-/**
- * Creates the volume popup window.
- */
-void
-create_popup_window(void)
-{
-	GtkBuilder *builder;
-	GError *error = NULL;
-	gchar *uifile;
-	gchar *slider_orientation;
-
-	slider_orientation = prefs_get_string("SliderOrientation", "vertical");
-
-	if (!g_strcmp0(slider_orientation, "horizontal"))
-		uifile = get_ui_file(UI_FILE_POPUP_VOLUME_HORIZONTAL);
-	else
-		uifile = get_ui_file(UI_FILE_POPUP_VOLUME_VERTICAL);
-
-	g_free(slider_orientation);
-
-	if (!uifile) {
-		report_error(_
-			     ("Can't find the volume popup window interface file. "
-			      "Please ensure PNMixer is installed correctly. Exiting."));
-		exit(1);
-	}
-
-	DEBUG_PRINT("Loading volume popup ui from '%s'", uifile);
-	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_file(builder, uifile, &error)) {
-		g_warning("%s", error->message);
-		report_error(error->message);
-		exit(1);
-	}
-
-	g_free(uifile);
-
-	vol_adjustment = GTK_ADJUSTMENT(gtk_builder_get_object(builder,
-					"vol_scale_adjustment"));
-	/* get original adjustments */
-	get_current_levels();
-
-	vol_scale = GTK_WIDGET(gtk_builder_get_object(builder, "vol_scale"));
-	mute_check_popup_window = GTK_WIDGET(gtk_builder_get_object(builder, "mute_check_popup_window"));
-	popup_window = GTK_WIDGET(gtk_builder_get_object(builder, "popup_window"));
-
-	gtk_builder_connect_signals(builder, NULL);
-	g_object_unref(G_OBJECT(builder));
-
-	gtk_widget_grab_focus(vol_scale);
 }
 
 /**
@@ -382,15 +311,11 @@ static void
 popup_callback(GtkStatusIcon *status_icon, guint button,
 	       guint activate_time, GtkMenu *menu)
 {
-	gtk_widget_hide(popup_window);
+	gtk_widget_hide(popup_window->window);
 	gtk_menu_popup(menu, NULL, NULL,
 		       gtk_status_icon_position_menu, status_icon,
 		       button, activate_time);
 }
-
-
-
-
 
 /**
  * Sets the global options enable_noti, hotkey_noti, mouse_noti, popup_noti,
@@ -417,12 +342,13 @@ void
 apply_prefs(gint alsa_change)
 {
 	gdouble *vol_meter_clrs;
+	GtkAdjustment *vol_adj = popup_window->vol_adj;
 
 	scroll_step = prefs_get_integer("ScrollStep", 5);
-	gtk_adjustment_set_page_increment(vol_adjustment, scroll_step);
+	gtk_adjustment_set_page_increment(vol_adj, scroll_step);
 
 	fine_scroll_step = prefs_get_integer("FineScrollStep", 1);
-	gtk_adjustment_set_step_increment(vol_adjustment, fine_scroll_step);
+	gtk_adjustment_set_step_increment(vol_adj, fine_scroll_step);
 
 	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
 		gint mk, uk, dk, mm, um, dm, hstep;
@@ -446,7 +372,7 @@ apply_prefs(gint alsa_change)
 	g_free(vol_meter_clrs);
 
 	update_status_icons();
-	update_vol_text();
+	popup_window_update(popup_window);
 
 	if (alsa_change)
 		do_alsa_reinit();
@@ -556,7 +482,7 @@ do_alsa_reinit(void)
 {
 	alsa_init();
 	update_status_icons();
-	update_vol_text();
+	popup_window_update(popup_window);
 	on_volume_has_changed();
 }
 
@@ -568,7 +494,9 @@ void
 get_current_levels(void)
 {
 	int tmpvol = getvol();
-	gtk_adjustment_set_value(GTK_ADJUSTMENT(vol_adjustment), (double) tmpvol);
+	GtkAdjustment *vol_adj = popup_window->vol_adj;
+
+	gtk_adjustment_set_value(vol_adj, (double) tmpvol);
 }
 
 static float vol_div_factor;
@@ -664,58 +592,6 @@ update_tray_icon(void)
 }
 
 /**
- * Updates all mute checkboxes and synchronizes them. This includes
- * mute_check_popup_window and popup_menu_mute_check. Usually called after
- * volume has been muted or changed.
- */
-void
-update_mute_checkboxes(void)
-{
-	/* we only want to update the icons and not emit any signals */
-	g_signal_handler_block(G_OBJECT(popup_menu->mute_check),
-				popup_menu_mute_check_handler);
-	g_signal_handler_block(G_OBJECT(mute_check_popup_window),
-				mute_check_popup_window_handler);
-
-	if (ismuted() == 1) {
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(mute_check_popup_window),
-				FALSE);
-#ifdef WITH_GTK3
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(popup_menu->mute_check),
-				FALSE);
-#else
-		gtk_check_menu_item_set_active(
-				GTK_CHECK_MENU_ITEM(popup_menu->mute_check),
-				FALSE);
-#endif
-
-	} else {
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(mute_check_popup_window),
-				TRUE);
-
-#ifdef WITH_GTK3
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(popup_menu->mute_check),
-				TRUE);
-
-#else
-		gtk_check_menu_item_set_active(
-				GTK_CHECK_MENU_ITEM(popup_menu->mute_check),
-				TRUE);
-#endif
-	}
-
-	/* release the signal block */
-	g_signal_handler_unblock(G_OBJECT(popup_menu->mute_check),
-			popup_menu_mute_check_handler);
-	g_signal_handler_unblock(G_OBJECT(mute_check_popup_window),
-			mute_check_popup_window_handler);
-}
-
-/**
  * Updates the states that always needs to be updated on volume changes.
  * This is currently the tray icon and the mute checkboxes.
  */
@@ -723,59 +599,8 @@ void
 on_volume_has_changed(void)
 {
 	update_tray_icon();
-	update_mute_checkboxes();
-}
-
-/**
- * Hides the volume popup_window, connected via the signals
- * button-press-event, key-press-event and grab-broken-event.
- *
- * @param widget the object which received the signal
- * @param event the GdkEventButton which triggered the signal
- * @param user_data user data set when the signal handler was connected
- * @return TRUE to stop other handlers from being invoked for the evend,
- * FALSE to propagate the event further
- */
-gboolean
-hide_me(G_GNUC_UNUSED GtkWidget *widget,
-		GdkEvent *event, G_GNUC_UNUSED gpointer user_data)
-{
-#ifdef WITH_GTK3
-	GdkDevice *device = gtk_get_current_event_device();
-#endif
-	gint x, y;
-
-	switch (event->type) {
-	/* If a click happens outside of the popup, hide it */
-	case GDK_BUTTON_PRESS:
-		if (
-#ifdef WITH_GTK3
-			!gdk_device_get_window_at_position(device, &x, &y)
-#else
-			!gdk_window_at_pointer(&x, &y)
-#endif
-		)
-			gtk_widget_hide(popup_window);
-		break;
-
-	/* If 'Esc' is pressed, hide popup */
-	case GDK_KEY_PRESS:
-		if (event->key.keyval == GDK_KEY_Escape) {
-			gtk_widget_hide(popup_window);
-		}
-		break;
-
-	/* Broken grab, hide popup */
-	case GDK_GRAB_BROKEN:
-		gtk_widget_hide(popup_window);
-		break;
-
-	/* Unhandle event, do nothing */
-	default:
-		break;
-	}
-
-	return FALSE;
+	popup_window_update(popup_window);
+	popup_menu_update(popup_menu);
 }
 
 static guchar vol_meter_red, vol_meter_green, vol_meter_blue;
@@ -876,32 +701,6 @@ update_status_icons(void)
 			g_object_unref(old_icons[i]);
 }
 
-/**
- * Updates the alignment of the volume text which is shown on the
- * volume popup_window (left click) around the scroll bar.
- */
-void
-update_vol_text(void)
-{
-	gboolean show;
-	
-	show = prefs_get_boolean("DisplayTextVolume", TRUE);
-
-	if (show) {
-		gint pi;
-		GtkPositionType pos;
-
-		pi = prefs_get_integer("TextVolumePosition", 0);
-
-		pos = pi == 0 ? GTK_POS_TOP : pi == 1 ? GTK_POS_BOTTOM : pi ==
-			2 ? GTK_POS_LEFT : GTK_POS_RIGHT;
-
-		gtk_scale_set_draw_value(GTK_SCALE(vol_scale), TRUE);
-		gtk_scale_set_value_pos(GTK_SCALE(vol_scale), pos);
-	} else
-		gtk_scale_set_draw_value(GTK_SCALE(vol_scale), FALSE);
-}
-
 static gboolean version = FALSE;
 static GOptionEntry args[] = {
 	{
@@ -963,21 +762,19 @@ main(int argc, char *argv[])
 	cards = NULL;		// so we don't try and free on first run
 	alsa_init();
 	init_libnotify();
-	create_popup_window();
 
-	// Popup menu
+	// Popups
 	popup_menu = popup_menu_create();
-	// TODO: is it only for GTK2 ?
-//	popup_menu_mute_check_handler =
-//		g_signal_connect(G_OBJECT(popup_menu->mute_check),
-//		                 "toggled", G_CALLBACK(on_mute_clicked), NULL);
+	popup_window = popup_window_create();
+
 
 	hotkeys_add_filter();
 
+	// Tray icon
 	tray_icon = create_tray_icon();
 
 	g_signal_connect(G_OBJECT(tray_icon), "popup-menu",
-			 G_CALLBACK(popup_callback), popup_menu);
+			 G_CALLBACK(popup_callback), popup_menu->menu);
 	g_signal_connect(G_OBJECT(tray_icon), "activate",
 			 G_CALLBACK(tray_icon_on_click), NULL);
 	g_signal_connect(G_OBJECT(tray_icon), "button-release-event",
@@ -985,8 +782,14 @@ main(int argc, char *argv[])
 
 	apply_prefs(0);
 
+
+	// Update levels
+	get_current_levels();
+
+
 	gtk_main();
 
+	popup_window_destroy(popup_window);
 	popup_menu_destroy(popup_menu);
 
 	uninit_libnotify();

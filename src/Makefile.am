@@ -17,7 +17,8 @@ pnmixer_SOURCES = \
 	prefs.c prefs.h \
 	debug.h \
 	ui-prefs.c ui-prefs.h \
-	ui-popup-menu.c ui-popup-menu.h
+	ui-popup-menu.c ui-popup-menu.h \
+	ui-popup-window.c ui-popup-window.h
 
 pnmixer_LDADD = @PACKAGE_LIBS@ $(INTLLIBS)
 

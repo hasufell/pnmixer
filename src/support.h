@@ -47,6 +47,10 @@
 #define N_(String) (String)
 #endif
 
+#ifndef WITH_GTK3
+GtkBuilder *gtk_builder_new_from_file (const gchar *filename);
+#endif
+
 /*
  * Public Functions.
  */

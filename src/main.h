@@ -20,12 +20,6 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-
-GtkWidget *popup_window;
-GtkWidget *vol_scale;
-GtkWidget *mute_check_popup_window;
-GtkAdjustment *vol_adjustment;
-
 gboolean enable_noti, hotkey_noti, mouse_noti, popup_noti, external_noti;
 gint noti_timeout;
 
@@ -42,10 +36,8 @@ void get_current_levels(void);
 void update_tray_icon(void);
 void update_mute_checkboxes(void);
 void on_volume_has_changed(void);
-gboolean hide_me(GtkWidget *, GdkEvent *, gpointer);
 gint tray_icon_size(void);
 void set_vol_meter_color(gdouble nr, gdouble ng, gdouble nb);
 void update_status_icons(void);
-void update_vol_text(void);
 
 #endif				// MAIN_H

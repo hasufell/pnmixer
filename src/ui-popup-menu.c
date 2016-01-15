@@ -27,6 +27,7 @@
 
 #include "support.h"
 #include "main.h"
+#include "alsa.h"
 
 #ifdef WITH_GTK3
 #define POPUP_MENU_UI_FILE "popup-menu-gtk3.glade"
@@ -36,66 +37,7 @@
 #define ABOUT_UI_FILE      "about-gtk2.glade"
 #endif
 
-/*
- * Helpers
- */
-
-static GtkAboutDialog *
-build_about_dialog(void)
-{
-	gchar *uifile;
-	GtkBuilder *builder;
-	GtkAboutDialog *about;
-
-	uifile = get_ui_file(ABOUT_UI_FILE);
-	g_assert(uifile);
-
-	builder = gtk_builder_new_from_file(uifile);
-
-	about = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "about_dialog"));
-	g_assert(about);
-
-	gtk_about_dialog_set_version(about, VERSION);
-
-	gtk_builder_connect_signals(builder, NULL);
-
-	g_object_unref(G_OBJECT(builder));
-	g_free(uifile);
-
-	return about;
-}
-
-static PopupMenu *
-build_popup_menu(void)
-{
-	gchar *uifile;
-	GtkBuilder *builder;
-	PopupMenu *menu;
-
-	uifile = get_ui_file(POPUP_MENU_UI_FILE);
-	g_assert(uifile);
-
-	DEBUG_PRINT("Building popup menu using ui file '%s'", uifile);
-	builder = gtk_builder_new_from_file(uifile);
-
-	menu = g_slice_new(PopupMenu);
-	menu->menu = GTK_MENU(gtk_builder_get_object(builder, "popup_menu"));
-	menu->mute_check = GTK_WIDGET(gtk_builder_get_object(builder, "popup_menu_mute_check"));
-
-	gtk_builder_connect_signals(builder, menu);
-
-	g_object_unref(G_OBJECT(builder));
-	g_free(uifile);
-
-	return menu;
-}
-
-static void
-destroy_popup_menu(PopupMenu *menu)
-{
-	gtk_widget_destroy(GTK_WIDGET(menu->menu));
-	g_slice_free(PopupMenu, menu);
-}
+static GtkAboutDialog *build_about_dialog(void);
 
 /*
  * Widget signal handlers
@@ -107,7 +49,7 @@ destroy_popup_menu(PopupMenu *menu)
  * toggled signal.
  */
 void
-popup_menu_on_mute_clicked(G_GNUC_UNUSED GtkMenuItem *item,
+popup_menu_on_mute_clicked(G_GNUC_UNUSED GtkWidget *widget,
                            G_GNUC_UNUSED PopupMenu *menu)
 {
 	do_mute(popup_noti);
@@ -159,8 +101,117 @@ popup_menu_on_about_clicked(G_GNUC_UNUSED GtkMenuItem *item,
 }
 
 /*
+ * Helpers
+ */
+
+static GtkAboutDialog *
+build_about_dialog(void)
+{
+	gchar *uifile;
+	GtkBuilder *builder;
+	GtkAboutDialog *about;
+
+	uifile = get_ui_file(ABOUT_UI_FILE);
+	g_assert(uifile);
+
+	builder = gtk_builder_new_from_file(uifile);
+
+	about = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "about_dialog"));
+	g_assert(about);
+
+	gtk_about_dialog_set_version(about, VERSION);
+
+	gtk_builder_connect_signals(builder, NULL);
+
+	g_object_unref(G_OBJECT(builder));
+	g_free(uifile);
+
+	return about;
+}
+
+static PopupMenu *
+build_popup_menu(void)
+{
+	gchar *uifile;
+	GtkBuilder *builder;
+	PopupMenu *menu;
+
+	uifile = get_ui_file(POPUP_MENU_UI_FILE);
+	g_assert(uifile);
+
+	DEBUG_PRINT("Building popup menu from ui file '%s'", uifile);
+	builder = gtk_builder_new_from_file(uifile);
+
+	menu = g_slice_new(PopupMenu);
+	menu->menu = GTK_MENU(gtk_builder_get_object(builder, "popup_menu"));
+	menu->mute_check = GTK_WIDGET(gtk_builder_get_object(builder, "mute_check"));
+
+	gtk_builder_connect_signals(builder, menu);
+
+	g_object_unref(G_OBJECT(builder));
+	g_free(uifile);
+
+	return menu;
+}
+
+static void
+destroy_popup_menu(PopupMenu *menu)
+{
+	gtk_widget_destroy(GTK_WIDGET(menu->menu));
+	g_slice_free(PopupMenu, menu);
+}
+
+/**
+ * Update the mute checkbox according to the current alsa state
+ *
+ * @param widget the checkbox to update
+ */
+static void
+update_mute_check(PopupMenu *menu)
+{
+	GtkWidget *mute_check;
+	gboolean active;
+
+	mute_check = GTK_WIDGET(menu->mute_check);
+
+	if (ismuted() == 1)
+		active = FALSE;
+	else
+		active = TRUE;
+
+	/* On Gtk3 version, we listen for the signal sent by the GtkMenuItem.
+	 * So, when we change the value of the GtkToggleButton, we don't have
+	 * to block the signal handler, since there's no signal handler anyway
+	 * on the GtkToggleButton.
+	 * Yeah, I know it's a little bit tricky, but this is due to the dual
+	 * Gtk2/Gtk3 thing. This should be improved for the sake of clarity
+	 * when the Gtk2 version is gone.
+	 */
+
+#ifndef WITH_GTK3
+	gint n_handlers_blocked;
+	n_handlers_blocked = g_signal_handlers_block_by_func
+		(G_OBJECT(mute_check), popup_menu_on_mute_clicked, menu);
+	g_assert(n_handlers_blocked == 1);
+
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(mute_check), active);
+
+	g_signal_handlers_unblock_by_func
+		(G_OBJECT(mute_check), popup_menu_on_mute_clicked, menu);
+#else
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mute_check), active);
+#endif
+}
+
+/*
  * Public functions
  */
+
+void
+popup_menu_update(PopupMenu *menu)
+{
+	update_mute_check(menu);
+}
 
 void
 popup_menu_destroy(PopupMenu *menu)

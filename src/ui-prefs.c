@@ -873,26 +873,15 @@ build_window(void)
 {
 	gchar *uifile = NULL;
 	GtkBuilder *builder = NULL;
-	GError *error = NULL;
 	UiPrefsData *prefs_data = NULL;
 
 	/* Get the path to the ui file */
 	uifile = get_ui_file(PREFS_UI_FILE);
-	if (!uifile) {
-		report_error(_("Can't find preferences user interface file. "
-		               "Please ensure PNMixer is installed correctly."));
-		goto clean_exit;
-	}
-
-	DEBUG_PRINT("Building prefs window using ui file '%s'", uifile);
+	g_assert(uifile);
 
 	/* Build the preferences window from ui file */
-	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_file(builder, uifile, &error)) {
-		g_warning("%s", error->message);
-		report_error(error->message);
-		goto clean_exit;
-	}
+	DEBUG_PRINT("Building prefs window from ui file '%s'", uifile);
+	builder = gtk_builder_new_from_file(uifile);
 
 	gtk_notebook_append_page
 	(GTK_NOTEBOOK(gtk_builder_get_object(builder, "notebook")),
@@ -968,19 +957,13 @@ build_window(void)
 	gtk_builder_connect_signals(builder, prefs_data);
 
 	/* Cleanup */
-clean_exit:
-	if (error)
-		g_error_free(error);
 
 	/* Notice that the builder drops the references of the objects
 	 * it created when it is finalized. The finalization can cause
 	 * unused objects to be destroyed.
 	 */
-	if (builder)
-		g_object_unref(G_OBJECT(builder));
-
-	if (uifile)
-		g_free(uifile);
+	g_object_unref(G_OBJECT(builder));
+	g_free(uifile);
 
 	return prefs_data;
 }

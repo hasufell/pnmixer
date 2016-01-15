@@ -32,9 +32,6 @@
     <property name="skip_taskbar_hint">True</property>
     <property name="skip_pager_hint">True</property>
     <property name="decorated">False</property>
-    <signal name="button-press-event" handler="hide_me" swapped="no"/>
-    <signal name="key-press-event" handler="hide_me" swapped="no"/>
-    <signal name="grab-broken-event" handler="hide_me" swapped="no"/>
     <child>
       <object class="GtkMenuBar" id="popup_menubar">
         <property name="can_focus">False</property>
@@ -50,17 +47,18 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkCheckMenuItem" id="popup_menu_mute_check">
+                  <object class="GtkCheckMenuItem" id="mute_check">
                     <property name="label" translatable="yes">_Mute</property>
                     <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Mute/Unmute Volume</property>
-                    <property name="use_underline">True</property>
+		    <property name="use_underline">True</property>
+		    <signal name="activate" handler="popup_menu_on_mute_clicked" swapped="no"/>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkImageMenuItem" id="volcontrol_item">
+                  <object class="GtkImageMenuItem" id="mixer_item">
                     <property name="label" translatable="yes">_Volume Control</property>
                     <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>

@@ -164,6 +164,21 @@ get_stock_pixbuf(const char *filename, gint size)
 	return return_buf;
 }
 
+#ifndef WITH_GTK3
+GtkBuilder *
+gtk_builder_new_from_file (const gchar *filename)
+{
+  GError *error = NULL;
+  GtkBuilder *builder;
+
+  builder = gtk_builder_new ();
+  if (!gtk_builder_add_from_file (builder, filename, &error))
+    g_error ("failed to add UI: %s", error->message);
+
+  return builder;
+}
+#endif
+
 /**
  * Gets the path to an ui file.
  * Looks first in ./data/ui/[file], and then in
