@@ -466,30 +466,6 @@ on_noti_enable_toggled(G_GNUC_UNUSED GtkToggleButton *button,
 }
 #endif
 
-#ifndef WITH_GTK3
-/**
- * Gtk2 cludge
- * Gtk2 ComboBoxes don't have ids. We workaround that by
- * mapping the id with a ComboBox index. We're fine as long
- * as nobody changes the content of the ComboBox.
- *
- * @param combo_box a GtkComboBox
- * @return the ID of the active row
- */
-static const gchar*
-gtk_combo_box_get_active_id(GtkComboBox *combo_box)
-{
-	gint index = gtk_combo_box_get_active(combo_box);
-
-	if (index == 1)
-		return "horizontal";
-
-	return "vertical";
-}
-#endif
-
-
-
 /**
  * Callback function when the ok_button (GtkButton) of the
  * preferences window received the clicked signal.
@@ -497,13 +473,20 @@ gtk_combo_box_get_active_id(GtkComboBox *combo_box)
  * @param button the object that received the signal
  * @param data struct holding the GtkWidgets of the preferences windows
  */
-
 static void
 retrieve_window_values(UiPrefsData *data)
 {
 	// volume slider orientation
 	GtkWidget *soc = data->vol_orientation_combo;
-	const gchar *orientation = gtk_combo_box_get_active_id(GTK_COMBO_BOX(soc));
+	const gchar *orientation;
+#ifdef WITH_GTK3
+	orientation = gtk_combo_box_get_active_id(GTK_COMBO_BOX(soc));
+#else
+	/* Gtk2 ComboBoxes don't have item ids */
+	orientation = "vertical";
+	if (gtk_combo_box_get_active(GTK_COMBO_BOX(soc)) == 1)
+		orientation = "horizontal";
+#endif
 	prefs_set_string("SliderOrientation", orientation);
 	
 	// volume text display
