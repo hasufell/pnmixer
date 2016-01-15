@@ -24,6 +24,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+#include <X11/XKBlib.h>
 
 #include "ui-prefs.h"
 #include "prefs.h"
@@ -31,7 +32,6 @@
 #include "debug.h"
 
 #include "main.h"
-#include <X11/XKBlib.h>
 
 #ifdef WITH_GTK3
 #define PREFS_UI_FILE "prefs-gtk3.glade"
@@ -184,7 +184,7 @@ fill_card_combo(GtkWidget *combo, GtkWidget *channels_combo)
  * @param data user data set when the signal handler was connected
  */
 void
-on_vol_text_toggle(GtkToggleButton *button, UiPrefsData *data)
+on_vol_text_toggled(GtkToggleButton *button, UiPrefsData *data)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
 	gtk_widget_set_sensitive(data->vol_pos_label, active);
@@ -199,7 +199,7 @@ on_vol_text_toggle(GtkToggleButton *button, UiPrefsData *data)
  * @param data user data set when the signal handler was connected
  */
 void
-on_vol_meter_draw_toggle(GtkToggleButton *button, UiPrefsData *data)
+on_vol_meter_draw_toggled(GtkToggleButton *button, UiPrefsData *data)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
 	gtk_widget_set_sensitive(data->vol_meter_pos_label, active);
@@ -710,6 +710,10 @@ populate_window(UiPrefsData *prefs_data)
 	(GTK_TOGGLE_BUTTON(prefs_data->vol_text_check),
 	 prefs_get_boolean("DisplayTextVolume", FALSE));
 
+	on_vol_text_toggled
+	(GTK_TOGGLE_BUTTON(prefs_data->vol_text_check),
+	 prefs_data);
+
 	// volume text position
 	gtk_combo_box_set_active
 	(GTK_COMBO_BOX(prefs_data->vol_pos_combo),
@@ -719,6 +723,10 @@ populate_window(UiPrefsData *prefs_data)
 	gtk_toggle_button_set_active
 	(GTK_TOGGLE_BUTTON(prefs_data->vol_meter_draw_check),
 	 prefs_get_boolean("DrawVolMeter", FALSE));
+
+	on_vol_meter_draw_toggled
+	(GTK_TOGGLE_BUTTON(prefs_data->vol_meter_draw_check),
+	 prefs_data);
 
 	// volume meter position
 	gtk_adjustment_set_upper
@@ -789,6 +797,10 @@ populate_window(UiPrefsData *prefs_data)
 	(GTK_COMBO_BOX(prefs_data->middle_click_combo),
 	 prefs_get_integer("MiddleClickAction", 0));
 
+	on_middle_click_changed
+	(GTK_COMBO_BOX(prefs_data->middle_click_combo),
+	 prefs_data);
+
 	// custom command
 	gtk_entry_set_invisible_char(GTK_ENTRY(prefs_data->custom_entry), 8226);
 
@@ -797,13 +809,6 @@ populate_window(UiPrefsData *prefs_data)
 		gtk_entry_set_text(GTK_ENTRY(prefs_data->custom_entry), custcmd);
 		g_free(custcmd);
 	}
-
-	on_vol_text_toggle(GTK_TOGGLE_BUTTON(prefs_data->vol_text_check),
-			   prefs_data);
-	on_vol_meter_draw_toggle(GTK_TOGGLE_BUTTON(prefs_data->vol_meter_draw_check),
-			   prefs_data);
-	on_middle_click_changed(GTK_COMBO_BOX(prefs_data->middle_click_combo),
-			  prefs_data);
 
 	// hotkeys enabled
 	gtk_toggle_button_set_active

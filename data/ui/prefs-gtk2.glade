@@ -346,7 +346,7 @@
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_vol_text_toggle" swapped="no"/>
+                                    <signal name="toggled" handler="on_vol_text_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
@@ -435,7 +435,7 @@
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_vol_meter_draw_toggle" swapped="no"/>
+                                    <signal name="toggled" handler="on_vol_meter_draw_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
