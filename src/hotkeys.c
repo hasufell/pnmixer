@@ -20,13 +20,13 @@
 #include "config.h"
 #endif
 
+#include <gdk/gdkx.h>
+#include <X11/XKBlib.h>
+
 #include "support.h"
 #include "main.h"
 #include "prefs.h"
 #include "alsa.h"
-#include <gdk/gdkx.h>
-#include <X11/XKBlib.h>
-
 
 static int volMuteKey = -1;
 static int volDownKey = -1;
@@ -124,7 +124,7 @@ key_filter(GdkXEvent *gdk_xevent,
  * to the the root window, so it will intercept window events.
  */
 void
-add_filter(void)
+hotkeys_add_filter(void)
 {
 	gdk_window_add_filter(
 		gdk_x11_window_foreign_new_for_display(
@@ -169,7 +169,7 @@ errhdl(G_GNUC_UNUSED Display *disp, XErrorEvent *ev)
 /**
  * We need to report error in idle moment
  * since we can't report_error before gtk_main is called.
- * This function is attached via g_idle_add() in grab_keys(),
+ * This function is attached via g_idle_add() in hotkeys_grab(),
  * whenever there is an Xerror.
  *
  * @param data passed to the function,
@@ -202,7 +202,7 @@ idle_report_error(G_GNUC_UNUSED gpointer data)
  * @param step hotkey volume step
  */
 void
-grab_keys(int mk, int uk, int dk, int mm, int um, int dm, int step)
+hotkeys_grab(int mk, int uk, int dk, int mm, int um, int dm, int step)
 {
 	Display *disp = gdk_x11_get_default_xdisplay();
 

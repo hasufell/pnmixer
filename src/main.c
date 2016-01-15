@@ -493,10 +493,10 @@ apply_prefs(gint alsa_change)
 		um = prefs_get_integer("VolUpMods", 0);
 		dm = prefs_get_integer("VolDownMods", 0);
 		hstep = prefs_get_integer("HotkeyVolumeStep", 1);
-		grab_keys(mk, uk, dk, mm, um, dm, hstep);
+		hotkeys_grab(mk, uk, dk, mm, um, dm, hstep);
 	} else
 		// will actually just ungrab everything
-		grab_keys(-1, -1, -1, 0, 0, 0, 1);
+		hotkeys_grab(-1, -1, -1, 0, 0, 0, 1);
 
 	set_notification_options();
 
@@ -1048,7 +1048,7 @@ main(int argc, char *argv[])
 	init_libnotify();
 	create_popup_window();
 	create_popup_menu();
-	add_filter();
+	hotkeys_add_filter();
 
 	tray_icon = create_tray_icon();
 
