@@ -1075,7 +1075,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkEventBox" id="mute_eventbox">
+                                  <object class="GtkEventBox" id="hotkeys_mute_eventbox">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <signal name="button-press-event" handler="on_hotkey_event_box_button_pressed" swapped="no"/>
@@ -1098,7 +1098,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkEventBox" id="up_eventbox">
+                                  <object class="GtkEventBox" id="hotkeys_up_eventbox">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <signal name="button-press-event" handler="on_hotkey_event_box_button_pressed" swapped="no"/>
@@ -1121,7 +1121,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkEventBox" id="down_eventbox">
+                                  <object class="GtkEventBox" id="hotkeys_down_eventbox">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <signal name="button-press-event" handler="on_hotkey_event_box_button_pressed" swapped="no"/>
@@ -1453,7 +1453,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="hotkeys_key_label">
+          <object class="GtkLabel" id="hotkeys_dialog_key_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="label" translatable="yes">(Unknown)</property>

@@ -22,6 +22,8 @@
 #include <string.h>
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 
 #include "ui-prefs.h"
 #include "prefs.h"
@@ -29,8 +31,6 @@
 #include "debug.h"
 
 #include "main.h"
-#include <gdk/gdkkeysyms.h>
-#include <gdk/gdkx.h>
 #include <X11/XKBlib.h>
 
 #ifdef WITH_GTK3
@@ -38,7 +38,6 @@
 #else
 #define PREFS_UI_FILE "prefs-gtk2.glade"
 #endif
-
 
 /**
  * Defines the whole preferences entity.
@@ -77,7 +76,7 @@ struct UiPrefsData {
 	GtkWidget *hotkeys_vol_label;
 	GtkWidget *hotkeys_vol_spin;
 	GtkWidget *hotkeys_dialog;
-	GtkWidget *hotkeys_key_label;
+	GtkWidget *hotkeys_dialog_key_label;
 	GtkWidget *hotkeys_mute_label;
 	GtkWidget *hotkeys_up_label;
 	GtkWidget *hotkeys_down_label;
@@ -263,125 +262,6 @@ on_hotkeys_enabled_toggled(GtkToggleButton *button, UiPrefsData *data)
 	gtk_widget_set_sensitive(data->hotkeys_vol_spin, active);
 }
 
-
-
-/**
- * This is called from within the callback function
- * on_hotkey_event_box_button_pressed() in callbacks. which is triggered when
- * one of the hotkey boxes mute_eventbox, up_eventbox or
- * down_eventbox (GtkEventBox) in the preferences received
- * the button-press-event signal.
- *
- * Then this function grabs the keyboard, opens the hotkeys_dialog
- * and updates the GtkLabel with the pressed hotkey.
- * The GtkLabel is later read by on_ok_button_clicked() in
- * callbacks.c which stores the result in the global keyFile.
- *
- * @param widget_name the name of the widget (mute_eventbox, up_eventbox
- * or down_eventbox)
- * @param data struct holding the GtkWidgets of the preferences windows
- */
-static void
-acquire_hotkey(const char *widget_name, UiPrefsData *data)
-{
-	gint resp, action;
-	GtkWidget *diag = data->hotkeys_dialog;
-
-	action =
-		(!strcmp(widget_name, "mute_eventbox")) ? 0 :
-		(!strcmp(widget_name, "up_eventbox")) ? 1 :
-		(!strcmp(widget_name, "down_eventbox")) ? 2 : -1;
-
-	if (action < 0) {
-		report_error(_("Invalid widget passed to acquire_hotkey: %s"),
-			     widget_name);
-		return;
-	}
-
-	switch (action) {
-	case 0:
-		gtk_label_set_text(GTK_LABEL(data->hotkeys_key_label),
-				   _("Mute/Unmute"));
-		break;
-	case 1:
-		gtk_label_set_text(GTK_LABEL(data->hotkeys_key_label),
-				   _("Volume Up"));
-		break;
-	case 2:
-		gtk_label_set_text(GTK_LABEL(data->hotkeys_key_label),
-				   _("Volume Down"));
-		break;
-	default:
-		break;
-	}
-
-	// grab keyboard
-	if (G_LIKELY(
-#ifdef WITH_GTK3
-		    gdk_device_grab(gtk_get_current_event_device(),
-				    gdk_screen_get_root_window(gdk_screen_get_default()),
-				    GDK_OWNERSHIP_APPLICATION,
-				    TRUE, GDK_ALL_EVENTS_MASK, NULL, GDK_CURRENT_TIME)
-#else
-		    gdk_keyboard_grab(gtk_widget_get_root_window(
-					      GTK_WIDGET(diag)), TRUE, GDK_CURRENT_TIME)
-#endif
-		    == GDK_GRAB_SUCCESS)) {
-		resp = gtk_dialog_run(GTK_DIALOG(diag));
-#ifdef WITH_GTK3
-		gdk_device_ungrab(gtk_get_current_event_device(), GDK_CURRENT_TIME);
-#else
-		gdk_keyboard_ungrab(GDK_CURRENT_TIME);
-#endif
-		if (resp == GTK_RESPONSE_OK) {
-			const gchar *key_name =
-				gtk_label_get_text(GTK_LABEL(data->hotkeys_key_label));
-			if (!strcasecmp(key_name, "<Primary>c")) {
-				key_name = "(None)";
-			}
-			switch (action) {
-			case 0:
-				gtk_label_set_text(GTK_LABEL(data->hotkeys_mute_label),
-						   key_name);
-				break;
-			case 1:
-				gtk_label_set_text(GTK_LABEL(data->hotkeys_up_label),
-						   key_name);
-				break;
-			case 2:
-				gtk_label_set_text(GTK_LABEL(data->hotkeys_down_label),
-						   key_name);
-				break;
-			default:
-				break;
-			}
-		}
-	} else
-		report_error(_("Could not grab the keyboard."));
-	gtk_widget_hide(diag);
-}
-
-/**
- * Callback function when one of the hotkey event boxes mute_eventbox,
- * up_eventbox or down_eventbox (GtkEventBox) in the preferences
- * received the button-press-event signal.
- *
- * @param widget the object which received the signal
- * @param event the GdkEventButton which triggered this signal
- * @param data struct holding the GtkWidgets of the preferences windows
- * @return TRUE to stop other handlers from being invoked for the event.
- * False to propagate the event further
- */
-gboolean
-on_hotkey_event_box_button_pressed(GtkWidget *widget, GdkEventButton *event,
-                                   UiPrefsData *data)
-{
-	if (event->button == 1 && event->type == GDK_2BUTTON_PRESS)
-		acquire_hotkey(gtk_buildable_get_name(GTK_BUILDABLE(widget)), data);
-	return TRUE;
-}
-
-
 /**
  * Handler for the signal 'key-press-event' on the GtkDialog hotkeys_dialog
  * which was opened by acquire_hotkey().
@@ -400,6 +280,7 @@ on_hotkey_pressed(G_GNUC_UNUSED GtkWidget *dialog,
 	gchar *key_text;
 	guint keyval;
 	GdkModifierType state, consumed;
+	GtkLabel *key_label = GTK_LABEL(data->hotkeys_dialog_key_label);
 
 	state = ev->state;
 	gdk_keymap_translate_keyboard_state(gdk_keymap_get_default(),
@@ -410,8 +291,9 @@ on_hotkey_pressed(G_GNUC_UNUSED GtkWidget *dialog,
 	state &= gtk_accelerator_get_default_mod_mask();
 
 	key_text = gtk_accelerator_name(keyval, state);
-	gtk_label_set_text(GTK_LABEL(data->hotkeys_key_label), key_text);
+	gtk_label_set_text(key_label, key_text);
 	g_free(key_text);
+
 	return FALSE;
 }
 
@@ -430,13 +312,133 @@ on_hotkey_released(GtkWidget *dialog,
                    G_GNUC_UNUSED GdkEventKey *ev,
                    G_GNUC_UNUSED UiPrefsData *data)
 {
+	gtk_dialog_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+
+	return FALSE;
+}
+
+/**
+ * This is called from within the callback function
+ * on_hotkey_event_box_button_pressed() in callbacks. which is triggered when
+ * one of the hotkey boxes hotkeys_mute_eventbox, hotkeys_up_eventbox or
+ * hotkeys_down_eventbox (GtkEventBox) in the preferences received
+ * the button-press-event signal.
+ *
+ * Then this function grabs the keyboard, opens the hotkeys_dialog
+ * and updates the GtkLabel with the pressed hotkey.
+ * The GtkLabel is later read by on_ok_button_clicked() in
+ * callbacks.c which stores the result in the global keyFile.
+ *
+ * @param widget_name the name of the widget (hotkeys_mute_eventbox, hotkeys_up_eventbox
+ * or hotkeys_down_eventbox)
+ * @param data struct holding the GtkWidgets of the preferences windows
+ */
+static void
+acquire_hotkey(const char *widget_name, UiPrefsData *data)
+{
+	gint resp, action;
+	GtkWidget *diag = data->hotkeys_dialog;
+	GtkLabel *dialog_key_label = GTK_LABEL(data->hotkeys_dialog_key_label);
+	GdkGrabStatus grab_status;
+
+	action =
+		(!strcmp(widget_name, "hotkeys_mute_eventbox")) ? 0 :
+		(!strcmp(widget_name, "hotkeys_up_eventbox")) ? 1 :
+		(!strcmp(widget_name, "hotkeys_down_eventbox")) ? 2 : -1;
+
+	g_assert(action >= 0);
+
+	/* Set the right key label for the dialog window */
+	switch (action) {
+	case 0:
+		gtk_label_set_text(dialog_key_label, _("Mute/Unmute"));
+		break;
+	case 1:
+		gtk_label_set_text(dialog_key_label, _("Volume Up"));
+		break;
+	case 2:
+		gtk_label_set_text(dialog_key_label, _("Volume Down"));
+		break;
+	default:
+		break;
+	}
+
+	/* Grab keyboard */
+	grab_status =
+#ifdef WITH_GTK3
+		gdk_device_grab(gtk_get_current_event_device(),
+		                gdk_screen_get_root_window(gdk_screen_get_default()),
+		                GDK_OWNERSHIP_APPLICATION,
+		                TRUE, GDK_ALL_EVENTS_MASK, NULL, GDK_CURRENT_TIME);
+#else
+		gdk_keyboard_grab(gtk_widget_get_root_window(GTK_WIDGET(diag)),
+		                  TRUE, GDK_CURRENT_TIME);
+#endif
+
+	if (grab_status != GDK_GRAB_SUCCESS) {
+		report_error(_("Could not grab the keyboard."));
+		return;
+	}
+
+	/* Run the dialog window */
+	resp = gtk_dialog_run(GTK_DIALOG(diag));
+
+	/* Ungrab keyboard */
 #ifdef WITH_GTK3
 	gdk_device_ungrab(gtk_get_current_event_device(), GDK_CURRENT_TIME);
 #else
 	gdk_keyboard_ungrab(GDK_CURRENT_TIME);
 #endif
-	gtk_dialog_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
-	return FALSE;
+
+	/* Handle the response from the dialog window */
+	if (resp == GTK_RESPONSE_OK) {
+		const gchar *key_name;
+		GtkLabel *key_label;
+
+		key_name = gtk_label_get_text(dialog_key_label);
+
+		if (!strcasecmp(key_name, "<Primary>c"))
+			key_name = "(None)";
+		
+		switch (action) {
+		case 0:
+			key_label = GTK_LABEL(data->hotkeys_mute_label);
+			break;
+		case 1:
+			key_label = GTK_LABEL(data->hotkeys_up_label);
+			break;
+		case 2:
+			key_label = GTK_LABEL(data->hotkeys_down_label);
+			break;
+		default:
+			break;
+		}
+
+		gtk_label_set_text(key_label, key_name);
+	}
+
+	/* Hide window at last */
+	gtk_widget_hide(diag);
+}
+
+/**
+ * Callback function when one of the hotkey event boxes hotkeys_mute_eventbox,
+ * hotkeys_up_eventbox or hotkeys_down_eventbox (GtkEventBox) in the preferences
+ * received the button-press-event signal.
+ *
+ * @param widget the object which received the signal
+ * @param event the GdkEventButton which triggered this signal
+ * @param data struct holding the GtkWidgets of the preferences windows
+ * @return TRUE to stop other handlers from being invoked for the event.
+ * False to propagate the event further
+ */
+gboolean
+on_hotkey_event_box_button_pressed(GtkWidget *widget, GdkEventButton *event,
+                                   UiPrefsData *data)
+{
+	if (event->button == 1 && event->type == GDK_2BUTTON_PRESS)
+		acquire_hotkey(gtk_buildable_get_name(GTK_BUILDABLE(widget)), data);
+	return TRUE;
 }
 
 /**
@@ -465,6 +467,28 @@ on_noti_enable_toggled(G_GNUC_UNUSED GtkToggleButton *button,
 {
 }
 #endif
+
+/**
+ * Gets one of the hotkey code and mode in the Hotkeys settings
+ * from the specified label (parsed as an accelerator name).
+ *
+ * @param label the label to parse
+ * @param code the resulting keycode
+ * @param mods the resulting pressed keymode
+ */
+static void
+get_keycode_for_label(GtkLabel *label, gint *code, GdkModifierType *mods)
+{
+	guint keysym;
+	const gchar *key_text;
+
+	key_text = gtk_label_get_text(label);
+	gtk_accelerator_parse(key_text, &keysym, mods);
+	if (keysym != 0)
+		*code = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
+	else
+		*code = -1;
+}
 
 /**
  * Callback function when the ok_button (GtkButton) of the
@@ -585,33 +609,22 @@ retrieve_window_values(UiPrefsData *data)
 	prefs_set_integer("HotkeyVolumeStep", hotstep);
 	
 	// hotkeys
-	guint keysym;
+	GtkWidget *kl;
 	gint keycode;
 	GdkModifierType mods;
-	GtkWidget *kl = data->hotkeys_mute_label;
-	gtk_accelerator_parse(gtk_label_get_text(GTK_LABEL(kl)), &keysym, &mods);
-	if (keysym != 0)
-		keycode = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
-	else
-		keycode = -1;
+
+	kl = data->hotkeys_mute_label;
+	get_keycode_for_label(GTK_LABEL(kl), &keycode, &mods);
 	prefs_set_integer("VolMuteKey", keycode);
 	prefs_set_integer("VolMuteMods", mods);
 
 	kl = data->hotkeys_up_label;
-	gtk_accelerator_parse(gtk_label_get_text(GTK_LABEL(kl)), &keysym, &mods);
-	if (keysym != 0)
-		keycode = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
-	else
-		keycode = -1;
+	get_keycode_for_label(GTK_LABEL(kl), &keycode, &mods);
 	prefs_set_integer("VolUpKey", keycode);
 	prefs_set_integer("VolUpMods", mods);
 
 	kl = data->hotkeys_down_label;
-	gtk_accelerator_parse(gtk_label_get_text(GTK_LABEL(kl)), &keysym, &mods);
-	if (keysym != 0)
-		keycode = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
-	else
-		keycode = -1;
+	get_keycode_for_label(GTK_LABEL(kl), &keycode, &mods);
 	prefs_set_integer("VolDownKey", keycode);
 	prefs_set_integer("VolDownMods", mods);
 
@@ -653,7 +666,7 @@ retrieve_window_values(UiPrefsData *data)
  * @param mods the pressed keymod
  */
 static void
-set_label_for_keycode(GtkWidget *label, gint code, GdkModifierType mods)
+set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
 {
 	int keysym;
 	gchar *key_text;
@@ -803,15 +816,15 @@ populate_window(UiPrefsData *prefs_data)
 	 prefs_get_integer("HotkeyVolumeStep", 1));
 
 	// hotkeys
-	set_label_for_keycode(prefs_data->hotkeys_mute_label,
+	set_label_for_keycode(GTK_LABEL(prefs_data->hotkeys_mute_label),
 	                      prefs_get_integer("VolMuteKey", -1),
 	                      prefs_get_integer("VolMuteMods", 0));
 
-	set_label_for_keycode(prefs_data->hotkeys_up_label,
+	set_label_for_keycode(GTK_LABEL(prefs_data->hotkeys_up_label),
 	                      prefs_get_integer("VolUpKey", -1),
 	                      prefs_get_integer("VolUpMods", 0));
 
-	set_label_for_keycode(prefs_data->hotkeys_down_label,
+	set_label_for_keycode(GTK_LABEL(prefs_data->hotkeys_down_label),
 	                      prefs_get_integer("VolDownKey", -1),
 	                      prefs_get_integer("VolDownMods", 0));
 
@@ -928,7 +941,7 @@ build_window(void)
 	GW(hotkeys_vol_label);
 	GW(hotkeys_vol_spin);
 	GW(hotkeys_dialog);
-	GW(hotkeys_key_label);
+	GW(hotkeys_dialog_key_label);
 	GW(hotkeys_mute_label);
 	GW(hotkeys_up_label);
 	GW(hotkeys_down_label);
