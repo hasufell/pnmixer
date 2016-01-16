@@ -96,7 +96,7 @@ key_filter(GdkXEvent *gdk_xevent,
 
 		if ((int) key == volMuteKey && checkModKey(state, volMuteMods)) {
 			setmute(enable_noti && hotkey_noti);
-			on_volume_has_changed();
+			do_update_ui();
 			return GDK_FILTER_CONTINUE;
 		} else {
 			int cv = getvol();
@@ -110,10 +110,7 @@ key_filter(GdkXEvent *gdk_xevent,
 			if (ismuted() == 0)
 				setmute(enable_noti && hotkey_noti);
 
-			on_volume_has_changed();
-
-			// this will set the slider value
-			get_current_levels();
+			do_update_ui();
 		}
 	}
 	return GDK_FILTER_CONTINUE;

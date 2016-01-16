@@ -19,11 +19,6 @@
 
 #include <gtk/gtk.h>
 
-struct popup_menu {
-	GtkMenu *menu;
-	GtkWidget *mute_check;
-};
-
 typedef struct popup_menu PopupMenu;
 
 PopupMenu *popup_menu_create(void);

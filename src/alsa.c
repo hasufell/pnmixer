@@ -52,6 +52,7 @@ use_linear_dB_scale(long dBmin, long dBmax)
 	return dBmax - dBmin <= MAX_LINEAR_DB_SCALE * 100;
 }
 
+GSList *cards = NULL;
 static int smixer_level = 0;
 static struct snd_mixer_selem_regopt smixer_options;
 static snd_mixer_elem_t *elem;
@@ -241,9 +242,8 @@ alsa_cb(G_GNUC_UNUSED snd_mixer_elem_t *e, unsigned int mask)
 	/* Then check if mixer value changed */
 	if (mask & SND_CTL_EVENT_MASK_VALUE) {
 		int muted;
-		get_current_levels();
 		muted = ismuted();
-		on_volume_has_changed();
+		do_update_ui();
 		if (enable_noti && external_noti) {
 			int vol = getvol();
 			if (muted)

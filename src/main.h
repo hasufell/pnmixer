@@ -31,12 +31,12 @@ void do_alsa_reinit(void);
 void do_toggle_popup_window(void);
 void do_show_popup_menu(GtkStatusIcon *status_icon, guint button, guint activate_time);
 
+void do_update_ui(void);
+
+
 gint get_tray_icon_size(void);
 
 void report_error(char *, ...);
 void warn_sound_conn_lost(void);
-
-void get_current_levels(void);
-void on_volume_has_changed(void);
 
 #endif				// MAIN_H

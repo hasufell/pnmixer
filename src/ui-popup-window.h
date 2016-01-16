@@ -30,6 +30,7 @@ typedef struct popup_window PopupWindow;
 
 PopupWindow *popup_window_create(void);
 void         popup_window_destroy(PopupWindow *window);
+void         popup_window_reload_prefs(PopupWindow *window);
 void         popup_window_update(PopupWindow *window);
 void         popup_window_hide(PopupWindow *window);
 void         popup_window_toggle(PopupWindow *window);

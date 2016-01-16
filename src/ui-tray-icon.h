@@ -19,8 +19,8 @@
 
 void tray_icon_create(void);
 void tray_icon_destroy(void);
-void tray_icon_update(void);
 void tray_icon_reload_prefs(void);
+void tray_icon_update(void);
 gint tray_icon_get_size(void);
 
 #endif				// UI_TRAY_ICON_H_

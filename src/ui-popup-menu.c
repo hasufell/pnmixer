@@ -37,6 +37,11 @@
 #define ABOUT_UI_FILE      "about-gtk2.glade"
 #endif
 
+struct popup_menu {
+	GtkMenu *menu;
+	GtkWidget *mute_check;
+};
+
 static GtkAboutDialog *build_about_dialog(void);
 
 /*

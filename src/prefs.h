@@ -22,9 +22,6 @@
 
 #include "support.h"
 
-gint scroll_step, fine_scroll_step;
-GtkIconTheme *icon_theme;
-
 gboolean prefs_get_boolean(gchar *key, gboolean def);
 gint     prefs_get_integer(gchar *key, gint def);
 gdouble  prefs_get_double(gchar *key, gdouble def);

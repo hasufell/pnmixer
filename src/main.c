@@ -109,20 +109,6 @@ warn_sound_conn_lost(void)
 }
 
 /**
- * Sets the global options enable_noti, hotkey_noti, popup_noti,
- * noti_timeout and external_noti from the user settings.
- */
-static void
-set_notification_options(void)
-{
-	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
-	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
-	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
-	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
-	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
-}
-
-/**
  * Applies the preferences, usually triggered by on_ok_button_clicked()
  * in callbacks.c, but also initially called from main().
  *
@@ -131,14 +117,7 @@ set_notification_options(void)
 void
 apply_prefs(gint alsa_change)
 {
-	GtkAdjustment *vol_adj = popup_window->vol_adj;
-
-	scroll_step = prefs_get_integer("ScrollStep", 5);
-	gtk_adjustment_set_page_increment(vol_adj, scroll_step);
-
-	fine_scroll_step = prefs_get_integer("FineScrollStep", 1);
-	gtk_adjustment_set_step_increment(vol_adj, fine_scroll_step);
-
+	// Hotkeys preferences
 	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
 		gint mk, uk, dk, mm, um, dm, hstep;
 		mk = prefs_get_integer("VolMuteKey", -1);
@@ -153,11 +132,16 @@ apply_prefs(gint alsa_change)
 		// will actually just ungrab everything
 		hotkeys_grab(-1, -1, -1, 0, 0, 0, 1);
 
-	set_notification_options();
+	// Notifications preferences
+	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
+	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
+	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
+	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
+	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
 
+	popup_window_reload_prefs(popup_window);
 	tray_icon_reload_prefs();
-
-	popup_window_update(popup_window);
+	do_update_ui();
 
 	if (alsa_change)
 		do_alsa_reinit();
@@ -239,7 +223,7 @@ void
 do_mute(gboolean notify)
 {
         setmute(notify);
-        on_volume_has_changed();
+        do_update_ui();
 }
 
 /**
@@ -315,42 +299,25 @@ void
 do_alsa_reinit(void)
 {
 	alsa_init();
+	do_update_ui();
+}
+
+/**
+ * Updates the states that always needs to be updated on volume changes.
+ * This is currently the tray icon and the mute checkboxes.
+ */
+void
+do_update_ui(void)
+{
 	tray_icon_update();
 	popup_window_update(popup_window);
-	on_volume_has_changed();
+	popup_menu_update(popup_menu);
 }
 
 gint
 get_tray_icon_size(void)
 {
 	return tray_icon_get_size();
-}
-
-/**
- * Gets the current volume level and adjusts the GtkAdjustment
- * vol_scale_adjustment widget which is used by GtkHScale/GtkScale.
- */
-void
-get_current_levels(void)
-{
-	int tmpvol = getvol();
-	GtkAdjustment *vol_adj = popup_window->vol_adj;
-
-	gtk_adjustment_set_value(vol_adj, (double) tmpvol);
-}
-
-
-/**
- * Updates the states that always needs to be updated on volume changes.
- * This is currently the tray icon and the mute checkboxes.
- * TODO: rename !
- */
-void
-on_volume_has_changed(void)
-{
-	tray_icon_update();
-	popup_window_update(popup_window);
-	popup_menu_update(popup_menu);
 }
 
 static gboolean version = FALSE;
@@ -388,51 +355,47 @@ main(int argc, char *argv[])
 	textdomain(GETTEXT_PACKAGE);
 #endif
 
-	DEBUG_PRINT("[Debugging Mode Build]\n");
-
 	setlocale(LC_ALL, "");
+
+	/* Parse options */
 	context = g_option_context_new(_("- A mixer for the system tray."));
 	g_option_context_add_main_entries(context, args, GETTEXT_PACKAGE);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 	g_option_context_parse(context, &argc, &argv, &error);
-	gtk_init(&argc, &argv);
-
 	g_option_context_free(context);
 
+	/* Print version and exit */
 	if (version) {
 		printf(_("%s version: %s\n"), PACKAGE, VERSION);
-		exit(0);
+		exit(EXIT_SUCCESS);
 	}
 
-	popup_window = NULL;
+	/* Init Gtk+ */
+	gtk_init(&argc, &argv);
 
 	add_pixmap_directory(PACKAGE_DATA_DIR "/" PACKAGE "/pixmaps");
 	add_pixmap_directory("./data/pixmaps");
 
+	/* Load preferences */
 	prefs_ensure_save_dir();
 	prefs_load();
-	cards = NULL;		// so we don't try and free on first run
+
+	/* Init everything */
 	alsa_init();
 	init_libnotify();
-
 	hotkeys_add_filter();
 
-	// Popups
 	popup_menu = popup_menu_create();
 	popup_window = popup_window_create();
-
-	// Tray icon
 	tray_icon_create();
 
-	// Set preferences
+	/* Apply preferences */
 	apply_prefs(0);
 
-	// Update levels
-	get_current_levels();
-
-
+	/* Run */
 	gtk_main();
 
+	/* Cleanup */
 	tray_icon_destroy();
 	popup_window_destroy(popup_window);
 	popup_menu_destroy(popup_menu);

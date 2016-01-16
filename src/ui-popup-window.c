@@ -38,6 +38,15 @@
 #define POPUP_WINDOW_VERTICAL_UI_FILE   "popup-window-vertical-gtk2.glade"
 #endif
 
+enum orientation {
+	VERTICAL,
+	HORIZONTAL
+};
+
+static enum orientation slider_orientation;
+static gboolean display_volume_text;
+static GtkPositionType volume_text_position;
+
 /*
  * Widget signal handlers
  */
@@ -133,7 +142,7 @@ on_vol_scale_changed_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
 	if (ismuted() == 0)
 		setmute(popup_noti);
 
-	on_volume_has_changed();
+	do_update_ui();
 
 	return FALSE;
 }
@@ -159,14 +168,11 @@ popup_window_on_mixer_pressed(G_GNUC_UNUSED GtkButton *button,
 static PopupWindow *
 build_popup_window(void)
 {
-	gchar *orientation;
 	gchar *uifile;
 	GtkBuilder *builder;
 	PopupWindow *window;
 
-	orientation = prefs_get_string("SliderOrientation", "vertical");
-
-	if (!g_strcmp0(orientation, "horizontal"))
+	if (slider_orientation == HORIZONTAL)
 		uifile = get_ui_file(POPUP_WINDOW_HORIZONTAL_UI_FILE);
 	else
 		uifile = get_ui_file(POPUP_WINDOW_VERTICAL_UI_FILE);
@@ -185,7 +191,6 @@ build_popup_window(void)
 
 	g_object_unref(G_OBJECT(builder));
 	g_free(uifile);
-	g_free(orientation);
 
 	return window;
 }
@@ -207,24 +212,12 @@ static void
 update_vol_text(PopupWindow *window)
 {
 	GtkScale *vol_scale;
-	gboolean display_text;
-	gint text_pos;
 
 	vol_scale = GTK_SCALE(window->vol_scale);
 
-	display_text = prefs_get_boolean("DisplayTextVolume", TRUE);
-	text_pos = prefs_get_integer("TextVolumePosition", 0);
-
-	if (display_text) {
-		GtkPositionType pos;
-
-		pos =   text_pos == 0 ? GTK_POS_TOP :
-			text_pos == 1 ? GTK_POS_BOTTOM :
-			text_pos == 2 ? GTK_POS_LEFT :
-			GTK_POS_RIGHT;
-
+	if (display_volume_text) {
 		gtk_scale_set_draw_value(vol_scale, TRUE);
-		gtk_scale_set_value_pos(vol_scale, pos);
+		gtk_scale_set_value_pos(vol_scale, volume_text_position);
 	} else
 		gtk_scale_set_draw_value(vol_scale, FALSE);
 }
@@ -235,7 +228,7 @@ update_vol_text(PopupWindow *window)
  * @param window the popup window to update
  */
 static void
-update_mute_check(PopupWindow *window)
+update_mute_check(PopupWindow *window, int muted)
 {
 	GtkToggleButton *mute_check;
 	gint n_handlers_blocked;
@@ -246,13 +239,21 @@ update_mute_check(PopupWindow *window)
 		(G_OBJECT(mute_check), popup_window_on_mute_toggled, window);
 	g_assert(n_handlers_blocked == 1);
 
-	if (ismuted() == 1)
+	if (muted)
 		gtk_toggle_button_set_active(mute_check, FALSE);
 	else
 		gtk_toggle_button_set_active(mute_check, TRUE);
 
 	g_signal_handlers_unblock_by_func
 		(G_OBJECT(mute_check), popup_window_on_mute_toggled, window);
+}
+
+static void
+update_volume_slider(PopupWindow *window, int volume)
+{
+	GtkAdjustment *vol_adj = window->vol_adj;
+
+	gtk_adjustment_set_value(vol_adj, (double) volume);
 }
 
 /*
@@ -265,8 +266,8 @@ popup_window_toggle(PopupWindow *window)
 	GtkWidget *popup_window = window->window;
 	GtkWidget *vol_scale = window->vol_scale;
 
-	// Ensure levels are up to date
-	get_current_levels();
+	// Ensure the window is up to date
+	popup_window_update(window);
 
 	// If already visible, hide it
 	if (gtk_widget_get_visible(popup_window)) {
@@ -327,8 +328,46 @@ popup_window_hide(PopupWindow *window)
 void
 popup_window_update(PopupWindow *window)
 {
+	int volume = getvol();
+	int muted = ismuted();
+
 	update_vol_text(window);
-	update_mute_check(window);
+	update_mute_check(window, muted);
+	update_volume_slider(window, volume);
+}
+
+void
+popup_window_reload_prefs(PopupWindow *window)
+{
+	// slider orientation
+	gchar *orientation;
+	orientation = prefs_get_string("SliderOrientation", "vertical");
+	if (!g_strcmp0(orientation, "horizontal"))
+		slider_orientation = HORIZONTAL;
+	else
+		slider_orientation = VERTICAL;
+	g_free(orientation);
+
+	// volume text display
+	display_volume_text = prefs_get_boolean("DisplayTextVolume", TRUE);
+
+	// volume text position
+	gint position;
+	position = prefs_get_integer("TextVolumePosition", 0);
+	volume_text_position =
+		position == 0 ? GTK_POS_TOP :
+		position == 1 ? GTK_POS_BOTTOM :
+		position == 2 ? GTK_POS_LEFT :
+		GTK_POS_RIGHT;
+
+	// scroll steps
+	gint scroll_step;
+	scroll_step = prefs_get_integer("ScrollStep", 5);
+	gtk_adjustment_set_page_increment(window->vol_adj, scroll_step);
+
+	gint fine_scroll_step;
+	fine_scroll_step = prefs_get_integer("FineScrollStep", 1);
+	gtk_adjustment_set_step_increment(window->vol_adj, fine_scroll_step);
 }
 
 void

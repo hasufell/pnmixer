@@ -51,6 +51,7 @@ static gboolean icon_system_theme;
 static gboolean draw_volume_meter;
 static int draw_offset;
 static guchar vol_meter_red, vol_meter_green, vol_meter_blue;
+static gint scroll_step;
 
 /* Value to draw volume meter, depending on icon size and conf */
 static float vol_meter_div_factor;
@@ -259,10 +260,7 @@ on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
 	if (ismuted() == 0)
 		setmute(mouse_noti);
 
-	// this will set the slider value
-	get_current_levels();
-
-	on_volume_has_changed();
+	do_update_ui();
 
 	return TRUE;
 }
@@ -387,6 +385,8 @@ tray_icon_reload_prefs(void)
 	vol_meter_green = vol_meter_clrs[1] * 255;
 	vol_meter_blue = vol_meter_clrs[2] * 255;
 	g_free(vol_meter_clrs);
+
+	scroll_step = prefs_get_integer("ScrollStep", 5);
 
 	populate_icon_array();
 	populate_volume_meter();
