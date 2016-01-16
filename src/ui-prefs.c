@@ -731,7 +731,7 @@ populate_window(UiPrefsData *prefs_data)
 	// volume meter position
 	gtk_adjustment_set_upper
 	(GTK_ADJUSTMENT(prefs_data->vol_meter_pos_adjustment),
-	 tray_icon_size() - 10);
+	 get_tray_icon_size() - 10);
 
 	gtk_spin_button_set_value
 	(GTK_SPIN_BUTTON(prefs_data->vol_meter_pos_spin),

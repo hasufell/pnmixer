@@ -38,7 +38,7 @@
                 <property name="adjustment">vol_scale_adjustment</property>
                 <property name="inverted">True</property>
                 <property name="digits">0</property>
-                <signal name="change-value" handler="vol_scroll_event" swapped="no"/>
+                <signal name="change-value" handler="on_vol_scale_changed_value" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>

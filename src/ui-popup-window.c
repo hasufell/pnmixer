@@ -93,6 +93,51 @@ popup_window_on_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
 	return FALSE;
 }
 
+/**
+ * Callback function when the vol_scale (GtkScale) in the volume
+ * popup window received the change-value signal
+ * (either via mouse or keyboard).
+ *
+ * @param range the GtkRange that received the signal
+ * @param scroll the type of scroll action that was performed
+ * @param value the new value resulting from the scroll action
+ * @param user_data user data set when the signal handler was connected
+ * @return TRUE to prevent other handlers from being invoked for the
+ * signal, FALSE to propagate the signal further
+ */
+
+gboolean
+on_vol_scale_changed_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
+                           gdouble value, G_GNUC_UNUSED gpointer user_data)
+{
+	GtkAdjustment *gtk_adj;
+	int volumeset;
+
+	/* We must ensure that the new value meets the requirement
+	 * defined by the GtkAdjustment. We have to do that manually,
+	 * because at this moment the value within GtkAdjustment
+	 * has not been updated yet, so using gtk_adjustment_get_value()
+	 * returns a wrong value.
+	 */
+
+	gtk_adj = gtk_range_get_adjustment(range);
+
+	if (value < gtk_adjustment_get_lower(gtk_adj))
+		value = gtk_adjustment_get_lower(gtk_adj);
+	if (value > gtk_adjustment_get_upper(gtk_adj))
+		value = gtk_adjustment_get_upper(gtk_adj);
+
+	volumeset = (int) value;
+
+	setvol(volumeset, 0, popup_noti);
+	if (ismuted() == 0)
+		setmute(popup_noti);
+
+	on_volume_has_changed();
+
+	return FALSE;
+}
+
 void
 popup_window_on_mute_toggled(G_GNUC_UNUSED GtkToggleButton *button,
                              G_GNUC_UNUSED PopupWindow *window)
@@ -213,6 +258,71 @@ update_mute_check(PopupWindow *window)
 /*
  * Public functions
  */
+
+void
+popup_window_toggle(PopupWindow *window)
+{
+	GtkWidget *popup_window = window->window;
+	GtkWidget *vol_scale = window->vol_scale;
+
+	// Ensure levels are up to date
+	get_current_levels();
+
+	// If already visible, hide it
+	if (gtk_widget_get_visible(popup_window)) {
+		gtk_widget_hide(popup_window);
+		return;
+	}
+
+	// Otherwise, show the window
+	gtk_widget_show_now(popup_window);
+
+	// Give focus to volume scale
+	gtk_widget_grab_focus(vol_scale);
+
+	// TODO is this code really needed ?
+#ifdef WITH_GTK3
+	GdkDevice *pointer_dev = gtk_get_current_event_device();
+
+	if (pointer_dev == NULL)
+		return;
+	
+	if (gdk_device_grab(pointer_dev,
+	                    gtk_widget_get_window(popup_window),
+	                    GDK_OWNERSHIP_NONE,
+	                    TRUE,
+	                    GDK_BUTTON_PRESS_MASK,
+	                    NULL,
+	                    GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
+		g_warning("Could not grab %s\n",
+		          gdk_device_get_name(pointer_dev));
+
+	GdkDevice *keyboard_dev = gdk_device_get_associated_device(pointer_dev);
+
+	if (keyboard_dev == NULL)
+		return;
+				
+	if (gdk_device_grab(keyboard_dev,
+	                    gtk_widget_get_window(popup_window),
+	                    GDK_OWNERSHIP_NONE,
+	                    TRUE,
+	                    GDK_KEY_PRESS_MASK,
+	                    NULL, GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
+		g_warning("Could not grab %s\n",
+		          gdk_device_get_name(keyboard_dev));
+#else
+	gdk_pointer_grab(gtk_widget_get_window(popup_window), TRUE,
+	                 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);	
+	gdk_keyboard_grab(gtk_widget_get_window(popup_window), TRUE,
+	                  GDK_CURRENT_TIME);
+#endif
+}
+
+void
+popup_window_hide(PopupWindow *window)
+{
+	gtk_widget_hide(window->window);
+}
 
 void
 popup_window_update(PopupWindow *window)

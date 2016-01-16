@@ -29,4 +29,7 @@ typedef struct popup_menu PopupMenu;
 PopupMenu *popup_menu_create(void);
 void       popup_menu_destroy(PopupMenu *menu);
 void       popup_menu_update(PopupMenu *menu);
+void       popup_menu_show(PopupMenu *menu, GtkStatusIcon *status_icon,
+                           guint button, guint activate_time);
+
 #endif				// UI_POPUP_MENU_H_

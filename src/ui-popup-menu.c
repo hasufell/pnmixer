@@ -79,7 +79,7 @@ void
 popup_menu_on_prefs_clicked(G_GNUC_UNUSED GtkMenuItem *item,
                             G_GNUC_UNUSED PopupMenu *menu)
 {
-	do_prefs();
+	do_open_prefs();
 }
 
 void
@@ -206,6 +206,15 @@ update_mute_check(PopupMenu *menu)
 /*
  * Public functions
  */
+
+void
+popup_menu_show(PopupMenu *menu, GtkStatusIcon *status_icon,
+                guint button, guint activate_time)
+{
+	gtk_menu_popup(menu->menu, NULL, NULL,
+	               gtk_status_icon_position_menu, status_icon,
+		       button, activate_time);
+}
 
 void
 popup_menu_update(PopupMenu *menu)

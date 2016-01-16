@@ -13,12 +13,12 @@ pnmixer_SOURCES = \
 	hotkeys.c hotkeys.h \
 	notify.c notify.h \
 	alsa.c alsa.h \
-	callbacks.c callbacks.h \
 	prefs.c prefs.h \
 	debug.h \
 	ui-prefs.c ui-prefs.h \
 	ui-popup-menu.c ui-popup-menu.h \
-	ui-popup-window.c ui-popup-window.h
+	ui-popup-window.c ui-popup-window.h \
+	ui-tray-icon.c ui-tray-icon.h
 
 pnmixer_LDADD = @PACKAGE_LIBS@ $(INTLLIBS)
 
