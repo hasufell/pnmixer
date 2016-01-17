@@ -982,8 +982,6 @@ prefs_window_create(void)
 	populate_window(window);
 
 	gtk_widget_show(window->window);
-
-	return TRUE;
 }
 
 void

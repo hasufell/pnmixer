@@ -47,6 +47,9 @@
 #define N_(String) (String)
 #endif
 
+#define gtk_builder_get_widget(builder, name)	  \
+	GTK_WIDGET(gtk_builder_get_object(builder, name))
+
 #ifndef WITH_GTK3
 GtkBuilder *gtk_builder_new_from_file (const gchar *filename);
 #endif

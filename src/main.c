@@ -142,7 +142,7 @@ apply_prefs(gint alsa_change)
 	popup_window_reload_prefs(popup_window);
 	tray_icon_reload_prefs();
 	do_update_ui();
-
+	
 	if (alsa_change)
 		do_alsa_reinit();
 }
@@ -197,7 +197,7 @@ void
 do_show_popup_menu(GtkStatusIcon *status_icon, guint button, guint activate_time)
 {
 	popup_window_hide(popup_window);
-	popup_menu_show(popup_menu, status_icon, button, activate_time);
+	popup_menu_show(popup_menu, gtk_status_icon_position_menu, status_icon, button, activate_time);
 }
 
 /**
@@ -337,9 +337,11 @@ main(int argc, char *argv[])
 	tray_icon_create();
 
 	/* Apply preferences */
+	DEBUG_PRINT("Applying prefs...");
 	apply_prefs(0);
 
 	/* Run */
+	DEBUG_PRINT("Running main loop...");
 	gtk_main();
 
 	/* Cleanup */
