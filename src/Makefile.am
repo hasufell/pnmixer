@@ -15,7 +15,7 @@ pnmixer_SOURCES = \
 	alsa.c alsa.h \
 	prefs.c prefs.h \
 	debug.h \
-	ui-prefs.c ui-prefs.h \
+	ui-prefs-window.c ui-prefs-window.h \
 	ui-popup-menu.c ui-popup-menu.h \
 	ui-popup-window.c ui-popup-window.h \
 	ui-tray-icon.c ui-tray-icon.h

@@ -38,7 +38,7 @@
 #include "support.h"
 #include "hotkeys.h"
 #include "prefs.h"
-#include "ui-prefs.h"
+#include "ui-prefs-window.h"
 #include "ui-popup-menu.h"
 #include "ui-popup-window.h"
 #include "ui-tray-icon.h"
@@ -147,57 +147,6 @@ apply_prefs(gint alsa_change)
 		do_alsa_reinit();
 }
 
-static gboolean
-on_prefs_ok_clicked(G_GNUC_UNUSED GtkButton *button, UiPrefsData *data)
-{
-	/* Save values to preferences */
-	ui_prefs_retrieve_values(data);
-	ui_prefs_destroy_window(data);
-
-	/* Save preferences to file */
-	prefs_save();
-
-	/* Make it effective */
-	apply_prefs(1);
-
-	return TRUE;
-}
-
-static gboolean
-on_prefs_cancel_clicked(G_GNUC_UNUSED GtkButton *button, UiPrefsData *data)
-{
-	ui_prefs_destroy_window(data);
-
-	return TRUE;
-}
-
-/**
- * Callback function when a key is hit in prefs_window. Currently handles
- * Esc key (calls on_cancel_button_clicked())
- * and
- * Return key (calls on_ok_button_clicked()).
- *
- * @param widget the widget that received the signal
- * @param event the key event that was triggered
- * @param data struct holding the GtkWidgets of the preferences windows
- * @return TRUE to stop other handlers from being invoked for the event.
- * False to propagate the event further
- */
-static gboolean
-on_key_pressed(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, UiPrefsData *data)
-{
-	switch (event->keyval) {
-	case GDK_KEY_Escape:
-		return on_prefs_cancel_clicked(NULL, data);
-		break;
-	case GDK_KEY_Return:
-		return on_prefs_ok_clicked(NULL, data);
-		break;
-	default:
-		return FALSE;
-	}
-}
-
 /**
  * Runs a given command via g_spawn_command_line_async().
  *
@@ -235,9 +184,7 @@ do_mute(gboolean notify)
 void
 do_open_prefs(void)
 {
-	ui_prefs_create_window(G_CALLBACK(on_prefs_ok_clicked),
-	                       G_CALLBACK(on_prefs_cancel_clicked),
-	                       G_CALLBACK(on_key_pressed));
+	prefs_window_create();
 }
 
 void

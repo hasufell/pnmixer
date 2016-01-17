@@ -39,4 +39,6 @@ gint get_tray_icon_size(void);
 void report_error(char *, ...);
 void warn_sound_conn_lost(void);
 
+void apply_prefs(gint alsa_change);
+
 #endif				// MAIN_H
