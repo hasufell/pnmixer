@@ -29,8 +29,8 @@ void do_mixer(void);
 void do_custom_command(void);
 void do_alsa_reinit(void);
 void do_toggle_popup_window(void);
-void do_show_popup_menu(GtkStatusIcon *status_icon, guint button, guint activate_time);
-
+void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
+                        guint button, guint activate_time);
 void do_update_ui(void);
 
 

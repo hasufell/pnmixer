@@ -17,8 +17,6 @@
 #ifndef UI_POPUP_MENU_H_
 #define UI_POPUP_MENU_H_
 
-#include <gtk/gtk.h>
-
 typedef struct popup_menu PopupMenu;
 
 PopupMenu *popup_menu_create(void);

@@ -26,7 +26,6 @@
 #include "support.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
-#include "debug.h"
 
 #include "alsa.h"
 #include "main.h"
@@ -46,9 +45,7 @@ struct popup_menu {
 #endif
 };
 
-/*
- * Widget signal handlers
- */
+/* Widget signal handlers */
 
 /**
  * Propagates the activate signal on mute_item (GtkMenuItem) in the right-click
@@ -110,6 +107,8 @@ popup_menu_on_about_activated(G_GNUC_UNUSED GtkMenuItem *item,
 	about_dialog_run(dialog);
 	about_dialog_destroy(dialog);
 }
+
+/* Helpers */
 
 /**
  * Update the mute checkbox according to the current alsa state
@@ -176,7 +175,7 @@ void
 popup_menu_destroy(PopupMenu *menu)
 {
 	gtk_widget_destroy(menu->menu);
-	g_slice_free(PopupMenu, menu);
+	g_free(menu);
 }
 
 PopupMenu *
@@ -192,12 +191,12 @@ popup_menu_create(void)
 	DEBUG_PRINT("Building popup menu from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	menu = g_slice_new(PopupMenu);
-	menu->menu = gtk_builder_get_widget(builder, "popup_menu");
+	menu = g_new(PopupMenu, 1);
+	assign_gtk_widget(builder, menu, menu);
 #ifdef WITH_GTK3
-	menu->mute_check = gtk_builder_get_widget(builder, "mute_check");
+	assign_gtk_widget(builder, menu, mute_check);
 #else
-	menu->mute_item = gtk_builder_get_widget(builder, "mute_item");
+	assign_gtk_widget(builder, menu, mute_item);
 #endif
 
 	gtk_builder_connect_signals(builder, menu);

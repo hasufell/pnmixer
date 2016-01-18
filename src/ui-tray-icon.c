@@ -280,7 +280,7 @@ static void
 on_popup_menu(GtkStatusIcon *status_icon, guint button,
               guint activate_time, GtkMenu *menu)
 {
-	do_show_popup_menu(tray_icon, button, activate_time);
+	do_show_popup_menu(gtk_status_icon_position_menu, tray_icon, button, activate_time);
 }
 
 /**

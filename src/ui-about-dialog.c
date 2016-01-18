@@ -46,7 +46,7 @@ void
 about_dialog_destroy(AboutDialog *dialog)
 {
 	gtk_widget_destroy(dialog->dialog);
-	g_slice_free(AboutDialog, dialog);
+	g_free(dialog);
 }
 
 AboutDialog *
@@ -62,8 +62,8 @@ about_dialog_create(void)
 	DEBUG_PRINT("Building about dialog from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	dialog = g_slice_new(AboutDialog);
-	dialog->dialog = gtk_builder_get_widget(builder, "about_dialog");
+	dialog = g_new(AboutDialog, 1);
+	assign_gtk_widget(builder, dialog, dialog);
 
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog->dialog), VERSION);
 

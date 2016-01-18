@@ -17,22 +17,15 @@
 #ifndef UI_POPUP_WINDOW_H_
 #define UI_POPUP_WINDOW_H_
 
-#include <gtk/gtk.h>
-
-struct popup_window {
-	GtkWidget *window;
-	GtkWidget *vol_scale;
-	GtkAdjustment *vol_adj;
-	GtkWidget *mute_check;
-};
-
 typedef struct popup_window PopupWindow;
 
 PopupWindow *popup_window_create(void);
-void         popup_window_destroy(PopupWindow *window);
-void         popup_window_reload_prefs(PopupWindow *window);
-void         popup_window_update(PopupWindow *window);
-void         popup_window_hide(PopupWindow *window);
-void         popup_window_toggle(PopupWindow *window);
+void popup_window_destroy(PopupWindow *window);
+void popup_window_hide(PopupWindow *window);
+void popup_window_toggle(PopupWindow *window);
+void popup_window_update(PopupWindow *window);
+
+#include <gtk/gtk.h>
+GtkWindow *popup_window_get_gtk_window(PopupWindow *window);
 
 #endif				// UI_POPUP_WINDOW_H_

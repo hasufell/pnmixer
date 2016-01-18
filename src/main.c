@@ -49,8 +49,7 @@ static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
 
 /**
- * Reports an error, usually via a dialog window or
- * on stderr.
+ * Reports an error, usually via a dialog window or on stderr.
  *
  * @param err the error
  * @param ... more string segments in the format of printf
@@ -59,15 +58,18 @@ void
 report_error(char *err, ...)
 {
 	va_list ap;
+
 	va_start(ap, err);
+
 	if (popup_window) {
-		vsnprintf(err_buf, 512, err, ap);
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(popup_window->window),
+		GtkWindow *window = popup_window_get_gtk_window(popup_window);
+		GtkWidget *dialog = gtk_message_dialog_new(window,
 				    GTK_DIALOG_DESTROY_WITH_PARENT,
 				    GTK_MESSAGE_ERROR,
 				    GTK_BUTTONS_CLOSE,
 				    NULL);
 		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+		vsnprintf(err_buf, 512, err, ap);
 		g_object_set(dialog, "text", err_buf, NULL);
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
@@ -75,6 +77,7 @@ report_error(char *err, ...)
 		vfprintf(stderr, err, ap);
 		fprintf(stderr, "\n");
 	}
+
 	va_end(ap);
 }
 
@@ -87,7 +90,8 @@ warn_sound_conn_lost(void)
 {
 	if (popup_window) {
 		gint resp;
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(popup_window->window),
+		GtkWindow *window = popup_window_get_gtk_window(popup_window);
+		GtkWidget *dialog = gtk_message_dialog_new(window,
 				    GTK_DIALOG_DESTROY_WITH_PARENT,
 				    GTK_MESSAGE_ERROR,
 				    GTK_BUTTONS_YES_NO,
@@ -139,7 +143,12 @@ apply_prefs(gint alsa_change)
 	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
 	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
 
-	popup_window_reload_prefs(popup_window);
+	// Popup window, rebuild it from scratch. This is needed in case
+	// the slider orientation was modified.
+	popup_window_destroy(popup_window);
+	popup_window = popup_window_create();
+
+	// Tray icon, reload
 	tray_icon_reload_prefs();
 	do_update_ui();
 	
@@ -158,8 +167,6 @@ run_command(const gchar *cmd)
 	GError *error = NULL;
 
 	g_assert(cmd != NULL);
-
-	gtk_widget_hide(popup_window->window);
 
 	if (g_spawn_command_line_async(cmd, &error) == FALSE) {
 		report_error(_("Unable to run command: %s"), error->message);
@@ -194,10 +201,10 @@ do_toggle_popup_window(void)
 }
 
 void
-do_show_popup_menu(GtkStatusIcon *status_icon, guint button, guint activate_time)
+do_show_popup_menu(GtkMenuPositionFunc func, gpointer data, guint button, guint activate_time)
 {
 	popup_window_hide(popup_window);
-	popup_menu_show(popup_menu, gtk_status_icon_position_menu, status_icon, button, activate_time);
+	popup_menu_show(popup_menu, func, data, button, activate_time);
 }
 
 /**

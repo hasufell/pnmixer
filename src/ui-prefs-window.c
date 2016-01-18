@@ -898,7 +898,7 @@ build_window(void)
 #define GO(name) window->name = G_OBJECT(gtk_builder_get_object(builder, #name))
 #define GW(name) window->name = GTK_WIDGET(gtk_builder_get_object(builder, #name))
 	/* Top-level widgets */
-	GW(window);
+	window->window = GTK_WIDGET(gtk_builder_get_object(builder, "prefs_window"));
 	GW(notebook);
 	GW(ok_button);
 	GW(cancel_button);
@@ -981,6 +981,7 @@ prefs_window_create(void)
 	window = build_window();
 	populate_window(window);
 
+	printf("About to show...\n");
 	gtk_widget_show(window->window);
 }
 

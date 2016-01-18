@@ -2,12 +2,12 @@
 <interface>
   <requires lib="gtk+" version="2.24"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkAdjustment" id="vol_scale_adjustment">
+  <object class="GtkAdjustment" id="vol_scale_adj">
     <property name="upper">100</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkWindow" id="popup_window">
+  <object class="GtkWindow" id="window">
     <property name="type">popup</property>
     <property name="height_request">280</property>
     <property name="width_request">80</property>
@@ -35,10 +35,10 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="orientation">vertical</property>
-                <property name="adjustment">vol_scale_adjustment</property>
+                <property name="adjustment">vol_scale_adj</property>
                 <property name="inverted">True</property>
                 <property name="digits">0</property>
-                <signal name="change-value" handler="on_vol_scale_changed_value" swapped="no"/>
+                <signal name="change-value" handler="popup_window_on_vol_scale_change_value" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>

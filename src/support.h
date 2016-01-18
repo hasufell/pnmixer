@@ -50,6 +50,33 @@
 #define gtk_builder_get_widget(builder, name)	  \
 	GTK_WIDGET(gtk_builder_get_object(builder, name))
 
+#define gtk_builder_get_adjustment(builder, name)	  \
+	GTK_ADJUSTMENT(gtk_builder_get_object(builder, name))
+
+/* 
+ * 'assign' functions are used to retrieve a widget from a GtkBuilder
+ * and to assign it into a structure. This is used a lot when we build
+ * a window, and need to keep a pointer toward some widgets for later use.
+ * This macro is more clever that it seems:
+ * - it ensures that the name used in the struct is the same as the name used
+ *   in the ui file, therefore forcing a consistent naming across the code.
+ * - it ensures that the widget was found amidst the GtkBuilder collection,
+ *   therefore detecting errors that can happend when reworking the ui files.
+ */
+
+#define assign_gtk_widget(builder, container, name)	  \
+	do { \
+		container->name = gtk_builder_get_widget(builder, #name); \
+		g_assert(GTK_IS_WIDGET(container->name)); \
+	} while (0)
+
+#define assign_gtk_adjustment(builder, container, name)	  \
+	do { \
+		container->name = gtk_builder_get_adjustment(builder, #name); \
+		g_assert(GTK_IS_ADJUSTMENT(container->name)); \
+	} while (0)
+
+
 #ifndef WITH_GTK3
 GtkBuilder *gtk_builder_new_from_file (const gchar *filename);
 #endif
