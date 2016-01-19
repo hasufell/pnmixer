@@ -235,14 +235,14 @@ on_card_changed(GtkComboBoxText *box, PrefsWindow *window)
 }
 
 /**
- * Handler for the signal 'changed' on the GtkComboBox middle_click_combo.
+ * Handler for the signal 'changed' on the GtkComboBoxText middle_click_combo.
  * Updates the preferences window.
  *
  * @param box the combobox which received the signal
  * @param window user data set when the signal handler was connected
  */
 void
-on_middle_click_changed(GtkComboBox *box, PrefsWindow *window)
+on_middle_click_changed(GtkComboBoxText *box, PrefsWindow *window)
 {
 	gboolean cust = gtk_combo_box_get_active(GTK_COMBO_BOX(box)) == 3;
 	gtk_widget_set_sensitive(window->custom_label, cust);
@@ -792,7 +792,7 @@ populate_window_values(PrefsWindow *window)
 	(GTK_COMBO_BOX(window->middle_click_combo),
 	 prefs_get_integer("MiddleClickAction", 0));
 
-	on_middle_click_changed(GTK_COMBO_BOX(window->middle_click_combo), window);
+	on_middle_click_changed(GTK_COMBO_BOX_TEXT(window->middle_click_combo), window);
 
 	// custom command
 	gtk_entry_set_invisible_char(GTK_ENTRY(window->custom_entry), 8226);

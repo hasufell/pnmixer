@@ -8,26 +8,6 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkListStore" id="middle_click_liststore">
-    <columns>
-      <!-- column-name Text -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">Mute/Unmute</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Show Preferences</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Volume Control</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Custom (set below)</col>
-      </row>
-    </data>
-  </object>
   <object class="GtkVBox" id="noti_vbox_disabled">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -910,17 +890,16 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkComboBox" id="middle_click_combo">
+                                  <object class="GtkComboBoxText" id="middle_click_combo">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <property name="model">middle_click_liststore</property>
+                                    <items>
+                                      <item translatable="yes">Mute/Unmute</item>
+                                      <item translatable="yes">Show Preferences</item>
+                                      <item translatable="yes">Volume Control</item>
+                                      <item translatable="yes">Custom (set below)</item>
+                                    </items>
                                     <signal name="changed" handler="on_middle_click_changed" swapped="no"/>
-                                    <child>
-                                      <object class="GtkCellRendererText" id="middle_text_rend"/>
-                                      <attributes>
-                                        <attribute name="text">0</attribute>
-                                      </attributes>
-                                    </child>
                                   </object>
                                   <packing>
                                     <property name="left_attach">1</property>
