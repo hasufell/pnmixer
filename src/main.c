@@ -47,6 +47,7 @@ static char err_buf[512];
 
 static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
+static TrayIcon *tray_icon;
 
 /**
  * Reports an error, usually via a dialog window or on stderr.
@@ -149,7 +150,7 @@ apply_prefs(gint alsa_change)
 	popup_window = popup_window_create();
 
 	// Tray icon, reload
-	tray_icon_reload_prefs();
+	tray_icon_reload_prefs(tray_icon);
 	do_update_ui();
 	
 	if (alsa_change)
@@ -263,7 +264,7 @@ do_alsa_reinit(void)
 void
 do_update_ui(void)
 {
-	tray_icon_update();
+	tray_icon_update(tray_icon);
 	popup_window_update(popup_window);
 	popup_menu_update(popup_menu);
 }
@@ -271,7 +272,7 @@ do_update_ui(void)
 gint
 get_tray_icon_size(void)
 {
-	return tray_icon_get_size();
+	return tray_icon_get_size(tray_icon);
 }
 
 static gboolean version = FALSE;
@@ -334,6 +335,7 @@ main(int argc, char *argv[])
 	prefs_ensure_save_dir();
 	prefs_load();
 
+
 	/* Init everything */
 	alsa_init();
 	init_libnotify();
@@ -341,7 +343,7 @@ main(int argc, char *argv[])
 
 	popup_menu = popup_menu_create();
 	popup_window = popup_window_create();
-	tray_icon_create();
+	tray_icon = tray_icon_create();
 
 	/* Apply preferences */
 	DEBUG_PRINT("Applying prefs...");
@@ -352,7 +354,7 @@ main(int argc, char *argv[])
 	gtk_main();
 
 	/* Cleanup */
-	tray_icon_destroy();
+	tray_icon_destroy(tray_icon);
 	popup_window_destroy(popup_window);
 	popup_menu_destroy(popup_menu);
 

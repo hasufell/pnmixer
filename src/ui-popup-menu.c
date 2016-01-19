@@ -185,13 +185,16 @@ popup_menu_create(void)
 	GtkBuilder *builder;
 	PopupMenu *menu;
 
+	menu = g_new0(PopupMenu, 1);
+
+	/* Build UI file */
 	uifile = get_ui_file(POPUP_MENU_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG_PRINT("Building popup menu from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	menu = g_new(PopupMenu, 1);
+	/* Save some widgets for later use */
 	assign_gtk_widget(builder, menu, menu);
 #ifdef WITH_GTK3
 	assign_gtk_widget(builder, menu, mute_check);
@@ -199,8 +202,10 @@ popup_menu_create(void)
 	assign_gtk_widget(builder, menu, mute_item);
 #endif
 
+	/* Connect signal handlers */
 	gtk_builder_connect_signals(builder, menu);
 
+	/* Cleanup */
 	g_object_unref(builder);
 	g_free(uifile);
 

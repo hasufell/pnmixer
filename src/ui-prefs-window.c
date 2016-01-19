@@ -551,7 +551,7 @@ retrieve_window_values(PrefsWindow *window)
 	colors[1] = (gdouble) color.green / 65536;
 	colors[2] = (gdouble) color.blue / 65536;
 #endif
-	prefs_set_vol_meter_colors(colors, 3);
+	prefs_set_double_list("VolMeterColor", colors, 3);
 
 	// icon theme
 	GtkWidget *system_theme = window->system_theme;
@@ -737,7 +737,7 @@ populate_window(PrefsWindow *window)
 	 prefs_get_integer("VolMeterPos", 0));
 
 	// volume meter colors
-	vol_meter_clrs = prefs_get_vol_meter_colors();
+	vol_meter_clrs = prefs_get_double_list("VolMeterColor", NULL);
 #ifdef WITH_GTK3
 	GdkRGBA vol_meter_color_button_color;
 

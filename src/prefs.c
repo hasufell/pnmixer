@@ -63,15 +63,17 @@ static GKeyFile *keyFile;
  * @return the preference value or def on error
  */
 gboolean
-prefs_get_boolean(gchar *key, gboolean def)
+prefs_get_boolean(const gchar *key, gboolean def)
 {
 	gboolean ret;
 	GError *error = NULL;
+
 	ret = g_key_file_get_boolean(keyFile, "PNMixer", key, &error);
 	if (error) {
 		g_error_free(error);
 		return def;
 	}
+
 	return ret;
 }
 
@@ -84,15 +86,17 @@ prefs_get_boolean(gchar *key, gboolean def)
  * @return the preference value or def on error
  */
 gint
-prefs_get_integer(gchar *key, gint def)
+prefs_get_integer(const gchar *key, gint def)
 {
 	gint ret;
 	GError *error = NULL;
+
 	ret = g_key_file_get_integer(keyFile, "PNMixer", key, &error);
 	if (error) {
 		g_error_free(error);
 		return def;
 	}
+
 	return ret;
 }
 
@@ -105,15 +109,17 @@ prefs_get_integer(gchar *key, gint def)
  * @return the preference value or def on error
  */
 gdouble
-prefs_get_double(gchar *key, gdouble def)
+prefs_get_double(const gchar *key, gdouble def)
 {
 	gdouble ret;
 	GError *error = NULL;
+
 	ret = g_key_file_get_double(keyFile, "PNMixer", key, &error);
 	if (error) {
 		g_error_free(error);
 		return def;
 	}
+
 	return ret;
 }
 
@@ -123,10 +129,10 @@ prefs_get_double(gchar *key, gdouble def)
  *
  * @param key the specific settings key
  * @param def the default value to return on error
- * @return the preference value or def on error, must be freed.
+ * @return the preference value or def on error. Must be freed.
  */
 gchar *
-prefs_get_string(gchar *key, const gchar *def)
+prefs_get_string(const gchar *key, const gchar *def)
 {
 	gchar *ret = NULL;
 	GError *error = NULL;
@@ -136,8 +142,63 @@ prefs_get_string(gchar *key, const gchar *def)
 		g_error_free(error);
 		return g_strdup(def);
 	}
+
 	return ret;
 }
+
+/**
+ * Gets a list of doubles from preferences.
+ * On error, returns NULL.
+ *
+ * @param key the specific settings key
+ * @param numcols integer pointer that will contain the returned array size
+ * @return the preference value or NULL on error
+ */
+gdouble *
+prefs_get_double_list(const gchar *key, gsize *n)
+{
+	gsize numcols = 0;
+	gdouble *ret = NULL;
+	GError *error = NULL;
+	
+	ret = g_key_file_get_double_list(keyFile, "PNMixer", key, &numcols, &error);
+	if (error) {
+		g_error_free(error);
+		ret = NULL;
+	}
+
+	/* VolMeterColor
+	 * Ensure we get a valid list, and provide default values if needed.
+	 */
+	if (!g_strcmp0(key, "VolMeterColor")) {
+		gsize i;
+		
+		if (ret && numcols != 3) {
+			g_free(ret);
+			ret = NULL;
+		}
+
+		if (!ret) {
+			ret = g_malloc(3 * sizeof(gdouble));
+			ret[0] = 0.909803921569;
+			ret[1] = 0.43137254902;
+			ret[2] = 0.43137254902;
+		}	
+
+		for (i = 0; i < 3; i++) {
+			if (ret[i] < 0)
+				ret[i] = 0;
+			if (ret[i] > 1)
+				ret[i] = 1;
+		}
+	}
+
+	if (n)
+		*n = numcols;
+
+	return ret;
+}
+
 
 /**
  * Gets the currently selected channel of the specified Alsa Card
@@ -197,44 +258,10 @@ prefs_get_vol_command(void)
 }
 
 /**
- * Gets the volume meter colors which are drawn on top of the
- * tray_icon by reading the VolMeterColor entry of the config
- * file.
- *
- * @return array of doubles which holds the RGB values, from
- * 0 to 1.0
- */
-gdouble *
-prefs_get_vol_meter_colors(void)
-{
-	gdouble *colors;
-	gsize i, numcols;
-
-	colors = g_key_file_get_double_list(keyFile, "PNMixer", "VolMeterColor",
-	                                    &numcols, NULL);
-
-	if (!colors) {
-		colors = g_malloc(3 * sizeof(gdouble));
-		colors[0] = 0.909803921569;
-		colors[1] = 0.43137254902;
-		colors[2] = 0.43137254902;
-	}	
-
-	for (i =0; i < 3; i++) {
-		if (colors[i] < 0)
-			colors[i] = 0;
-		if (colors[i] > 1)
-			colors[i] = 1;
-	}
-
-	return colors;
-}
-
-/**
  * Sets a boolean value to preferences.
  *
  * @param key the specific settings key
- * @param def the value to set
+ * @param value the value to set
  */
 void
 prefs_set_boolean(const gchar *key, gboolean value)
@@ -246,7 +273,7 @@ prefs_set_boolean(const gchar *key, gboolean value)
  * Sets a integer value to preferences.
  *
  * @param key the specific settings key
- * @param def the value to set
+ * @param value the value to set
  */
 void
 prefs_set_integer(const gchar *key, gint value)
@@ -258,7 +285,7 @@ prefs_set_integer(const gchar *key, gint value)
  * Sets a double value to preferences.
  *
  * @param key the specific settings key
- * @param def the value to set
+ * @param value the value to set
  */
 void
 prefs_set_double(const gchar *key, gdouble value)
@@ -270,12 +297,25 @@ prefs_set_double(const gchar *key, gdouble value)
  * Sets a string value to preferences.
  *
  * @param key the specific settings key
- * @param def the value to set
+ * @param value the value to set
  */
 void
 prefs_set_string(const gchar *key, const gchar *value)
 {
 	g_key_file_set_string(keyFile, "PNMixer", key, value);
+}
+
+/**
+ * Sets a list of doubles to preferences.
+ *
+ * @param key the specific settings key
+ * @param list the array of double values to set
+ * @param n the array length
+ */
+void
+prefs_set_double_list(const gchar *key, gdouble *list, gsize n)
+{
+	g_key_file_set_double_list(keyFile, "PNMixer", key, list, n);
 }
 
 /**
@@ -288,20 +328,6 @@ void
 prefs_set_channel(const gchar *card, const gchar *channel)
 {
 	g_key_file_set_string(keyFile, card, "Channel", channel);
-}
-
-/**
- * Sets the volume meter colors which are drawn on top of the
- * tray_icon.
- *
- * @param colors an array of color swhich holds the RGB values,
- *        from 0 to 1.0
- * @param n the array size
- */
-void
-prefs_set_vol_meter_colors(gdouble *colors, gsize n)
-{
-	g_key_file_set_double_list(keyFile, "PNMixer", "VolMeterColor", colors, n);
 }
 
 /**

@@ -40,83 +40,153 @@ enum {
 	N_VOLUME_ICONS
 };
 
-static GdkPixbuf *icons[N_VOLUME_ICONS] = { NULL };
+struct tray_icon_prefs {
+	gboolean mouse_noti;
+	gint middle_click_action;
+	gint scroll_step;
+};
 
-static GtkStatusIcon *tray_icon;
+typedef struct tray_icon_prefs TrayIconPrefs;
 
-/* Preferences */
-static gboolean mouse_noti;
-static gint middle_click_action;
-static gboolean icon_system_theme;
-static gboolean draw_volume_meter;
-static int draw_offset;
-static guchar vol_meter_red, vol_meter_green, vol_meter_blue;
-static gint scroll_step;
+struct vol_meter {
+	/* Configuration */
+	guchar red;
+	guchar green;
+	guchar blue;
+	gint x_offset;
+	gint y_offset;
+	/* Dynamic stuff */
+	GdkPixbuf *pixbuf;
+	gint width;
+	guchar *row;
+};
 
-/* Value to draw volume meter, depending on icon size and conf */
-static float vol_meter_div_factor;
-static int vol_meter_width;
-static guchar *vol_meter_row;
+typedef struct vol_meter VolMeter;
 
-/* Helpers */
+struct tray_icon {
+	TrayIconPrefs *prefs;
+	VolMeter *vol_meter;
+	GtkStatusIcon *status_icon;
+	gint status_icon_size;
+	GdkPixbuf **pixbufs;
+};
+
+/* Tray icon preferences */
 
 static void
-populate_icon_array(void)
+tray_icon_prefs_free(TrayIconPrefs *prefs)
 {
-	guint i;
-	int size;
+	g_free(prefs);
+}
+
+static TrayIconPrefs *
+tray_icon_prefs_new(void)
+{
+	TrayIconPrefs *prefs;
+
+	prefs = g_new0(TrayIconPrefs, 1);
+
+	prefs->mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
+	prefs->middle_click_action = prefs_get_integer("MiddleClickAction", 0);
+	prefs->scroll_step = prefs_get_integer("ScrollStep", 5);
+
+	return prefs;
+}
+
+/*
+ * Tray icon pixbuf array.
+ * The array contains all the icons currently in use, stored as GdkPixbuf.
+ * The array is dynamic. It's built "just-in-time", that's to say the first
+ * time it's accessed. It avoids building it multiple times at startup.
+ * Also, when we need to reload the array, we just have to free it.
+ */
+
+static void
+pixbuf_array_free(GdkPixbuf **pixbufs)
+{
+	gsize i;
+
+	if (!pixbufs)
+		return;
 
 	for (i = 0; i < N_VOLUME_ICONS; i++)
-		g_clear_object(&icons[i]);
+		g_object_unref(pixbufs[i]);
 
-	size = tray_icon_get_size();
+	g_free(pixbufs);
+}
 
-	if (icon_system_theme) {
-		icons[VOLUME_MUTED] = get_stock_pixbuf("audio-volume-muted", size);
-		icons[VOLUME_OFF] = get_stock_pixbuf("audio-volume-off", size);
-		icons[VOLUME_LOW] = get_stock_pixbuf("audio-volume-low", size);
-		icons[VOLUME_MEDIUM] = get_stock_pixbuf("audio-volume-medium", size);
-		icons[VOLUME_HIGH] = get_stock_pixbuf("audio-volume-high", size);
+static GdkPixbuf **
+pixbuf_array_new(int size)
+{
+	GdkPixbuf *pixbufs[N_VOLUME_ICONS];
+	gboolean system_theme;
+
+	DEBUG_PRINT("Building pixbuf array for size %d)", size);
+
+	system_theme = prefs_get_boolean("SystemTheme", FALSE);
+
+	if (system_theme) {
+		pixbufs[VOLUME_MUTED] = get_stock_pixbuf("audio-volume-muted", size);
+		pixbufs[VOLUME_OFF] = get_stock_pixbuf("audio-volume-off", size);
+		pixbufs[VOLUME_LOW] = get_stock_pixbuf("audio-volume-low", size);
+		pixbufs[VOLUME_MEDIUM] = get_stock_pixbuf("audio-volume-medium", size);
+		pixbufs[VOLUME_HIGH] = get_stock_pixbuf("audio-volume-high", size);
 		/* 'audio-volume-off' is not available in every icon set.
 		 * Check freedesktop standard for more info:
 		 *   http://standards.freedesktop.org/icon-naming-spec/
 		 *   icon-naming-spec-latest.html
 		 */
-		if (icons[VOLUME_OFF] == NULL)
-			icons[VOLUME_OFF] = get_stock_pixbuf("audio-volume-low", size);
+		if (pixbufs[VOLUME_OFF] == NULL)
+			pixbufs[VOLUME_OFF] = get_stock_pixbuf("audio-volume-low", size);
 	} else {
-		icons[VOLUME_MUTED] = create_pixbuf("pnmixer-muted.png");
-		icons[VOLUME_OFF] = create_pixbuf("pnmixer-off.png");
-		icons[VOLUME_LOW] = create_pixbuf("pnmixer-low.png");
-		icons[VOLUME_MEDIUM] = create_pixbuf("pnmixer-medium.png");
-		icons[VOLUME_HIGH] = create_pixbuf("pnmixer-high.png");
+		pixbufs[VOLUME_MUTED] = create_pixbuf("pnmixer-muted.png");
+		pixbufs[VOLUME_OFF] = create_pixbuf("pnmixer-off.png");
+		pixbufs[VOLUME_LOW] = create_pixbuf("pnmixer-low.png");
+		pixbufs[VOLUME_MEDIUM] = create_pixbuf("pnmixer-medium.png");
+		pixbufs[VOLUME_HIGH] = create_pixbuf("pnmixer-high.png");
 	}
+
+	return g_memdup(pixbufs, sizeof pixbufs);
 }
 
+/* Tray icon volume meter */
+
 static void
-populate_volume_meter(void)
+vol_meter_free(VolMeter *vol_meter)
 {
-	int i, icon_width;
-
-	g_free(vol_meter_row);
-	vol_meter_row = NULL;
-
-	if (!draw_volume_meter)
+	if (!vol_meter)
 		return;
 
-	icon_width = gdk_pixbuf_get_height(icons[0]);
-	vol_meter_div_factor = ((gdk_pixbuf_get_height(icons[0]) - 10) / 100.0);
-	vol_meter_width = 1.25 * icon_width;
-	if (vol_meter_width % 4 != 0)
-		vol_meter_width -= (vol_meter_width % 4);
+	if (vol_meter->pixbuf)
+		g_object_unref(vol_meter->pixbuf);
 
-	vol_meter_row = g_malloc(vol_meter_width * sizeof(guchar));
-	for (i = 0; i < vol_meter_width / 4; i++) {
-		vol_meter_row[i * 4 + 0] = vol_meter_red;
-		vol_meter_row[i * 4 + 1] = vol_meter_green;
-		vol_meter_row[i * 4 + 2] = vol_meter_blue;
-		vol_meter_row[i * 4 + 3] = 255;
-	}
+	g_free(vol_meter->row);
+	g_free(vol_meter);
+}
+
+static VolMeter*
+vol_meter_new(void)
+{
+	VolMeter *vol_meter;
+	gboolean vol_meter_enabled;
+	gdouble *vol_meter_clrs;
+
+	vol_meter_enabled = prefs_get_boolean("DrawVolMeter", FALSE);
+	if (vol_meter_enabled == FALSE)
+		return NULL;
+
+	vol_meter = g_new0(VolMeter, 1);
+
+	vol_meter->x_offset = prefs_get_integer("VolMeterPos", 0);
+	vol_meter->y_offset = 5;
+
+	vol_meter_clrs = prefs_get_double_list("VolMeterColor", NULL);
+	vol_meter->red = vol_meter_clrs[0] * 255;
+	vol_meter->green = vol_meter_clrs[1] * 255;
+	vol_meter->blue = vol_meter_clrs[2] * 255;
+	g_free(vol_meter_clrs);
+
+	return vol_meter;
 }
 
 /**
@@ -127,68 +197,116 @@ populate_volume_meter(void)
  * @param y offset
  * @param h height of the volume meter
  */
-static void
-draw_vol_meter(GdkPixbuf *pixbuf, int x, int y, int h)
+static GdkPixbuf *
+vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 {
-	int width, height, rowstride, n_channels, i;
+	int icon_width, icon_height;
+	int vol_meter_width;
+	int x, y, h;
+	gdouble div_factor;
+	int rowstride, i;
 	guchar *pixels, *p;
 
-	n_channels = gdk_pixbuf_get_n_channels(pixbuf);
+	// TODO: make this feature cool
+	// TODO: remove the comment about "more CPU usage"
 
+	/* Ensure the pixbuf is as expected */
 	g_assert(gdk_pixbuf_get_colorspace(pixbuf) == GDK_COLORSPACE_RGB);
 	g_assert(gdk_pixbuf_get_bits_per_sample(pixbuf) == 8);
 	g_assert(gdk_pixbuf_get_has_alpha(pixbuf));
-	g_assert(n_channels == 4);
+	g_assert(gdk_pixbuf_get_n_channels(pixbuf) == 4);
 
-	width = gdk_pixbuf_get_width(pixbuf);
-	height = gdk_pixbuf_get_height(pixbuf);
+	icon_width = gdk_pixbuf_get_width(pixbuf);
+	icon_height = gdk_pixbuf_get_height(pixbuf);
+	printf("icon_width: %d, icon_height: %d\n", icon_width, icon_height);
 
-	g_assert(x >= 0 && x < width);
-	g_assert(y + h >= 0 && y < height);
+	/* Cache the pixbuf passed in parameter */
+	if (vol_meter->pixbuf)
+		g_object_unref(vol_meter->pixbuf);
+	vol_meter->pixbuf = pixbuf = gdk_pixbuf_copy(pixbuf);
 
+	/* Let's check if the icon width changed, in which case we
+	 * must reinit our internal row of pixels.
+	 */
+	vol_meter_width = icon_width / 8;
+	if (vol_meter_width != vol_meter->width) {
+		vol_meter->width = vol_meter_width;
+		g_free(vol_meter->row);
+		vol_meter->row = NULL;
+	}
+
+	if (vol_meter->row == NULL) {
+		DEBUG_PRINT("Allocating vol meter row (%d)", vol_meter->width);
+		vol_meter->row = g_malloc(vol_meter->width * sizeof(guchar) * 4);
+		for (i = 0; i < vol_meter->width; i++) {
+			vol_meter->row[i * 4 + 0] = vol_meter->red;
+			vol_meter->row[i * 4 + 1] = vol_meter->green;
+			vol_meter->row[i * 4 + 2] = vol_meter->blue;
+			vol_meter->row[i * 4 + 3] = 255;
+		}
+	}
+
+	/* Get the volume meter coordinates and height */
+	x = vol_meter->x_offset;
+	y = vol_meter->y_offset;
+	printf("x: %d, y: %d\n", x, y);
+
+	div_factor = (icon_height - (y * 2)) / 100.0;
+	h = volume * div_factor;
+	printf("div_factor: %lf, h: %d\n", div_factor, h);
+
+	g_assert(x >= 0 && x < icon_width);
+	g_assert(y >= 0 && y + h < icon_height);
+
+	/* Draw the volume meter.
+	 * Rows in the image are stored top to bottom.
+	 */
+	y = icon_height - y;
 	rowstride = gdk_pixbuf_get_rowstride(pixbuf);
 	pixels = gdk_pixbuf_get_pixels(pixbuf);
 
-	y = height - y;
 	for (i = 0; i < h; i++) {
-		p = pixels + (y - i) * rowstride + x * n_channels;
-		memcpy(p, vol_meter_row, vol_meter_width);
+		p = pixels + (y - i) * rowstride + x * 4;
+		memcpy(p, vol_meter->row, vol_meter->width * 4);
 	}
+
+	return pixbuf;
 }
 
-static void
-update_icon(int volume, int muted)
-{
-	static GdkPixbuf *vol_meter_icon;
-	GdkPixbuf *icon;
+/* Helpers */
 
-	g_clear_object(&vol_meter_icon);
+static void
+update_icon(TrayIcon *icon, int volume, int muted)
+{
+	GdkPixbuf **pixbufs;
+	GdkPixbuf *pixbuf;
+
+	if (icon->pixbufs == NULL)
+		icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
+
+	pixbufs = icon->pixbufs;
 
 	if (muted == 1) {
 		if (volume == 0)
-			icon = icons[VOLUME_OFF];
+			pixbuf = pixbufs[VOLUME_OFF];
 		else if (volume < 33)
-			icon = icons[VOLUME_LOW];
+			pixbuf = pixbufs[VOLUME_LOW];
 		else if (volume < 66)
-			icon = icons[VOLUME_MEDIUM];
+			pixbuf = pixbufs[VOLUME_MEDIUM];
 		else
-			icon = icons[VOLUME_HIGH];
-
-		if (vol_meter_row) {
-			vol_meter_icon = gdk_pixbuf_copy(icon);
-			draw_vol_meter(vol_meter_icon, draw_offset, 5,
-			               volume * vol_meter_div_factor);
-			icon = vol_meter_icon;
-		}
+			pixbuf = pixbufs[VOLUME_HIGH];
 	} else {
-		icon = icons[VOLUME_MUTED];
+		pixbuf = pixbufs[VOLUME_MUTED];
 	}
 
-	gtk_status_icon_set_from_pixbuf(tray_icon, icon);
+	if (muted == 1 && icon->vol_meter)
+		pixbuf = vol_meter_draw(icon->vol_meter, pixbuf, volume);
+
+	gtk_status_icon_set_from_pixbuf(icon->status_icon, pixbuf);
 }
 
 static void
-update_tooltip(int volume, int muted)
+update_tooltip(TrayIcon *icon, int volume, int muted)
 {
 	const char *card_name;
 	const char *channel;
@@ -196,73 +314,31 @@ update_tooltip(int volume, int muted)
 
 	card_name = (alsa_get_active_card())->name;
 	channel = alsa_get_active_channel();
-
+	
 	if (muted == 1)
-		snprintf(tooltip, sizeof tooltip, _("%s (%s)\nVolume: %d %%"),
-		         card_name, channel, volume);
+		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
+		         card_name, channel, _("Volume"), volume);
 	else
-		snprintf(tooltip, sizeof tooltip, _("%s (%s)\nVolume: %d %%\nMuted"),
-		         card_name, channel, volume);
+		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%\n%s"),
+		         card_name, channel, _("Volume"), volume, _("Muted"));
 
-	gtk_status_icon_set_tooltip_text(tray_icon, tooltip);
+	gtk_status_icon_set_tooltip_text(icon->status_icon, tooltip);
 }
-
-
-
-
-
-
-
 
 /* Signal handlers */
 
 /**
- * Handles the 'size-changed' signal on the tray_icon by
- * calling update_status_icons().
+ * Handles the 'activate' signal on the tray_icon,
+ * usually opening the popup_window and grabbing pointer and keyboard.
  *
  * @param status_icon the object which received the signal
- * @param size the new size
- * @param user_data set when the signal handler was connected
- * @return FALSE, so Gtk+ scales the icon as necessary
- */
-static gboolean
-on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, G_GNUC_UNUSED gint size,
-                G_GNUC_UNUSED gpointer user_data)
-{
-	populate_icon_array();
-	populate_volume_meter();
-	tray_icon_update();
-	return TRUE;
-}
-
-/**
- * Callback function when the tray_icon receives the scroll-event signal.
- *
- * @param status_icon the object which received the signal
- * @param event the GdkEventScroll which triggered this signal
  * @param user_data user data set when the signal handler was connected
- * @return TRUE to stop other handlers from being invoked for the event.
- * False to propagate the event further
  */
-static gboolean
-on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
-                G_GNUC_UNUSED gpointer user_data)
+static void
+on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
+            G_GNUC_UNUSED TrayIcon *icon)
 {
-	int cv;
-
-	cv = getvol();
-
-	if (event->direction == GDK_SCROLL_UP)
-		setvol(cv + scroll_step, 1, mouse_noti);
-        else if (event->direction == GDK_SCROLL_DOWN)
-		setvol(cv - scroll_step, -1, mouse_noti);
-
-	if (ismuted() == 0)
-		setmute(mouse_noti);
-
-	do_update_ui();
-
-	return TRUE;
+	do_toggle_popup_window();
 }
 
 /**
@@ -278,23 +354,9 @@ on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
  */
 static void
 on_popup_menu(GtkStatusIcon *status_icon, guint button,
-              guint activate_time, GtkMenu *menu)
+              guint activate_time, G_GNUC_UNUSED TrayIcon *icon)
 {
-	do_show_popup_menu(gtk_status_icon_position_menu, tray_icon, button, activate_time);
-}
-
-/**
- * Handles the 'activate' signal on the tray_icon,
- * usually opening the popup_window and grabbing pointer and keyboard.
- *
- * @param status_icon the object which received the signal
- * @param user_data user data set when the signal handler was connected
- */
-static void
-on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
-            G_GNUC_UNUSED gpointer user_data)
-{
-	do_toggle_popup_window();
+	do_show_popup_menu(gtk_status_icon_position_menu, status_icon, button, activate_time);
 }
 
 /* FIXME: return type should be gboolean */
@@ -308,15 +370,15 @@ on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  * connected
  */
 static void
-on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventButton *event,
-                        G_GNUC_UNUSED gpointer user_data)
+on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
+                        GdkEventButton *event, TrayIcon *icon)
 {
 	if (event->button != 2)
 		return;
 
-	switch (middle_click_action) {
+	switch (icon->prefs->middle_click_action) {
 	case 0:
-		do_mute(mouse_noti);
+		do_mute(icon->prefs->mouse_noti);
 		break;
 	case 1:
 		do_open_prefs();
@@ -332,6 +394,71 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventButton
 	}
 }
 
+/**
+ * Callback function when the tray_icon receives the scroll-event signal.
+ *
+ * @param status_icon the object which received the signal
+ * @param event the GdkEventScroll which triggered this signal
+ * @param user_data user data set when the signal handler was connected
+ * @return TRUE to stop other handlers from being invoked for the event.
+ * False to propagate the event further
+ */
+static gboolean
+on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
+                TrayIcon *icon)
+{
+	int volume;
+	gint scroll_step;
+	gboolean mouse_noti;
+
+	volume = getvol();
+	scroll_step = icon->prefs->scroll_step;
+	mouse_noti = icon->prefs->mouse_noti;
+
+	if (event->direction == GDK_SCROLL_UP)
+		setvol(volume + scroll_step, 1, mouse_noti);
+        else if (event->direction == GDK_SCROLL_DOWN)
+		setvol(volume - scroll_step, -1, mouse_noti);
+
+	if (ismuted() == 0)
+		setmute(mouse_noti);
+
+	do_update_ui();
+
+	return TRUE;
+}
+
+/**
+ * Handles the 'size-changed' signal on the tray_icon by
+ * calling update_status_icons().
+ *
+ * @param status_icon the object which received the signal
+ * @param size the new size
+ * @param user_data set when the signal handler was connected
+ * @return FALSE, so Gtk+ scales the icon as necessary
+ */
+static gboolean
+on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size,
+                TrayIcon *icon)
+{
+	DEBUG_PRINT("Tray icon size is now %d", size);
+
+	icon->status_icon_size = size;
+
+	pixbuf_array_free(icon->pixbufs);
+	icon->pixbufs = NULL;
+
+	if (icon->vol_meter) {
+		vol_meter_free(icon->vol_meter);
+		icon->vol_meter = vol_meter_new();
+	}
+
+	tray_icon_update(icon);
+
+	return FALSE;
+}
+
+
 /* Public functions */
 
 /**
@@ -340,15 +467,21 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventButton
  * @return size of the tray icon or 48 if there is none
  */
 gint
-tray_icon_get_size(void)
+tray_icon_get_size(TrayIcon *icon)
 {
+	// TODO: remove that when no more useful
+
+	GtkStatusIcon *status_icon = icon->status_icon;
 	gint size;
 
 	// gtk_status_icon_is_embedded returns false until the prefs
 	// window is opened on gtk3
 
-	if (tray_icon && GTK_IS_STATUS_ICON(tray_icon))
-		size = gtk_status_icon_get_size(tray_icon);
+	printf("gtk_status_icon_get_size(status_icon) = %d\n",
+	       gtk_status_icon_get_size(status_icon));
+
+	if (status_icon && GTK_IS_STATUS_ICON(status_icon))
+		size = gtk_status_icon_get_size(status_icon);
 	else
 		size = 48;
 
@@ -360,44 +493,42 @@ tray_icon_get_size(void)
  * or changed.
  */
 void
-tray_icon_update(void)
+tray_icon_update(TrayIcon *icon)
 {
 	int volume = getvol();
 	int muted = ismuted();
 
-	update_icon(volume, muted);
-	update_tooltip(volume, muted);
+	update_icon(icon, volume, muted);
+	update_tooltip(icon, volume, muted);
 }
 
 void
-tray_icon_reload_prefs(void)
+tray_icon_reload_prefs(TrayIcon *icon)
 {
-	icon_system_theme = prefs_get_boolean("SystemTheme", FALSE);
-	middle_click_action = prefs_get_integer("MiddleClickAction", 0);
-	draw_volume_meter = prefs_get_boolean("DrawVolMeter", FALSE);
-	draw_offset = prefs_get_integer("VolMeterPos", 0);
+	/* Reload some configuration */
+	tray_icon_prefs_free(icon->prefs);
+	icon->prefs = tray_icon_prefs_new();
 
-	mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
+	/* Recreate the volume meter */
+	vol_meter_free(icon->vol_meter);
+	icon->vol_meter = vol_meter_new();
 
-	gdouble *vol_meter_clrs;
-	vol_meter_clrs = prefs_get_vol_meter_colors();
-	vol_meter_red = vol_meter_clrs[0] * 255;
-	vol_meter_green = vol_meter_clrs[1] * 255;
-	vol_meter_blue = vol_meter_clrs[2] * 255;
-	g_free(vol_meter_clrs);
+	/* Destroy the pixbufs array */
+	pixbuf_array_free(icon->pixbufs);
+	icon->pixbufs = NULL;
 
-	scroll_step = prefs_get_integer("ScrollStep", 5);
-
-	populate_icon_array();
-	populate_volume_meter();
-
-	tray_icon_update();
+	/* Update */
+	tray_icon_update(icon);
 }
 
 void
-tray_icon_destroy(void)
+tray_icon_destroy(TrayIcon *icon)
 {
-	g_clear_object(&tray_icon);
+	g_object_unref(icon->status_icon);
+	pixbuf_array_free(icon->pixbufs);
+	vol_meter_free(icon->vol_meter);
+	tray_icon_prefs_free(icon->prefs);
+	g_free(icon);
 }
 
 /**
@@ -406,28 +537,37 @@ tray_icon_destroy(void)
  *
  * @return the newly created tray icon
  */
-void
+TrayIcon *
 tray_icon_create(void)
 {
+	TrayIcon *icon;
+
 	DEBUG_PRINT("Creating tray icon");
 
-	tray_icon = gtk_status_icon_new();
+	icon = g_new0(TrayIcon, 1);
 
-	// Handles the left click
-	g_signal_connect(tray_icon, "activate",
-			 G_CALLBACK(on_activate), NULL);
-	// Handles the right click
-	g_signal_connect(tray_icon, "popup-menu",
-			 G_CALLBACK(on_popup_menu), NULL);
-	// Handles the middle click
-	g_signal_connect(tray_icon, "button-release-event",
-			 G_CALLBACK(on_button_release_event), NULL);
-	// Handles mouse scrolling on the icon
-	g_signal_connect(tray_icon, "scroll_event",
-			 G_CALLBACK(on_scroll_event), NULL);
-	// Handles change of size
-	g_signal_connect(tray_icon, "size-changed",
-			 G_CALLBACK(on_size_changed), NULL);
+	icon->prefs = tray_icon_prefs_new();
 
-	gtk_status_icon_set_visible(tray_icon, TRUE);
+	icon->vol_meter = vol_meter_new();
+
+	icon->status_icon = gtk_status_icon_new();
+	/* Handle the left click */
+	g_signal_connect(icon->status_icon, "activate",
+			 G_CALLBACK(on_activate), icon);
+	/* Handle the right click */
+	g_signal_connect(icon->status_icon, "popup-menu",
+			 G_CALLBACK(on_popup_menu), icon);
+	/* Handle the middle click */
+	g_signal_connect(icon->status_icon, "button-release-event",
+			 G_CALLBACK(on_button_release_event), icon);
+	/* Handle mouse scrolling on the icon */
+	g_signal_connect(icon->status_icon, "scroll_event",
+			 G_CALLBACK(on_scroll_event), icon);
+	/* Handle change of size */
+	g_signal_connect(icon->status_icon, "size-changed",
+			 G_CALLBACK(on_size_changed), icon);
+
+	gtk_status_icon_set_visible(icon->status_icon, TRUE);
+
+	return icon;
 }

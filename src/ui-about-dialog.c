@@ -56,19 +56,25 @@ about_dialog_create(void)
 	GtkBuilder *builder;
 	AboutDialog *dialog;
 
+	dialog = g_new0(AboutDialog, 1);
+
+	/* Build UI file */
 	uifile = get_ui_file(ABOUT_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG_PRINT("Building about dialog from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	dialog = g_new(AboutDialog, 1);
+	/* Save some widgets for later use */
 	assign_gtk_widget(builder, dialog, dialog);
 
+	/* Configure some widgets */
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog->dialog), VERSION);
 
+	/* Connect signal handlers */
 	gtk_builder_connect_signals(builder, NULL);
 
+	/* Cleanup */
 	g_object_unref(builder);
 	g_free(uifile);
 
