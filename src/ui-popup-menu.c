@@ -101,11 +101,7 @@ void
 popup_menu_on_about_activated(G_GNUC_UNUSED GtkMenuItem *item,
                               G_GNUC_UNUSED PopupMenu *menu)
 {
-	AboutDialog *dialog;
-
-	dialog = about_dialog_create();
-	about_dialog_run(dialog);
-	about_dialog_destroy(dialog);
+	about_dialog_run();
 }
 
 /* Helpers */

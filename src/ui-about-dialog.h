@@ -17,10 +17,6 @@
 #ifndef UI_ABOUT_DIALOG_H_
 #define UI_ABOUT_DIALOG_H_
 
-typedef struct about_dialog AboutDialog;
-
-AboutDialog *about_dialog_create(void);
-void about_dialog_destroy(AboutDialog *dialog);
-void about_dialog_run(AboutDialog *dialog);
+void about_dialog_run(void);
 
 #endif				// UI_ABOUT_DIALOG_H_

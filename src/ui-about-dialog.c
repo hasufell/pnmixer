@@ -34,22 +34,20 @@ struct about_dialog {
 	GtkWidget *dialog;
 };
 
-/* Public functions */
+typedef struct about_dialog AboutDialog;
 
-void
-about_dialog_run(AboutDialog *dialog)
-{
-	gtk_dialog_run(GTK_DIALOG(dialog->dialog));
-}
+static AboutDialog *instance;
 
-void
+/* Private functions */
+
+static void
 about_dialog_destroy(AboutDialog *dialog)
 {
 	gtk_widget_destroy(dialog->dialog);
 	g_free(dialog);
 }
 
-AboutDialog *
+static AboutDialog *
 about_dialog_create(void)
 {
 	gchar *uifile;
@@ -79,4 +77,19 @@ about_dialog_create(void)
 	g_free(uifile);
 
 	return dialog;
+}
+
+/* Public functions */
+
+void
+about_dialog_run(void)
+{
+	/* Only one instance at a time */
+	if (instance)
+		return;
+
+	instance = about_dialog_create();
+	gtk_dialog_run(GTK_DIALOG(instance->dialog));
+	about_dialog_destroy(instance);
+	instance = NULL;
 }
