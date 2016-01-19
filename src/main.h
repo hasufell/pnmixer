@@ -33,9 +33,6 @@ void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
                         guint button, guint activate_time);
 void do_update_ui(void);
 
-
-gint get_tray_icon_size(void);
-
 void report_error(char *, ...);
 void warn_sound_conn_lost(void);
 

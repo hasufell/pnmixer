@@ -17,9 +17,6 @@
 #ifndef UI_PREFS_WINDOW_H_
 #define UI_PREFS_WINDOW_H_
 
-typedef struct prefs_window PrefsWindow;
-
-void prefs_window_create(void);
-void prefs_window_destroy(PrefsWindow *window);
+void prefs_window_open(void);
 
 #endif				// UI_PREFS_WINDOW_H_

@@ -177,6 +177,8 @@ vol_meter_new(void)
 
 	vol_meter = g_new0(VolMeter, 1);
 
+	// TODO: pos should be percent now, maybe renaming variable
+	// in conf is the best...
 	vol_meter->x_offset = prefs_get_integer("VolMeterPos", 0);
 	vol_meter->y_offset = 5;
 

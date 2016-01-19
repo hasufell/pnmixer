@@ -257,11 +257,11 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="vol_meter_pos_adjustment">
-    <property name="upper">22</property>
+    <property name="upper">100</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkWindow" id="prefs_window">
+  <object class="GtkWindow" id="window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">PNMixer Preferences</property>
     <property name="resizable">False</property>
@@ -1334,7 +1334,7 @@
     <property name="destroy_with_parent">True</property>
     <property name="icon_name">input-keyboard</property>
     <property name="type_hint">dialog</property>
-    <property name="transient_for">prefs_window</property>
+    <property name="transient_for">window</property>
     <signal name="key-release-event" handler="on_hotkey_released" swapped="no"/>
     <signal name="key-press-event" handler="on_hotkey_pressed" swapped="no"/>
     <child internal-child="vbox">

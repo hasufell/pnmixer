@@ -334,7 +334,7 @@ popup_window_create(void)
 
 	window = g_new0(PopupWindow, 1);
 
-	/* UI file depends on slider orientation */
+	/* Build UI file depending on slider orientation */
 	gchar *orientation;
 	orientation = prefs_get_string("SliderOrientation", "vertical");
 	if (!g_strcmp0(orientation, "horizontal"))

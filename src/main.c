@@ -192,7 +192,7 @@ do_mute(gboolean notify)
 void
 do_open_prefs(void)
 {
-	prefs_window_create();
+	prefs_window_open();
 }
 
 void
@@ -267,12 +267,6 @@ do_update_ui(void)
 	tray_icon_update(tray_icon);
 	popup_window_update(popup_window);
 	popup_menu_update(popup_menu);
-}
-
-gint
-get_tray_icon_size(void)
-{
-	return tray_icon_get_size(tray_icon);
 }
 
 static gboolean version = FALSE;

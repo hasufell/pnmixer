@@ -56,7 +56,7 @@ struct prefs_window {
 	GtkWidget *vol_meter_draw_check;
 	GtkWidget *vol_meter_pos_label;
 	GtkWidget *vol_meter_pos_spin;
-	GObject   *vol_meter_pos_adjustment;
+	GtkAdjustment *vol_meter_pos_adjustment;
 	GtkWidget *vol_meter_color_label;
 	GtkWidget *vol_meter_color_button;
 	GtkWidget *system_theme;
@@ -97,9 +97,9 @@ struct prefs_window {
 
 typedef struct prefs_window PrefsWindow;
 
-/*
- * Helpers
- */
+static PrefsWindow *instance;
+
+/* Helpers */
 
 /**
  * Fills the GtkComboBoxText chan_combo with the currently available
@@ -683,7 +683,7 @@ set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
 }
 
 static void
-populate_window(PrefsWindow *window)
+populate_window_values(PrefsWindow *window)
 {
 	gdouble *vol_meter_clrs;
 	gchar *slider_orientation, *vol_cmd, *custcmd;
@@ -728,10 +728,6 @@ populate_window(PrefsWindow *window)
 	                          window);
 
 	// volume meter position
-	gtk_adjustment_set_upper
-	(GTK_ADJUSTMENT(window->vol_meter_pos_adjustment),
-	 get_tray_icon_size() - 10);
-
 	gtk_spin_button_set_value
 	(GTK_SPIN_BUTTON(window->vol_meter_pos_spin),
 	 prefs_get_integer("VolMeterPos", 0));
@@ -863,22 +859,41 @@ populate_window(PrefsWindow *window)
 #endif
 }
 
+/* Private functions */
+
+static void
+prefs_window_show(PrefsWindow *window)
+{
+	gtk_widget_show(window->window);
+}
+
+static void
+prefs_window_destroy(PrefsWindow *window)
+{
+	gtk_widget_destroy(window->window);
+	g_free(window);
+}
+
 static PrefsWindow *
-build_window(void)
+prefs_window_create(void)
 {
 	gchar *uifile = NULL;
 	GtkBuilder *builder = NULL;
-	PrefsWindow *window = NULL;
+	PrefsWindow *window;
 
-	/* Get the path to the ui file */
+	window = g_new0(PrefsWindow, 1);
+
+	/* Build UI file */
 	uifile = get_ui_file(PREFS_UI_FILE);
 	g_assert(uifile);
 
-	/* Build the preferences window from ui file */
 	DEBUG_PRINT("Building prefs window from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	/* Append the notification page */
+	/* Append the notification page.
+	 * This has to be done manually here, in the C code,
+	 * because notifications support is optional at build time.
+	 */
 	gtk_notebook_append_page
 	(GTK_NOTEBOOK(gtk_builder_get_object(builder, "notebook")),
 #ifdef HAVE_LIBN
@@ -888,130 +903,113 @@ build_window(void)
 #endif
 	 gtk_label_new(_("Notifications")));
 
-	/* Save pointers toward all the useful elements from the UI.
-	 * Notice that gtk_builder_get_object() doesn't increment the
-	 * reference count of the returned object, neither do we.
-	 * So all those pointers are invalid after window destruction.
-	 */
-	window = g_slice_new(PrefsWindow);
-
-#define GO(name) window->name = G_OBJECT(gtk_builder_get_object(builder, #name))
-#define GW(name) window->name = GTK_WIDGET(gtk_builder_get_object(builder, #name))
-	/* Top-level widgets */
-	window->window = GTK_WIDGET(gtk_builder_get_object(builder, "prefs_window"));
-	GW(notebook);
-	GW(ok_button);
-	GW(cancel_button);
-	/* View panel */
-	GW(vol_orientation_combo);
-	GW(vol_text_check);
-	GW(vol_pos_label);
-	GW(vol_pos_combo);
-	GW(vol_meter_draw_check);
-	GW(vol_meter_pos_label);
-	GW(vol_meter_pos_spin);
-	GO(vol_meter_pos_adjustment);
-	GW(vol_meter_color_label);
-	GW(vol_meter_color_button);
-	GW(system_theme);
-	/* Device panel */
-	GW(card_combo);
-	GW(chan_combo);
-	GW(normalize_vol_check);
-	/* Behavior panel */
-	GW(vol_control_entry);
-	GW(scroll_step_spin);
-	GW(fine_scroll_step_spin);
-	GW(middle_click_combo);
-	GW(custom_label);
-	GW(custom_entry);
-	/* Hotkeys panel */
-	GW(hotkeys_enable_check);
-	GW(hotkeys_vol_label);
-	GW(hotkeys_vol_spin);
-	GW(hotkeys_dialog);
-	GW(hotkeys_dialog_key_label);
-	GW(hotkeys_mute_label);
-	GW(hotkeys_up_label);
-	GW(hotkeys_down_label);
-	/* Notifications panel */
+	/* Save some widgets for later use */
+	// Top level widgets
+	assign_gtk_widget(builder, window, window);
+	assign_gtk_widget(builder, window, notebook);
+	assign_gtk_widget(builder, window, ok_button);
+	assign_gtk_widget(builder, window, cancel_button);
+	// View panel
+	assign_gtk_widget(builder, window, vol_orientation_combo);
+	assign_gtk_widget(builder, window, vol_text_check);
+	assign_gtk_widget(builder, window, vol_pos_label);
+	assign_gtk_widget(builder, window, vol_pos_combo);
+	assign_gtk_widget(builder, window, vol_meter_draw_check);
+	assign_gtk_widget(builder, window, vol_meter_pos_label);
+	assign_gtk_widget(builder, window, vol_meter_pos_spin);
+	assign_gtk_adjustment(builder, window, vol_meter_pos_adjustment);
+	assign_gtk_widget(builder, window, vol_meter_color_label);
+	assign_gtk_widget(builder, window, vol_meter_color_button);
+	assign_gtk_widget(builder, window, system_theme);
+	// Device panel
+	assign_gtk_widget(builder, window, card_combo);
+	assign_gtk_widget(builder, window, chan_combo);
+	assign_gtk_widget(builder, window, normalize_vol_check);
+	// Behavior panel
+	assign_gtk_widget(builder, window, vol_control_entry);
+	assign_gtk_widget(builder, window, scroll_step_spin);
+	assign_gtk_widget(builder, window, fine_scroll_step_spin);
+	assign_gtk_widget(builder, window, middle_click_combo);
+	assign_gtk_widget(builder, window, custom_label);
+	assign_gtk_widget(builder, window, custom_entry);
+	// Hotkeys panel
+	assign_gtk_widget(builder, window, hotkeys_enable_check);
+	assign_gtk_widget(builder, window, hotkeys_vol_label);
+	assign_gtk_widget(builder, window, hotkeys_vol_spin);
+	assign_gtk_widget(builder, window, hotkeys_dialog);
+	assign_gtk_widget(builder, window, hotkeys_dialog_key_label);
+	assign_gtk_widget(builder, window, hotkeys_mute_label);
+	assign_gtk_widget(builder, window, hotkeys_up_label);
+	assign_gtk_widget(builder, window, hotkeys_down_label);
+	// Notifications panel
 #ifdef HAVE_LIBN
-	GW(noti_vbox_enabled);
-	GW(noti_enable_check);
-	GW(noti_timeout_spin);
-	GW(noti_timeout_label);
-	GW(noti_hotkey_check);
-	GW(noti_mouse_check);
-	GW(noti_popup_check);
-	GW(noti_ext_check);
+	assign_gtk_widget(builder, window, noti_vbox_enabled);
+	assign_gtk_widget(builder, window, noti_enable_check);
+	assign_gtk_widget(builder, window, noti_timeout_spin);
+	assign_gtk_widget(builder, window, noti_timeout_label);
+	assign_gtk_widget(builder, window, noti_hotkey_check);
+	assign_gtk_widget(builder, window, noti_mouse_check);
+	assign_gtk_widget(builder, window, noti_popup_check);
+	assign_gtk_widget(builder, window, noti_ext_check);
 #else
-	GW(noti_vbox_disabled);
+	assign_gtk_widget(builder, window, noti_vbox_disabled);
 #endif
-#undef GO
-#undef GW
+
+	/* Configure some widgets */
+	populate_window_values(window);
 
 	/* Connect signals */
 	gtk_builder_connect_signals(builder, window);
 
 	/* Cleanup */
-
-	/* Notice that the builder drops the references of the objects
-	 * it created when it is finalized. The finalization can cause
-	 * unused objects to be destroyed.
-	 */
 	g_object_unref(G_OBJECT(builder));
 	g_free(uifile);
 
 	return window;
 }
 
-static void
-destroy_window(PrefsWindow *window)
-{
-	g_slice_free(PrefsWindow, window);
-}
-
 /* Public functions */
 
 void
-prefs_window_create(void)
+prefs_window_open(void)
 {
-	PrefsWindow *window;
+	/* Only one instance at a time */
+	if (instance)
+		return;
 
-	window = build_window();
-	populate_window(window);
-
-	printf("About to show...\n");
-	gtk_widget_show(window->window);
+	instance = prefs_window_create();
+	prefs_window_show(instance);
 }
 
-void
-prefs_window_destroy(PrefsWindow *window)
-{
-	gtk_widget_destroy(window->window);
-	destroy_window(window);
-}
 
 /* Ok & Cancel signal handlers */
 
 void
-on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *data)
+on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 {
+	g_assert(window == instance);
+
 	/* Save values to preferences */
-	retrieve_window_values(data);
-	prefs_window_destroy(data);
+	retrieve_window_values(window);
 
 	/* Save preferences to file */
 	prefs_save();
 
 	/* Make it effective */
 	apply_prefs(1);
+
+	/* Destroy the window */
+	prefs_window_destroy(instance);
+	instance = NULL;
 }
 
 void
-on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *data)
+on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 {
-	prefs_window_destroy(data);
+	g_assert(window == instance);
+
+	prefs_window_destroy(window);
+	instance = NULL;
 }
 
 /**
@@ -1027,14 +1025,14 @@ on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *data)
  * False to propagate the event further
  */
 gboolean
-on_key_press_event(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, PrefsWindow *data)
+on_key_press_event(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, PrefsWindow *window)
 {
 	switch (event->keyval) {
 	case GDK_KEY_Escape:
-		on_cancel_button_clicked(NULL, data);
+		on_cancel_button_clicked(NULL, window);
 		break;
 	case GDK_KEY_Return:
-		on_ok_button_clicked(NULL, data);
+		on_ok_button_clicked(NULL, window);
 		break;
 	default:
 		break;
