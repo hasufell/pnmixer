@@ -20,9 +20,10 @@
 
 #include <gtk/gtk.h>
 
-#include "debug.h"
 #include "support.h"
 #include "ui-about-dialog.h"
+
+#include "main.h"
 
 #ifdef WITH_GTK3
 #define ABOUT_UI_FILE      "about-gtk3.glade"
@@ -30,47 +31,30 @@
 #define ABOUT_UI_FILE      "about-gtk2.glade"
 #endif
 
-struct about_dialog {
-	GtkWidget *dialog;
-};
-
-typedef struct about_dialog AboutDialog;
-
-static AboutDialog *instance;
+static GtkAboutDialog *instance;
 
 /* Private functions */
 
-static void
-about_dialog_destroy(AboutDialog *dialog)
-{
-	gtk_widget_destroy(dialog->dialog);
-	g_free(dialog);
-}
-
-static AboutDialog *
+static GtkAboutDialog *
 about_dialog_create(void)
 {
 	gchar *uifile;
 	GtkBuilder *builder;
-	AboutDialog *dialog;
-
-	dialog = g_new0(AboutDialog, 1);
+	GtkAboutDialog *dialog;
 
 	/* Build UI file */
 	uifile = get_ui_file(ABOUT_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG_PRINT("Building about dialog from ui file '%s'", uifile);
+	DEBUG("Building about dialog from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	/* Save some widgets for later use */
-	assign_gtk_widget(builder, dialog, dialog);
+	/* Get the GtkAboutDialog widget from builder */
+	dialog = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "dialog"));
 
-	/* Configure some widgets */
-	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog->dialog), VERSION);
-
-	/* Connect signal handlers */
-	gtk_builder_connect_signals(builder, NULL);
+	/* Configure it */
+	gtk_about_dialog_set_version(dialog, VERSION);
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), main_window);
 
 	/* Cleanup */
 	g_object_unref(builder);
@@ -89,7 +73,7 @@ about_dialog_run(void)
 		return;
 
 	instance = about_dialog_create();
-	gtk_dialog_run(GTK_DIALOG(instance->dialog));
-	about_dialog_destroy(instance);
+	gtk_dialog_run(GTK_DIALOG(instance));
+	gtk_widget_destroy(GTK_WIDGET(instance));
 	instance = NULL;
 }

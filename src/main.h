@@ -20,6 +20,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+GtkWindow *main_window;
+
 gboolean enable_noti, hotkey_noti, popup_noti, external_noti;
 gint noti_timeout;
 
@@ -32,9 +34,6 @@ void do_toggle_popup_window(void);
 void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
                         guint button, guint activate_time);
 void do_update_ui(void);
-
-void report_error(char *, ...);
-void warn_sound_conn_lost(void);
 
 void apply_prefs(gint alsa_change);
 

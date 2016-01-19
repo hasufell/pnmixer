@@ -27,7 +27,6 @@
 #include "support.h"
 #include "prefs.h"
 #include "alsa.h"
-#include "debug.h"
 
 #include "main.h"
 
@@ -121,7 +120,7 @@ pixbuf_array_new(int size)
 	GdkPixbuf *pixbufs[N_VOLUME_ICONS];
 	gboolean system_theme;
 
-	DEBUG_PRINT("Building pixbuf array for size %d)", size);
+	DEBUG("Building pixbuf array for size %d)", size);
 
 	system_theme = prefs_get_boolean("SystemTheme", FALSE);
 
@@ -238,7 +237,7 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 	}
 
 	if (vol_meter->row == NULL) {
-		DEBUG_PRINT("Allocating vol meter row (%d)", vol_meter->width);
+		DEBUG("Allocating vol meter row (%d)", vol_meter->width);
 		vol_meter->row = g_malloc(vol_meter->width * sizeof(guchar) * 4);
 		for (i = 0; i < vol_meter->width; i++) {
 			vol_meter->row[i * 4 + 0] = vol_meter->red;
@@ -443,7 +442,7 @@ static gboolean
 on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size,
                 TrayIcon *icon)
 {
-	DEBUG_PRINT("Tray icon size is now %d", size);
+	DEBUG("Tray icon size is now %d", size);
 
 	icon->status_icon_size = size;
 
@@ -544,7 +543,7 @@ tray_icon_create(void)
 {
 	TrayIcon *icon;
 
-	DEBUG_PRINT("Creating tray icon");
+	DEBUG("Creating tray icon");
 
 	icon = g_new0(TrayIcon, 1);
 

@@ -20,19 +20,12 @@
 #include "config.h"
 #endif
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <errno.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
 #include <locale.h>
+
+#include <glib.h>
+
 #include "alsa.h"
-#include "debug.h"
 #include "main.h"
 #include "notify.h"
 #include "support.h"
@@ -43,75 +36,11 @@
 #include "ui-popup-window.h"
 #include "ui-tray-icon.h"
 
-static char err_buf[512];
+GtkWindow *main_window = NULL;
 
 static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
 static TrayIcon *tray_icon;
-
-/**
- * Reports an error, usually via a dialog window or on stderr.
- *
- * @param err the error
- * @param ... more string segments in the format of printf
- */
-void
-report_error(char *err, ...)
-{
-	va_list ap;
-
-	va_start(ap, err);
-
-	if (popup_window) {
-		GtkWindow *window = popup_window_get_gtk_window(popup_window);
-		GtkWidget *dialog = gtk_message_dialog_new(window,
-				    GTK_DIALOG_DESTROY_WITH_PARENT,
-				    GTK_MESSAGE_ERROR,
-				    GTK_BUTTONS_CLOSE,
-				    NULL);
-		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-		vsnprintf(err_buf, 512, err, ap);
-		g_object_set(dialog, "text", err_buf, NULL);
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-	} else {
-		vfprintf(stderr, err, ap);
-		fprintf(stderr, "\n");
-	}
-
-	va_end(ap);
-}
-
-/**
- * Emits a warning if the sound connection is lost, usually
- * via a dialog window (with option to reinitialize alsa) or stderr.
- */
-void
-warn_sound_conn_lost(void)
-{
-	if (popup_window) {
-		gint resp;
-		GtkWindow *window = popup_window_get_gtk_window(popup_window);
-		GtkWidget *dialog = gtk_message_dialog_new(window,
-				    GTK_DIALOG_DESTROY_WITH_PARENT,
-				    GTK_MESSAGE_ERROR,
-				    GTK_BUTTONS_YES_NO,
-				    _("Warning: Connection to sound system failed."));
-		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-				_("Do you want to re-initialize the connection to alsa?\n\n"
-				  "If you do not, you will either need to restart PNMixer "
-				  "or select the 'Reload Alsa' option in the right click "
-				  "menu in order for PNMixer to function."));
-		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-		resp = gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-		if (resp == GTK_RESPONSE_YES)
-			do_alsa_reinit();
-	} else
-		fprintf(stderr,
-			_("Warning: Connection to sound system failed, "
-			  "you probably need to restart pnmixer\n"));
-}
 
 /**
  * Applies the preferences, usually triggered by on_ok_button_clicked()
@@ -339,15 +268,21 @@ main(int argc, char *argv[])
 	popup_window = popup_window_create();
 	tray_icon = tray_icon_create();
 
+	// We make the main window public, it's needed as a transient parent
+	main_window = popup_window_get_gtk_window(popup_window);
+
 	/* Apply preferences */
-	DEBUG_PRINT("Applying prefs...");
+	DEBUG("Applying prefs...");
 	apply_prefs(0);
 
 	/* Run */
-	DEBUG_PRINT("Running main loop...");
+	DEBUG("Running main loop...");
 	gtk_main();
 
 	/* Cleanup */
+
+	main_window = NULL;
+
 	tray_icon_destroy(tray_icon);
 	popup_window_destroy(popup_window);
 	popup_menu_destroy(popup_menu);

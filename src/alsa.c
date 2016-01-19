@@ -35,10 +35,11 @@
 
 #define _GNU_SOURCE
 #include "alsa.h"
-#include "debug.h"
-#include "main.h"
+#include "support.h"
 #include "notify.h"
 #include "prefs.h"
+
+#include "main.h"
 
 #include <math.h>
 #include <alsa/asoundlib.h>
@@ -195,27 +196,27 @@ open_mixer(const char *card, struct snd_mixer_selem_regopt *opts, int level)
 	int err;
 	snd_mixer_t *mixer = NULL;
 
-	DEBUG_PRINT("Card %s: opening mixer", card);
+	DEBUG("Card %s: opening mixer", card);
 
 	if ((err = snd_mixer_open(&mixer, 0)) < 0) {
-		DEBUG_PRINT("Card %s: mixer open error: %s", card, snd_strerror(err));
+		DEBUG("Card %s: mixer open error: %s", card, snd_strerror(err));
 		return NULL;
 	}
 	if (level == 0 && (err = snd_mixer_attach(mixer, card)) < 0) {
-		DEBUG_PRINT("Card %s: mixer attach error: %s", card,
+		DEBUG("Card %s: mixer attach error: %s", card,
 			    snd_strerror(err));
 		snd_mixer_close(mixer);
 		return NULL;
 	}
 	if ((err = snd_mixer_selem_register(
 			   mixer, level > 0 ? opts : NULL, NULL)) < 0) {
-		DEBUG_PRINT("Card %s: mixer register error: %s", card,
+		DEBUG("Card %s: mixer register error: %s", card,
 			    snd_strerror(err));
 		snd_mixer_close(mixer);
 		return NULL;
 	}
 	if ((err = snd_mixer_load(mixer)) < 0) {
-		DEBUG_PRINT("Card %s: mixer load error: %s", card, snd_strerror(err));
+		DEBUG("Card %s: mixer load error: %s", card, snd_strerror(err));
 		snd_mixer_close(mixer);
 		return NULL;
 	}
@@ -395,7 +396,7 @@ close_mixer(snd_mixer_t *mixer, const char *card)
 {
 	int err;
 
-	DEBUG_PRINT("Card %s: closing mixer", card);
+	DEBUG("Card %s: closing mixer", card);
 
 	if ((err = snd_mixer_detach(mixer, card)) < 0)
 		report_error("Card %s: mixer detach error: %s", card,
@@ -468,14 +469,14 @@ alsaset(void)
 	char *channel;
 
 	// update list of available cards
-	DEBUG_PRINT("Getting available cards...");
+	DEBUG("Getting available cards...");
 	get_cards();
 	assert(cards != NULL);
 
 	// get selected card
 	assert(active_card == NULL);
 	card_name = prefs_get_string("AlsaCard", NULL);
-	DEBUG_PRINT("Selected card: %s", card_name);
+	DEBUG("Selected card: %s", card_name);
 	if (card_name) {
 		active_card = find_card(card_name);
 		g_free(card_name);
@@ -483,7 +484,7 @@ alsaset(void)
 
 	// if not available, use the default card
 	if (!active_card) {
-		DEBUG_PRINT("Using default soundcard");
+		DEBUG("Using default soundcard");
 		active_card = cards->data;
 	}
 	// If no playable channels, iterate on card list until a valid card is
@@ -494,7 +495,7 @@ alsaset(void)
 	// For example, when it's an USB DAC, and it's disconnected.
 	if (!active_card->channels) {
 		GSList *item;
-		DEBUG_PRINT("Card '%s' has no playable channels, iterating on card list",
+		DEBUG("Card '%s' has no playable channels, iterating on card list",
 			    active_card->dev);
 		for (item = cards; item; item = item->next) {
 			active_card = item->data;
@@ -504,7 +505,7 @@ alsaset(void)
 		assert(item != NULL);
 	}
 	// open card
-	DEBUG_PRINT("Opening card '%s'...", active_card->dev);
+	DEBUG("Opening card '%s'...", active_card->dev);
 	smixer_options.device = active_card->dev;
 	handle = open_mixer(active_card->dev, &smixer_options, smixer_level);
 	assert(handle != NULL);
@@ -530,7 +531,7 @@ alsaset(void)
 	assert(elem != NULL);
 
 	// Set callback
-	DEBUG_PRINT("Using channel '%s'", snd_mixer_selem_get_name(elem));
+	DEBUG("Using channel '%s'", snd_mixer_selem_get_name(elem));
 	snd_mixer_elem_set_callback(elem, alsa_cb);
 
 	// set watch for volume changes
@@ -723,7 +724,7 @@ getvol(void)
 		snd_mixer_selem_get_playback_volume_range(elem, &pmin, &pmax);
 		snd_mixer_selem_get_playback_volume(elem,
 						    SND_MIXER_SCHN_FRONT_RIGHT, &val);
-		DEBUG_PRINT("[getvol] From mixer: %li  pmin: %li  pmax: %li",
+		DEBUG("[getvol] From mixer: %li  pmin: %li  pmax: %li",
 			    val, pmin, pmax);
 		return convert_prange(val, pmin, pmax);
 	}

@@ -33,9 +33,7 @@
 #include <glib/gstdio.h>
 
 #include "prefs.h"
-#include "debug.h"
-
-#include "main.h"
+#include "support.h"
 
 #define DEFAULT_PREFS "[PNMixer]\n\
 SliderOrientation=vertical\n\

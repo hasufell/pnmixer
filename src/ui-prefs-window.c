@@ -29,7 +29,6 @@
 #include "ui-prefs-window.h"
 #include "prefs.h"
 #include "alsa.h"
-#include "debug.h"
 
 #include "main.h"
 
@@ -688,7 +687,7 @@ populate_window_values(PrefsWindow *window)
 	gdouble *vol_meter_clrs;
 	gchar *slider_orientation, *vol_cmd, *custcmd;
 
-	DEBUG_PRINT("Populating prefs window");
+	DEBUG("Populating prefs window");
 
 	// volume slider orientation
 	slider_orientation = prefs_get_string("SliderOrientation", NULL);
@@ -887,7 +886,7 @@ prefs_window_create(void)
 	uifile = get_ui_file(PREFS_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG_PRINT("Building prefs window from ui file '%s'", uifile);
+	DEBUG("Building prefs window from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Append the notification page.

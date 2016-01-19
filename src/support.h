@@ -47,6 +47,34 @@
 #define N_(String) (String)
 #endif
 
+/*
+ * Printing, reporting, debugging.
+ */
+
+extern gboolean want_debug;
+
+void report_error(char *, ...);
+void warn_sound_conn_lost(void);
+
+/**
+ * Macro to print verbose debug info in case we want debugging.
+ */
+#define DEBUG(fmt, ...)	\
+	do { \
+		if (want_debug == TRUE) \
+			fprintf(stderr, "debug: " fmt "\n", ##__VA_ARGS__); \
+	} while (0) \
+
+#define WARN(fmt, ...)	  \
+	fprintf(stderr, "warning: " fmt "\n", ##__VA_ARGS__)
+
+#define ERROR(fmt, ...)	  \
+	fprintf(stderr, "error: " fmt "\n", ##__VA_ARGS__)
+
+/*
+ * GtkBuilder helpers
+ */
+
 #define gtk_builder_get_widget(builder, name)	  \
 	GTK_WIDGET(gtk_builder_get_object(builder, name))
 
@@ -60,8 +88,8 @@
  * This macro is more clever that it seems:
  * - it ensures that the name used in the struct is the same as the name used
  *   in the ui file, therefore forcing a consistent naming across the code.
- * - it ensures that the widget was found amidst the GtkBuilder collection,
- *   therefore detecting errors that can happend when reworking the ui files.
+ * - it ensures that the widget was found amidst the GtkBuilder objects,
+ *   therefore detecting errors that can happen when reworking the ui files.
  */
 
 #define assign_gtk_widget(builder, container, name)	  \

@@ -9,7 +9,6 @@ bin_PROGRAMS = pnmixer
 
 pnmixer_SOURCES =		\
 	alsa.c			\
-	debug.h			\
 	hotkeys.c		\
 	main.c			\
 	notify.c		\

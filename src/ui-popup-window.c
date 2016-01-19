@@ -22,7 +22,6 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "debug.h"
 #include "prefs.h"
 #include "support.h"
 #include "ui-popup-window.h"
@@ -343,7 +342,7 @@ popup_window_create(void)
 		uifile = get_ui_file(POPUP_WINDOW_VERTICAL_UI_FILE);
 	g_free(orientation);
 
-	DEBUG_PRINT("Building popup window from ui file '%s'", uifile);
+	DEBUG("Building popup window from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */

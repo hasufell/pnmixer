@@ -29,10 +29,84 @@
 
 #include <gtk/gtk.h>
 
-#include "debug.h"
 #include "main.h"
 #include "support.h"
 #include "prefs.h"
+
+/*
+ * Printing, reporting, debugging.
+ */
+
+/**
+ * Global variable to control whether we want debugging.
+ * This variable is initialized in main() and depends on the
+ * '--debug'/'-d' command line argument.
+ */
+
+gboolean want_debug;
+
+/**
+ * Reports an error, usually via a dialog window or on stderr.
+ *
+ * @param err the error
+ * @param ... more string segments in the format of printf
+ */
+void
+report_error(char *fmt, ...)
+{
+	va_list ap;
+	char err_buf[512];
+
+	va_start(ap, fmt);
+	vsnprintf(err_buf, sizeof err_buf, fmt, ap);
+	va_end(ap);
+
+	ERROR("%s", err_buf);
+
+	if (main_window) {
+		GtkWidget *dialog = gtk_message_dialog_new(main_window,
+				    GTK_DIALOG_DESTROY_WITH_PARENT,
+				    GTK_MESSAGE_ERROR,
+				    GTK_BUTTONS_CLOSE,
+				    NULL);
+		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+		g_object_set(dialog, "text", err_buf, NULL);
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	}
+}
+
+/**
+ * Emits a warning if the sound connection is lost, usually
+ * via a dialog window (with option to reinitialize alsa) or stderr.
+ * Also reload alsa.
+ * TODO: move that alsa reloading outisde of here
+ */
+void
+warn_sound_conn_lost(void)
+{
+	WARN("Warning: Connection to sound system failed, "
+	     "you probably need to restart pnmixer");
+
+	if (main_window) {
+		gint resp;
+		GtkWidget *dialog = gtk_message_dialog_new(main_window,
+				    GTK_DIALOG_DESTROY_WITH_PARENT,
+				    GTK_MESSAGE_ERROR,
+				    GTK_BUTTONS_YES_NO,
+				    _("Warning: Connection to sound system failed."));
+		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
+				_("Do you want to re-initialize the connection to alsa?\n\n"
+				  "If you do not, you will either need to restart PNMixer "
+				  "or select the 'Reload Alsa' option in the right click "
+				  "menu in order for PNMixer to function."));
+		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+		resp = gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		if (resp == GTK_RESPONSE_YES)
+			do_alsa_reinit();
+	}
+}
 
 /**
  * List of available pixmap directories, populated via
@@ -160,7 +234,7 @@ get_stock_pixbuf(const char *filename, gint size)
 	return_buf = gtk_icon_theme_load_icon(icon_theme, filename,
 					      size, 0, &err);
 	if (err != NULL) {
-		DEBUG_PRINT("Unable to load icon %s: %s", filename, err->message);
+		DEBUG("Unable to load icon %s: %s", filename, err->message);
 		g_error_free(err);
 	}
 	return return_buf;

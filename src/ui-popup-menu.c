@@ -22,7 +22,6 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "debug.h"
 #include "support.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
@@ -187,7 +186,7 @@ popup_menu_create(void)
 	uifile = get_ui_file(POPUP_MENU_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG_PRINT("Building popup menu from ui file '%s'", uifile);
+	DEBUG("Building popup menu from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */
