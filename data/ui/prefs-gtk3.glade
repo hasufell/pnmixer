@@ -157,7 +157,7 @@
                 </child>
                 <child>
                       <object class="GtkCheckButton" id="noti_popup_check">
-                        <property name="label" translatable="yes">Adjustment in Volume Popup</property>
+                        <property name="label" translatable="yes">Adjustment in Popups</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
