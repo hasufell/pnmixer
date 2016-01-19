@@ -153,35 +153,6 @@ find_pixmap_file(const gchar *filename)
 }
 
 /**
- * This is an internally used function to create GtkImages.
- *
- * @param widget ??
- * @param filename filename to create the GtkImage from
- * @return the new GtkImage,
- * an empty GtkImage if the file was not found
- */
-GtkWidget *
-create_pixmap(G_GNUC_UNUSED GtkWidget *widget, const gchar *filename)
-{
-	gchar *pathname = NULL;
-	GtkWidget *pixmap;
-
-	if (!filename || !filename[0])
-		return gtk_image_new();
-
-	pathname = find_pixmap_file(filename);
-
-	if (!pathname) {
-		g_warning(_("Couldn't find pixmap file: %s"), filename);
-		return gtk_image_new();
-	}
-
-	pixmap = gtk_image_new_from_file(pathname);
-	g_free(pathname);
-	return pixmap;
-}
-
-/**
  * This is an internally used function to create GdkPixbufs.
  *
  * @param filename filename to create the GtkPixbuf from
