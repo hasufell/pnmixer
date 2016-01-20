@@ -44,72 +44,9 @@ struct popup_menu {
 #endif
 };
 
-/* Widget signal handlers */
-
-/**
- * Propagates the activate signal on mute_item (GtkMenuItem) in the right-click
- * popup menu to the underlying popup_menu_mute_check (GtkCheckButton) as
- * toggled signal.
- */
-void
-#ifdef WITH_GTK3
-popup_menu_on_mute_activated(G_GNUC_UNUSED GtkMenuItem *widget,
-#else
-popup_menu_on_mute_activated(G_GNUC_UNUSED GtkCheckMenuItem *widget,
-#endif
-                             G_GNUC_UNUSED PopupMenu *menu)
-{
-	do_mute(popup_noti);
-}
-
-/**
- * Opens the specified mixer application which can be triggered either
- * by clicking the 'Volume Control' GtkImageMenuItem in the context
- * menu, the GtkButton 'Mixer' in the left-click popup_window or
- * by middle-click if the Middle Click Action in the preferences
- * is set to 'Volume Control'.
- */
-void
-popup_menu_on_mixer_activated(G_GNUC_UNUSED GtkMenuItem *item,
-                              G_GNUC_UNUSED PopupMenu *menu)
-{
-	do_mixer();
-}
-
-/**
- * Brings up the preferences window, either triggered by clicking
- * on the GtkImageMenuItem 'Preferences' in the context menu
- * or by middle-click if the Middle Click Action in the preferences
- * is set to 'Show Preferences'.
- */
-void
-popup_menu_on_prefs_activated(G_GNUC_UNUSED GtkMenuItem *item,
-                              G_GNUC_UNUSED PopupMenu *menu)
-{
-	do_open_prefs();
-}
-
-void
-popup_menu_on_reload_activated(G_GNUC_UNUSED GtkMenuItem *item,
-                               G_GNUC_UNUSED PopupMenu *menu)
-{
-	do_alsa_reinit();
-}
-
-void
-popup_menu_on_about_activated(G_GNUC_UNUSED GtkMenuItem *item,
-                              G_GNUC_UNUSED PopupMenu *menu)
-{
-	about_dialog_run();
-}
-
 /* Helpers */
 
-/**
- * Update the mute checkbox according to the current alsa state
- *
- * @param widget the checkbox to update
- */
+/* Updates the mute checkbox according to the current audio state. */
 static void
 update_mute_check(PopupMenu *menu)
 {
@@ -140,24 +77,100 @@ update_mute_check(PopupMenu *menu)
 	mute_item = GTK_CHECK_MENU_ITEM(menu->mute_item);
 
 	n_handlers_blocked = g_signal_handlers_block_by_func
-		(G_OBJECT(mute_item), popup_menu_on_mute_activated, menu);
+		(G_OBJECT(mute_item), on_mute_item_activate, menu);
 	g_assert(n_handlers_blocked == 1);
 
 	gtk_check_menu_item_set_active(mute_item, active);
 
 	g_signal_handlers_unblock_by_func
-		(G_OBJECT(mute_item), popup_menu_on_mute_activated, menu);
+		(G_OBJECT(mute_item), on_mute_item_activate, menu);
 #endif
+}
+
+/* Signal handlers */
+
+/**
+ * Handles a click on 'mute_item', toggling the mute audio state.
+ * 
+ * @param menuitem the object which received the signal.
+ * @param menu PopupMenu instance set when the signal handler was connected.
+ */
+void
+#ifdef WITH_GTK3
+on_mute_item_activate(G_GNUC_UNUSED GtkMenuItem *menuitem,
+#else
+on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
+#endif
+                      G_GNUC_UNUSED PopupMenu *menu)
+{
+	do_mute(popup_noti);
+}
+
+/**
+ * Handles a click on 'mixer_item', opening the specified mixer application.
+ *
+ * @param menuitem the object which received the signal.
+ * @param menu PopupMenu instance set when the signal handler was connected.
+ */
+void
+on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
+                       G_GNUC_UNUSED PopupMenu *menu)
+{
+	do_mixer();
+}
+
+/**
+ * Handles a click on 'prefs_item', opening the preferences window.
+ *
+ * @param menuitem the object which received the signal.
+ * @param menu PopupMenu instance set when the signal handler was connected.
+ */
+void
+on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
+                       G_GNUC_UNUSED PopupMenu *menu)
+{
+	do_open_prefs();
+}
+
+/**
+ * Handles a click on 'reload_item', re-initializing alsa.
+ *
+ * @param menuitem the object which received the signal.
+ * @param menu PopupMenu instance set when the signal handler was connected.
+ */
+void
+on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
+                        G_GNUC_UNUSED PopupMenu *menu)
+{
+	do_alsa_reinit();
+}
+
+/**
+ * Handles a click on 'about_item', opening the About dialog.
+ *
+ * @param menuitem the object which received the signal.
+ * @param menu PopupMenu instance set when the signal handler was connected.
+ */
+void
+on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
+                       G_GNUC_UNUSED PopupMenu *menu)
+{
+	about_dialog_run();
 }
 
 /* Public functions */
 
-void
-popup_menu_update(PopupMenu *menu)
-{
-	update_mute_check(menu);
-}
-
+/**
+ * Shows the popup menu.
+ * The weird prototype of this function comes from the underlying
+ * gtk_menu_popup() that is used to display the popup menu.
+ *
+ * @param menu a PopupMenu instance.
+ * @param func a user supplied function used to position the menu, or NULL.
+ * @param data user supplied data to be passed to func.
+ * @param button the mouse button which was pressed to initiate the event.
+ * @param activate_time the time at which the activation event occurred.
+ */
 void
 popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
                 guint button, guint activate_time)
@@ -166,6 +179,23 @@ popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
 	               func, data, button, activate_time);
 }
 
+/**
+ * Updates the popup menu according to the audio status.
+ * This has to be called after volume has been changed or muted.
+ *
+ * @param menu a PopupMenu instance.
+ */
+void
+popup_menu_update(PopupMenu *menu)
+{
+	update_mute_check(menu);
+}
+
+/**
+ * Destroys the popup menu, freeing any resources.
+ *
+ * @param menu a PopupMenu instance.
+ */
 void
 popup_menu_destroy(PopupMenu *menu)
 {
@@ -173,6 +203,11 @@ popup_menu_destroy(PopupMenu *menu)
 	g_free(menu);
 }
 
+/**
+ * Creates the popup menu and connects all the signals.
+ *
+ * @return the newly created PopupMenu instance.
+ */
 PopupMenu *
 popup_menu_create(void)
 {

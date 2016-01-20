@@ -514,7 +514,7 @@ tray_icon_reload_prefs(TrayIcon *icon)
 }
 
 /**
- * Destroys the tray icon, freeing any resource.
+ * Destroys the tray icon, freeing any resources.
  *
  * @param icon a TrayIcon instance.
  */
