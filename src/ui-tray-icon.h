@@ -23,6 +23,5 @@ TrayIcon *tray_icon_create(void);
 void tray_icon_destroy(TrayIcon *tray_icon);
 void tray_icon_reload_prefs(TrayIcon *tray_icon);
 void tray_icon_update(TrayIcon *tray_icon);
-gint tray_icon_get_size(TrayIcon *tray_icon);
 
 #endif				// UI_TRAY_ICON_H_

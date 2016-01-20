@@ -36,7 +36,7 @@ enum {
 	VOLUME_LOW,
 	VOLUME_MEDIUM,
 	VOLUME_HIGH,
-	N_VOLUME_ICONS
+	N_VOLUME_PIXBUFS
 };
 
 struct tray_icon_prefs {
@@ -70,14 +70,20 @@ struct tray_icon {
 	GdkPixbuf **pixbufs;
 };
 
-/* Tray icon preferences */
+/* Tray icon preferences.
+ * We put here all the preferences that are needed during the object run-time.
+ * We don't put here preferences needed at construct-time, since they're only
+ * needed once.
+ */
 
+/* Frees a TrayIconPrefs instance. */
 static void
 tray_icon_prefs_free(TrayIconPrefs *prefs)
 {
 	g_free(prefs);
 }
 
+/* Creates a new TrayIconPrefs instance. */
 static TrayIconPrefs *
 tray_icon_prefs_new(void)
 {
@@ -97,9 +103,9 @@ tray_icon_prefs_new(void)
  * The array contains all the icons currently in use, stored as GdkPixbuf.
  * The array is dynamic. It's built "just-in-time", that's to say the first
  * time it's accessed. It avoids building it multiple times at startup.
- * Also, when we need to reload the array, we just have to free it.
  */
 
+/* Frees a pixbuf array. */
 static void
 pixbuf_array_free(GdkPixbuf **pixbufs)
 {
@@ -108,16 +114,17 @@ pixbuf_array_free(GdkPixbuf **pixbufs)
 	if (!pixbufs)
 		return;
 
-	for (i = 0; i < N_VOLUME_ICONS; i++)
+	for (i = 0; i < N_VOLUME_PIXBUFS; i++)
 		g_object_unref(pixbufs[i]);
 
 	g_free(pixbufs);
 }
 
+/* Creates a new pixbuf array, containing the icon set that must be used. */
 static GdkPixbuf **
 pixbuf_array_new(int size)
 {
-	GdkPixbuf *pixbufs[N_VOLUME_ICONS];
+	GdkPixbuf *pixbufs[N_VOLUME_PIXBUFS];
 	gboolean system_theme;
 
 	DEBUG("Building pixbuf array for size %d)", size);
@@ -150,6 +157,7 @@ pixbuf_array_new(int size)
 
 /* Tray icon volume meter */
 
+/* Frees a VolMeter instance. */
 static void
 vol_meter_free(VolMeter *vol_meter)
 {
@@ -163,6 +171,7 @@ vol_meter_free(VolMeter *vol_meter)
 	g_free(vol_meter);
 }
 
+/* Returns a new VolMeter instance. Returns NULL if VolMeter is disabled. */
 static VolMeter*
 vol_meter_new(void)
 {
@@ -190,13 +199,9 @@ vol_meter_new(void)
 	return vol_meter;
 }
 
-/**
- * Draws the volume meter on top of the icon.
- *
- * @param pixbuf the GdkPixbuf icon to draw the volume meter on
- * @param x offset
- * @param y offset
- * @param h height of the volume meter
+/* Draws the volume meter on top of the icon. It doesn't modify the pixbuf passed
+ * in parameter. Instead, it makes a copy internally, and return a pointer toward
+ * the modified copy. There's no need to unref it.
  */
 static GdkPixbuf *
 vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
@@ -276,6 +281,7 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 
 /* Helpers */
 
+/* Update the tray icon pixbuf according to the current audio state. */
 static void
 update_icon(TrayIcon *icon, int volume, int muted)
 {
@@ -306,6 +312,7 @@ update_icon(TrayIcon *icon, int volume, int muted)
 	gtk_status_icon_set_from_pixbuf(icon->status_icon, pixbuf);
 }
 
+/* Update the tray icon tooltip according to the current audio state. */
 static void
 update_tooltip(TrayIcon *icon, int volume, int muted)
 {
@@ -329,11 +336,11 @@ update_tooltip(TrayIcon *icon, int volume, int muted)
 /* Signal handlers */
 
 /**
- * Handles the 'activate' signal on the tray_icon,
- * usually opening the popup_window and grabbing pointer and keyboard.
+ * Handles the 'activate' signal on the GtkStatusIcon, bringing up or hiding
+ * the volume popup window. Usually triggered by left-click.
  *
- * @param status_icon the object which received the signal
- * @param user_data user data set when the signal handler was connected
+ * @param status_icon the object which received the signal.
+ * @param icon TrayIcon instance set when the signal handler was connected.
  */
 static void
 on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
@@ -343,15 +350,15 @@ on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 }
 
 /**
- * Handles the 'popup-menu' signal on the tray_icon, which brings
- * up the context menu, usually activated by right-click.
+ * Handles the 'popup-menu' signal on the GtkStatusIcon, bringing up
+ * the context popup menu. Usually triggered by right-click.
  *
- * @param status_icon the object which received the signal
+ * @param status_icon the object which received the signal.
  * @param button the button that was pressed, or 0 if the signal
- * is not emitted in response to a button press event
+ * is not emitted in response to a button press event.
  * @param activate_time the timestamp of the event that triggered
- * the signal emission
- * @param menu user data set when the signal handler was connected
+ * the signal emission.
+ * @param icon TrayIcon instance set when the signal handler was connected.
  */
 static void
 on_popup_menu(GtkStatusIcon *status_icon, guint button,
@@ -360,17 +367,17 @@ on_popup_menu(GtkStatusIcon *status_icon, guint button,
 	do_show_popup_menu(gtk_status_icon_position_menu, status_icon, button, activate_time);
 }
 
-/* FIXME: return type should be gboolean */
 /**
- * Handles button-release-event' signal on the tray_icon, currently
- * only used for middle-click.
+ * Handles 'button-release-event' signal on the GtkStatusIcon.
+ * Only used for middle-click, which runs the middle click action.
  *
- * @param status_icon the object which received the signal
- * @param event the GdkEventButton which triggered this signal
- * @param user_data user data set when the signal handler was
- * connected
+ * @param status_icon the object which received the signal.
+ * @param event the GdkEventButton which triggered this signal.
+ * @param icon TrayIcon instance set when the signal handler was connected.
+ * @return TRUE to stop other handlers from being invoked for the event.
+ * FALSE to propagate the event further.
  */
-static void
+static gboolean
 on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
                         GdkEventButton *event, TrayIcon *icon)
 {
@@ -393,16 +400,19 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 	default: {
 	}	// nothing
 	}
+
+	return FALSE;
 }
 
 /**
- * Callback function when the tray_icon receives the scroll-event signal.
+ * Handles 'scroll-event' signal on the GtkStatusIcon, changing the volume
+ * accordingly.
  *
- * @param status_icon the object which received the signal
- * @param event the GdkEventScroll which triggered this signal
- * @param user_data user data set when the signal handler was connected
+ * @param status_icon the object which received the signal.
+ * @param event the GdkEventScroll which triggered this signal.
+ * @param icon TrayIcon instance set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
- * False to propagate the event further
+ * FALSE to propagate the event further
  */
 static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
@@ -426,17 +436,18 @@ on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
 
 	do_update_ui();
 
-	return TRUE;
+	return FALSE;
 }
 
 /**
- * Handles the 'size-changed' signal on the tray_icon by
- * calling update_status_icons().
+ * Handles the 'size-changed' signal on the GtkStatusIcon.
+ * Happens when the panel holding the tray icon is resized.
+ * Also happens at startup during the tray icon creation.
  *
- * @param status_icon the object which received the signal
- * @param size the new size
- * @param user_data set when the signal handler was connected
- * @return FALSE, so Gtk+ scales the icon as necessary
+ * @param status_icon the object which received the signal.
+ * @param size the new size.
+ * @param icon TrayIcon instance set when the signal handler was connected.
+ * @return FALSE, so that Gtk+ scales the icon as necessary.
  */
 static gboolean
 on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size,
@@ -459,39 +470,13 @@ on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size,
 	return FALSE;
 }
 
-
 /* Public functions */
 
 /**
- * Returns the size of the tray icon.
+ * Updates the tray icon according to the audio status.
+ * This has to be called after volume has been changed or muted.
  *
- * @return size of the tray icon or 48 if there is none
- */
-gint
-tray_icon_get_size(TrayIcon *icon)
-{
-	// TODO: remove that when no more useful
-
-	GtkStatusIcon *status_icon = icon->status_icon;
-	gint size;
-
-	// gtk_status_icon_is_embedded returns false until the prefs
-	// window is opened on gtk3
-
-	printf("gtk_status_icon_get_size(status_icon) = %d\n",
-	       gtk_status_icon_get_size(status_icon));
-
-	if (status_icon && GTK_IS_STATUS_ICON(status_icon))
-		size = gtk_status_icon_get_size(status_icon);
-	else
-		size = 48;
-
-	return size;
-}
-
-/**
- * Updates the tray icon. Usually called after volume has been muted
- * or changed.
+ * @param icon a TrayIcon instance.
  */
 void
 tray_icon_update(TrayIcon *icon)
@@ -503,6 +488,12 @@ tray_icon_update(TrayIcon *icon)
 	update_tooltip(icon, volume, muted);
 }
 
+/**
+ * Update the tray icon according to the current preferences.
+ * This has to be called each time the preferences are modified.
+ *
+ * @param icon a TrayIcon instance.
+ */
 void
 tray_icon_reload_prefs(TrayIcon *icon)
 {
@@ -522,6 +513,11 @@ tray_icon_reload_prefs(TrayIcon *icon)
 	tray_icon_update(icon);
 }
 
+/**
+ * Destroys the tray icon, freeing any resource.
+ *
+ * @param icon a TrayIcon instance.
+ */
 void
 tray_icon_destroy(TrayIcon *icon)
 {
@@ -533,10 +529,9 @@ tray_icon_destroy(TrayIcon *icon)
 }
 
 /**
- * Creates the tray icon and connects the signals 'scroll_event'
- * and 'size-changed'.
+ * Creates the tray icon and connects all the signals.
  *
- * @return the newly created tray icon
+ * @return the newly created TrayIcon instance.
  */
 TrayIcon *
 tray_icon_create(void)
@@ -547,24 +542,25 @@ tray_icon_create(void)
 
 	icon = g_new0(TrayIcon, 1);
 
+	/* Create everything */
 	icon->prefs = tray_icon_prefs_new();
-
 	icon->vol_meter = vol_meter_new();
-
 	icon->status_icon = gtk_status_icon_new();
-	/* Handle the left click */
+
+	/* Connect signal handlers */
+	// Left-click
 	g_signal_connect(icon->status_icon, "activate",
 			 G_CALLBACK(on_activate), icon);
-	/* Handle the right click */
+	// Right-click
 	g_signal_connect(icon->status_icon, "popup-menu",
 			 G_CALLBACK(on_popup_menu), icon);
-	/* Handle the middle click */
+	// Middle-click
 	g_signal_connect(icon->status_icon, "button-release-event",
 			 G_CALLBACK(on_button_release_event), icon);
-	/* Handle mouse scrolling on the icon */
+	// Mouse scrolling on the icon
 	g_signal_connect(icon->status_icon, "scroll_event",
 			 G_CALLBACK(on_scroll_event), icon);
-	/* Handle change of size */
+	// Change of size
 	g_signal_connect(icon->status_icon, "size-changed",
 			 G_CALLBACK(on_size_changed), icon);
 
