@@ -11,7 +11,7 @@
 /**
  * @file ui-tray-icon.c
  * This file holds the ui-related code for the system tray icon.
- * @brief tray icon ui subsystem
+ * @brief tray icon subsystem
  */
 
 #ifdef HAVE_CONFIG_H
@@ -39,14 +39,6 @@ enum {
 	N_VOLUME_PIXBUFS
 };
 
-struct tray_icon_prefs {
-	gboolean mouse_noti;
-	gint middle_click_action;
-	gint scroll_step;
-};
-
-typedef struct tray_icon_prefs TrayIconPrefs;
-
 struct vol_meter {
 	/* Configuration */
 	guchar red;
@@ -63,40 +55,11 @@ struct vol_meter {
 typedef struct vol_meter VolMeter;
 
 struct tray_icon {
-	TrayIconPrefs *prefs;
 	VolMeter *vol_meter;
 	GtkStatusIcon *status_icon;
 	gint status_icon_size;
 	GdkPixbuf **pixbufs;
 };
-
-/* Tray icon preferences.
- * We put here all the preferences that are needed during the object run-time.
- * We don't put here preferences needed at construct-time, since they're only
- * needed once.
- */
-
-/* Frees a TrayIconPrefs instance. */
-static void
-tray_icon_prefs_free(TrayIconPrefs *prefs)
-{
-	g_free(prefs);
-}
-
-/* Creates a new TrayIconPrefs instance. */
-static TrayIconPrefs *
-tray_icon_prefs_new(void)
-{
-	TrayIconPrefs *prefs;
-
-	prefs = g_new0(TrayIconPrefs, 1);
-
-	prefs->mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
-	prefs->middle_click_action = prefs_get_integer("MiddleClickAction", 0);
-	prefs->scroll_step = prefs_get_integer("ScrollStep", 5);
-
-	return prefs;
-}
 
 /*
  * Tray icon pixbuf array.
@@ -381,12 +344,16 @@ static gboolean
 on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
                         GdkEventButton *event, TrayIcon *icon)
 {
+	int middle_click_action;
+
 	if (event->button != 2)
 		return;
 
-	switch (icon->prefs->middle_click_action) {
+	middle_click_action = prefs_get_integer("MiddleClickAction", 0);
+
+	switch (middle_click_action) {
 	case 0:
-		do_mute(icon->prefs->mouse_noti);
+		do_mute(mouse_noti);
 		break;
 	case 1:
 		do_open_prefs();
@@ -418,23 +385,10 @@ static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
                 TrayIcon *icon)
 {
-	int volume;
-	gint scroll_step;
-	gboolean mouse_noti;
-
-	volume = getvol();
-	scroll_step = icon->prefs->scroll_step;
-	mouse_noti = icon->prefs->mouse_noti;
-
 	if (event->direction == GDK_SCROLL_UP)
-		setvol(volume + scroll_step, 1, mouse_noti);
+		do_raise_volume(mouse_noti);
         else if (event->direction == GDK_SCROLL_DOWN)
-		setvol(volume - scroll_step, -1, mouse_noti);
-
-	if (ismuted() == 0)
-		setmute(mouse_noti);
-
-	do_update_ui();
+	        do_lower_volume(mouse_noti);
 
 	return FALSE;
 }
@@ -497,10 +451,6 @@ tray_icon_update(TrayIcon *icon)
 void
 tray_icon_reload_prefs(TrayIcon *icon)
 {
-	/* Reload some configuration */
-	tray_icon_prefs_free(icon->prefs);
-	icon->prefs = tray_icon_prefs_new();
-
 	/* Recreate the volume meter */
 	vol_meter_free(icon->vol_meter);
 	icon->vol_meter = vol_meter_new();
@@ -524,7 +474,6 @@ tray_icon_destroy(TrayIcon *icon)
 	g_object_unref(icon->status_icon);
 	pixbuf_array_free(icon->pixbufs);
 	vol_meter_free(icon->vol_meter);
-	tray_icon_prefs_free(icon->prefs);
 	g_free(icon);
 }
 
@@ -543,7 +492,6 @@ tray_icon_create(void)
 	icon = g_new0(TrayIcon, 1);
 
 	/* Create everything */
-	icon->prefs = tray_icon_prefs_new();
 	icon->vol_meter = vol_meter_new();
 	icon->status_icon = gtk_status_icon_new();
 

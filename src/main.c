@@ -42,6 +42,8 @@ static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
 static TrayIcon *tray_icon;
 
+static int scroll_step;
+
 /**
  * Applies the preferences, usually triggered by on_ok_button_clicked()
  * in callbacks.c, but also initially called from main().
@@ -51,7 +53,10 @@ static TrayIcon *tray_icon;
 void
 apply_prefs(gint alsa_change)
 {
-	// Hotkeys preferences
+	/* Scroll step */
+	scroll_step = prefs_get_integer("ScrollStep", 5);
+
+	/* Hotkeys preferences */
 	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
 		gint mk, uk, dk, mm, um, dm, hstep;
 		mk = prefs_get_integer("VolMuteKey", -1);
@@ -66,22 +71,27 @@ apply_prefs(gint alsa_change)
 		// will actually just ungrab everything
 		hotkeys_grab(-1, -1, -1, 0, 0, 0, 1);
 
-	// Notifications preferences
+	/* Notifications preferences */
 	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
 	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
+	mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
 	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
 	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
 	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
 
-	// Popup window, rebuild it from scratch. This is needed in case
-	// the slider orientation was modified.
+	/* Popup window, rebuild it from scratch. This is needed in case
+	 * the slider orientation was modified.
+	 */
 	popup_window_destroy(popup_window);
 	popup_window = popup_window_create();
 
-	// Tray icon, reload
+	/* Tray icon, reload */
 	tray_icon_reload_prefs(tray_icon);
+
+	/* Update the whole ui */
 	do_update_ui();
 	
+	/* Reload alsa */
 	if (alsa_change)
 		do_alsa_reinit();
 }
@@ -110,6 +120,32 @@ do_mute(gboolean notify)
 {
         setmute(notify);
         do_update_ui();
+}
+
+void
+do_raise_volume(gboolean notify)
+{
+	int volume = getvol();
+
+	setvol(volume + scroll_step, 1, notify);
+
+	if (ismuted() == 0)
+		setmute(notify);
+
+	do_update_ui();
+}
+
+void
+do_lower_volume(gboolean notify)
+{
+	int volume = getvol();
+
+	setvol(volume - scroll_step, -1, notify);
+
+	if (ismuted() == 0)
+		setmute(notify);
+
+	do_update_ui();
 }
 
 /**

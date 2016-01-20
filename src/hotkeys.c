@@ -95,22 +95,14 @@ key_filter(GdkXEvent *gdk_xevent,
 		state = ((XKeyEvent *) xevent)->state;
 
 		if ((int) key == volMuteKey && checkModKey(state, volMuteMods)) {
-			setmute(enable_noti && hotkey_noti);
-			do_update_ui();
+			do_mute(hotkey_noti);
 			return GDK_FILTER_CONTINUE;
 		} else {
-			int cv = getvol();
-			if ((int) key == volUpKey && checkModKey(state, volUpMods)) {
-				setvol(cv + volStep, 1, enable_noti && hotkey_noti);
-			} else if ((int) key == volDownKey && checkModKey(state, volDownMods)) {
-				setvol(cv - volStep, -1, enable_noti && hotkey_noti);
-			}
+			if ((int) key == volUpKey && checkModKey(state, volUpMods))
+				do_raise_volume(hotkey_noti);
+			else if ((int) key == volDownKey && checkModKey(state, volDownMods))
+				do_lower_volume(hotkey_noti);
 			// just ignore unknown hotkeys
-
-			if (ismuted() == 0)
-				setmute(enable_noti && hotkey_noti);
-
-			do_update_ui();
 		}
 	}
 	return GDK_FILTER_CONTINUE;

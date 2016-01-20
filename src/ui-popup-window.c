@@ -1,4 +1,4 @@
-/* popup-window.c
+/* ui-popup-window.c
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file popup-window.c
+ * @file ui-popup-window.c
  * This file holds the ui-related code for the popup window.
  * @brief Popup window subsystem
  */

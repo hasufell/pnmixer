@@ -22,10 +22,13 @@
 
 GtkWindow *main_window;
 
-gboolean enable_noti, hotkey_noti, popup_noti, external_noti;
+gboolean enable_noti, hotkey_noti, mouse_noti, popup_noti, external_noti;
 gint noti_timeout;
 
 void do_mute(gboolean notify);
+void do_raise_volume(gboolean notify);
+void do_lower_volume(gboolean notify);
+
 void do_open_prefs(void);
 void do_mixer(void);
 void do_custom_command(void);
@@ -34,6 +37,7 @@ void do_toggle_popup_window(void);
 void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
                         guint button, guint activate_time);
 void do_update_ui(void);
+
 
 void apply_prefs(gint alsa_change);
 

@@ -1,4 +1,4 @@
-/* about-dialog.c
+/* ui-about-dialog.c
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,7 +9,7 @@
  */
 
 /**
- * @file about-dialog.c
+ * @file ui-about-dialog.c
  * This file holds the ui-related code for the about dialog
  * @brief About dialog subsystem
  */
@@ -65,10 +65,13 @@ about_dialog_create(void)
 
 /* Public functions */
 
+/**
+ * Creates the about dialog, run it and destroy it.
+ * Only one instance at a time is allowed.
+ */
 void
 about_dialog_run(void)
 {
-	/* Only one instance at a time */
 	if (instance)
 		return;
 
