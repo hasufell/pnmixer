@@ -29,6 +29,7 @@
 
 #include <gtk/gtk.h>
 
+#include "audio.h"
 #include "main.h"
 #include "support.h"
 #include "prefs.h"
@@ -104,7 +105,7 @@ warn_sound_conn_lost(void)
 		resp = gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 		if (resp == GTK_RESPONSE_YES)
-			do_alsa_reinit();
+			audio_reinit();
 	}
 }
 

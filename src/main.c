@@ -25,7 +25,7 @@
 
 #include <glib.h>
 
-#include "alsa.h"
+#include "audio.h"
 #include "main.h"
 #include "notify.h"
 #include "support.h"
@@ -37,12 +37,12 @@
 #include "ui-tray-icon.h"
 
 GtkWindow *main_window = NULL;
+int scroll_step;
 
 static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
 static TrayIcon *tray_icon;
 
-static int scroll_step;
 
 /**
  * Applies the preferences, usually triggered by on_ok_button_clicked()
@@ -93,7 +93,7 @@ apply_prefs(gint alsa_change)
 	
 	/* Reload alsa */
 	if (alsa_change)
-		do_alsa_reinit();
+		audio_reinit();
 }
 
 /**
@@ -113,39 +113,6 @@ run_command(const gchar *cmd)
 		g_error_free(error);
 		error = NULL;
 	}
-}
-
-void
-do_mute(gboolean notify)
-{
-        setmute(notify);
-        do_update_ui();
-}
-
-void
-do_raise_volume(gboolean notify)
-{
-	int volume = getvol();
-
-	setvol(volume + scroll_step, 1, notify);
-
-	if (ismuted() == 0)
-		setmute(notify);
-
-	do_update_ui();
-}
-
-void
-do_lower_volume(gboolean notify)
-{
-	int volume = getvol();
-
-	setvol(volume - scroll_step, -1, notify);
-
-	if (ismuted() == 0)
-		setmute(notify);
-
-	do_update_ui();
 }
 
 /**
@@ -210,16 +177,6 @@ do_custom_command(void)
 	} else
 		report_error(_("You have not specified a custom command to run, "
 		               "please specify one in preferences."));
-}
-
-/**
- * Reinitializes alsa and updates the various states.
- */
-void
-do_alsa_reinit(void)
-{
-	alsa_init();
-	do_update_ui();
 }
 
 /**
@@ -296,7 +253,7 @@ main(int argc, char *argv[])
 
 
 	/* Init everything */
-	alsa_init();
+	audio_init();
 	init_libnotify();
 	hotkeys_add_filter();
 
@@ -324,7 +281,7 @@ main(int argc, char *argv[])
 	popup_menu_destroy(popup_menu);
 
 	uninit_libnotify();
-	alsa_close();
+	audio_cleanup();
 
 	return EXIT_SUCCESS;
 }

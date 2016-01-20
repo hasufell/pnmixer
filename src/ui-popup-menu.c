@@ -22,11 +22,11 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
+#include "audio.h"
 #include "support.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
 
-#include "alsa.h"
 #include "main.h"
 
 #ifdef WITH_GTK3
@@ -52,7 +52,7 @@ update_mute_check(PopupMenu *menu)
 {
 	gboolean active;
 
-	if (ismuted() == 1)
+	if (audio_is_muted() == 1)
 		active = FALSE;
 	else
 		active = TRUE;
@@ -103,7 +103,7 @@ on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
 #endif
                       G_GNUC_UNUSED PopupMenu *menu)
 {
-	do_mute(popup_noti);
+	audio_mute(popup_noti);
 }
 
 /**
@@ -133,7 +133,7 @@ on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 }
 
 /**
- * Handles a click on 'reload_item', re-initializing alsa.
+ * Handles a click on 'reload_item', re-initializing the audio subsystem.
  *
  * @param menuitem the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
@@ -142,7 +142,7 @@ void
 on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
                         G_GNUC_UNUSED PopupMenu *menu)
 {
-	do_alsa_reinit();
+	audio_reinit();
 }
 
 /**

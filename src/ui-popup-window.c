@@ -22,11 +22,11 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
+#include "audio.h"
 #include "prefs.h"
 #include "support.h"
 #include "ui-popup-window.h"
 
-#include "alsa.h"
 #include "main.h"
 
 #ifdef WITH_GTK3
@@ -115,7 +115,6 @@ popup_window_on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollT
                                        gdouble value, G_GNUC_UNUSED PopupWindow *window)
 {
 	GtkAdjustment *gtk_adj;
-	int volumeset;
 
 	/* We must ensure that the new value meets the requirement
 	 * defined by the GtkAdjustment. We have to do that manually,
@@ -131,13 +130,7 @@ popup_window_on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollT
 	if (value > gtk_adjustment_get_upper(gtk_adj))
 		value = gtk_adjustment_get_upper(gtk_adj);
 
-	volumeset = (int) value;
-
-	setvol(volumeset, 0, popup_noti);
-	if (ismuted() == 0)
-		setmute(popup_noti);
-
-	do_update_ui();
+	audio_set_volume((int) value, popup_noti);
 
 	return FALSE;
 }
@@ -146,7 +139,7 @@ void
 popup_window_on_mute_toggled(G_GNUC_UNUSED GtkToggleButton *button,
                              G_GNUC_UNUSED PopupWindow *window)
 {
-	do_mute(popup_noti);
+	audio_mute(popup_noti);
 }
 
 void
@@ -203,7 +196,7 @@ configure_vol_increment(GtkAdjustment *vol_scale_adj)
 }
 
 /**
- * Update the mute checkbox according to the current alsa state
+ * Update the mute checkbox according to the current audio state
  *
  * @param window the popup window to update
  */
@@ -310,8 +303,8 @@ popup_window_hide(PopupWindow *window)
 void
 popup_window_update(PopupWindow *window)
 {
-	int volume = getvol();
-	int muted = ismuted();
+	int volume = audio_get_volume();
+	int muted = audio_is_muted();
 
 	update_mute_check(window, muted);
 	update_volume_slider(window, volume);

@@ -23,10 +23,10 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "ui-tray-icon.h"
-#include "support.h"
+#include "audio.h"
 #include "prefs.h"
-#include "alsa.h"
+#include "support.h"
+#include "ui-tray-icon.h"
 
 #include "main.h"
 
@@ -283,8 +283,8 @@ update_tooltip(TrayIcon *icon, int volume, int muted)
 	const char *channel;
 	char tooltip[64];
 
-	card_name = (alsa_get_active_card())->name;
-	channel = alsa_get_active_channel();
+	card_name = audio_get_card();
+	channel = audio_get_channel();
 	
 	if (muted == 1)
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
@@ -342,7 +342,7 @@ on_popup_menu(GtkStatusIcon *status_icon, guint button,
  */
 static gboolean
 on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
-                        GdkEventButton *event, TrayIcon *icon)
+                        GdkEventButton *event, G_GNUC_UNUSED TrayIcon *icon)
 {
 	int middle_click_action;
 
@@ -353,7 +353,7 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 
 	switch (middle_click_action) {
 	case 0:
-		do_mute(mouse_noti);
+		audio_mute(mouse_noti);
 		break;
 	case 1:
 		do_open_prefs();
@@ -383,12 +383,12 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  */
 static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
-                TrayIcon *icon)
+                G_GNUC_UNUSED TrayIcon *icon)
 {
 	if (event->direction == GDK_SCROLL_UP)
-		do_raise_volume(mouse_noti);
+		audio_raise_volume(mouse_noti);
         else if (event->direction == GDK_SCROLL_DOWN)
-	        do_lower_volume(mouse_noti);
+	        audio_lower_volume(mouse_noti);
 
 	return FALSE;
 }
@@ -435,8 +435,8 @@ on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size,
 void
 tray_icon_update(TrayIcon *icon)
 {
-	int volume = getvol();
-	int muted = ismuted();
+	int volume = audio_get_volume();
+	int muted = audio_is_muted();
 
 	update_icon(icon, volume, muted);
 	update_tooltip(icon, volume, muted);

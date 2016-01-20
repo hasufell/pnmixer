@@ -23,10 +23,10 @@
 #include <gdk/gdkx.h>
 #include <X11/XKBlib.h>
 
-#include "support.h"
+#include "audio.h"
 #include "main.h"
+#include "support.h"
 #include "prefs.h"
-#include "alsa.h"
 
 static int volMuteKey = -1;
 static int volDownKey = -1;
@@ -95,13 +95,13 @@ key_filter(GdkXEvent *gdk_xevent,
 		state = ((XKeyEvent *) xevent)->state;
 
 		if ((int) key == volMuteKey && checkModKey(state, volMuteMods)) {
-			do_mute(hotkey_noti);
+			audio_mute(hotkey_noti);
 			return GDK_FILTER_CONTINUE;
 		} else {
 			if ((int) key == volUpKey && checkModKey(state, volUpMods))
-				do_raise_volume(hotkey_noti);
+				audio_raise_volume(hotkey_noti);
 			else if ((int) key == volDownKey && checkModKey(state, volDownMods))
-				do_lower_volume(hotkey_noti);
+				audio_lower_volume(hotkey_noti);
 			// just ignore unknown hotkeys
 		}
 	}

@@ -39,6 +39,7 @@
 #include "notify.h"
 #include "prefs.h"
 
+#include "audio.h"
 #include "main.h"
 
 #include <math.h>
@@ -270,7 +271,7 @@ alsa_cb(G_GNUC_UNUSED snd_mixer_elem_t *e, unsigned int mask)
 static gboolean
 idle_alsa_reinit(G_GNUC_UNUSED gpointer data)
 {
-	do_alsa_reinit();
+	audio_reinit();
 	return FALSE;
 }
 

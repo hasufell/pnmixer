@@ -10,7 +10,7 @@
 
 /**
  * @file main.h
- * Header for main.c holding public functions and debug macros.
+ * Header for main.c holding high-level public functions.
  * @brief header for main.c
  */
 
@@ -20,24 +20,19 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-GtkWindow *main_window;
+extern GtkWindow *main_window;
+extern int scroll_step;
 
 gboolean enable_noti, hotkey_noti, mouse_noti, popup_noti, external_noti;
 gint noti_timeout;
 
-void do_mute(gboolean notify);
-void do_raise_volume(gboolean notify);
-void do_lower_volume(gboolean notify);
-
 void do_open_prefs(void);
 void do_mixer(void);
 void do_custom_command(void);
-void do_alsa_reinit(void);
 void do_toggle_popup_window(void);
 void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
                         guint button, guint activate_time);
 void do_update_ui(void);
-
 
 void apply_prefs(gint alsa_change);
 
