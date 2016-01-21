@@ -21,7 +21,7 @@
     <property name="stock">gtk-refresh</property>
     <property name="icon_size">1</property>
   </object>
-  <object class="GtkWindow" id="window">
+  <object class="GtkWindow" id="menu_window">
     <property name="type">popup</property>
     <property name="width_request">285</property>
     <property name="height_request">82</property>

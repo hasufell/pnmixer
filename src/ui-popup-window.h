@@ -21,9 +21,10 @@ typedef struct popup_window PopupWindow;
 
 PopupWindow *popup_window_create(void);
 void popup_window_destroy(PopupWindow *window);
+void popup_window_update(PopupWindow *window);
+void popup_window_show(PopupWindow *window);
 void popup_window_hide(PopupWindow *window);
 void popup_window_toggle(PopupWindow *window);
-void popup_window_update(PopupWindow *window);
 
 #include <gtk/gtk.h>
 GtkWindow *popup_window_get_gtk_window(PopupWindow *window);

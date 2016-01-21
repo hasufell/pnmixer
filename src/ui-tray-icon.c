@@ -347,7 +347,7 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 	int middle_click_action;
 
 	if (event->button != 2)
-		return;
+		return FALSE;
 
 	middle_click_action = prefs_get_integer("MiddleClickAction", 0);
 
