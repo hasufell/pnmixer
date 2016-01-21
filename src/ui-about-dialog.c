@@ -94,7 +94,7 @@ about_dialog_create(GtkWindow *parent)
  * Creates the about dialog, run it and destroy it.
  * Only one instance at a time is allowed.
  *
- * @param parent The parent window for this dialog.
+ * @param parent the parent window for this dialog.
  */
 void
 about_dialog_do(GtkWindow *parent)

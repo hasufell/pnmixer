@@ -7,12 +7,11 @@
     <property name="height_request">200</property>
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
-    <property name="title" translatable="yes">Set HotKey</property>
+    <property name="title">Set xxx HotKey</property>
     <property name="modal">True</property>
     <property name="destroy_with_parent">True</property>
     <property name="icon_name">input-keyboard</property>
     <property name="type_hint">dialog</property>
-    <property name="transient_for">prefs_window</property>
     <signal name="key-press-event" handler="on_hotkey_dialog_key_press_event" swapped="no"/>
     <signal name="key-release-event" handler="on_hotkey_dialog_key_release_event" swapped="no"/>
     <child internal-child="vbox">
@@ -156,10 +155,11 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="def_label">
+          <object class="GtkLabel" id="instruction_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Press new HotKey for:</property>
+            <property name="label">Press new HotKey for xxx</property>
+            <property name="use_markup">True</property>
           </object>
           <packing>
             <property name="expand">True</property>
@@ -168,10 +168,9 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="key_label">
+          <object class="GtkLabel" id="key_pressed_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">(Unknown)</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>

@@ -1109,7 +1109,7 @@
                                   <object class="GtkLabel" id="label19">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <property name="label" translatable="yes">Double click a HotKey to assign a new HotKey</property>
+                                    <property name="label" translatable="yes">Double-click a HotKey to assign a new HotKey</property>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>

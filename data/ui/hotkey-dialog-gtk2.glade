@@ -7,7 +7,7 @@
     <property name="height_request">200</property>
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
-    <property name="title" translatable="yes">Set HotKey</property>
+    <property name="title">Set HotKey</property>
     <property name="modal">True</property>
     <property name="destroy_with_parent">True</property>
     <property name="icon_name">input-keyboard</property>
@@ -96,11 +96,12 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="def_label">
+          <object class="GtkLabel" id="instruction_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="yalign">0.89999997615814209</property>
-            <property name="label" translatable="yes">Press new HotKey for:</property>
+            <property name="label">Press new HotKey for xxx</property>
+            <property name="use_markup">True</property>
           </object>
           <packing>
             <property name="expand">True</property>
@@ -136,11 +137,10 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="key_label">
+          <object class="GtkLabel" id="key_pressed_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="yalign">0.10000000149011612</property>
-            <property name="label" translatable="yes">(Unknown)</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>

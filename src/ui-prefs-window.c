@@ -76,8 +76,11 @@ struct prefs_window {
 	GtkWidget *hotkeys_enable_check;
 	GtkWidget *hotkeys_vol_label;
 	GtkWidget *hotkeys_vol_spin;
+	GtkWidget *hotkeys_mute_eventbox;
 	GtkWidget *hotkeys_mute_label;
+	GtkWidget *hotkeys_up_eventbox;
 	GtkWidget *hotkeys_up_label;
+	GtkWidget *hotkeys_down_eventbox;
 	GtkWidget *hotkeys_down_label;
 	/* Notifications panel */
 #ifdef HAVE_LIBN
@@ -310,11 +313,10 @@ gboolean
 on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
                                        PrefsWindow *window)
 {
-	const gchar *widget_name;
-	GtkLabel *key_label;
-	const gchar *key_text;
+	const gchar *hotkey;
+	GtkLabel *hotkey_label;
+
 	gchar *resp;
-	gint action;
 	
 	/* We want a left-click */
 	if (event->button != 1)
@@ -324,33 +326,22 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 	if (event->type == GDK_2BUTTON_PRESS)
 		return FALSE;
 
-	/* Get the name of the widget that triggered this handler */
-	widget_name = gtk_widget_get_name(widget);
-
-	action = 
-		(!strcmp(widget_name, "hotkeys_mute_eventbox")) ? 0 :
-		(!strcmp(widget_name, "hotkeys_up_eventbox")) ? 1 :
-		(!strcmp(widget_name, "hotkeys_down_eventbox")) ? 2 : -1;
-
-	switch (action) {
-	case 0:
-		key_label = GTK_LABEL(window->hotkeys_mute_label);
-		key_text = _("Mute/Unmute");
-		break;
-	case 1:
-		key_label = GTK_LABEL(window->hotkeys_up_label);
-		key_text = _("Volume Up");
-		break;
-	case 2:
-		key_label = GTK_LABEL(window->hotkeys_down_label);
-		key_text = _("Volume Down");
-		break;
-	default:
-		break;
+	/* Let's check which eventbox was clicked */
+	hotkey = NULL;
+	if (widget == window->hotkeys_mute_eventbox) {
+		hotkey_label = GTK_LABEL(window->hotkeys_mute_label);
+		hotkey = _("Mute/Unmute");
+	} else if (widget == window->hotkeys_up_eventbox) {
+		hotkey_label = GTK_LABEL(window->hotkeys_up_label);
+		hotkey = _("Volume Up");
+	} else if (widget == window->hotkeys_down_eventbox) {
+		hotkey_label = GTK_LABEL(window->hotkeys_down_label);
+		hotkey = _("Volume Down");
 	}
+	g_assert(hotkey);
 
 	/* Run the hotkey dialog */
-	resp = hotkey_dialog_do(GTK_WINDOW(window->prefs_window), key_text);
+	resp = hotkey_dialog_do(GTK_WINDOW(window->prefs_window), hotkey);
 
 	/* Handle the response */
 	if (resp == NULL)
@@ -363,7 +354,7 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 	}
 
 	/* Set */
-	gtk_label_set_text(key_label, resp);
+	gtk_label_set_text(hotkey_label, resp);
 	g_free(resp);
 
 	return FALSE;
@@ -816,8 +807,11 @@ prefs_window_create(void)
 	assign_gtk_widget(builder, window, hotkeys_enable_check);
 	assign_gtk_widget(builder, window, hotkeys_vol_label);
 	assign_gtk_widget(builder, window, hotkeys_vol_spin);
+	assign_gtk_widget(builder, window, hotkeys_mute_eventbox);
 	assign_gtk_widget(builder, window, hotkeys_mute_label);
+	assign_gtk_widget(builder, window, hotkeys_up_eventbox);
 	assign_gtk_widget(builder, window, hotkeys_up_label);
+	assign_gtk_widget(builder, window, hotkeys_down_eventbox);
 	assign_gtk_widget(builder, window, hotkeys_down_label);
 	// Notifications panel
 #ifdef HAVE_LIBN

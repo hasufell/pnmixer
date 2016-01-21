@@ -19,6 +19,6 @@
 
 #include <gtk/gtk.h>
 
-gchar *hotkey_dialog_do(GtkWindow *parent, const gchar *hotkey_desc);
+gchar *hotkey_dialog_do(GtkWindow *parent, const gchar *hotkey);
 
 #endif				// UI_HOTKEY_DIALOG_H_
