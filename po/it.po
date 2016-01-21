@@ -558,7 +558,7 @@ msgstr "Controllo del Volume..."
 #~ msgstr "Hotkeys"
 
 #~ msgid ""
-#~ "An unknown error occured trying to launch your volume control command"
+#~ "An unknown error occurred trying to launch your volume control command"
 #~ msgstr ""
 #~ "Un errore sconosciuto è avvenuto provando a lanciare il tuo comando per "
 #~ "il controllo del volume"

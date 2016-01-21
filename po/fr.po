@@ -559,7 +559,7 @@ msgstr "Contrôle du volume..."
 #~ msgstr "Touches multimédia"
 
 #~ msgid ""
-#~ "An unknown error occured trying to launch your volume control command"
+#~ "An unknown error occurred trying to launch your volume control command"
 #~ msgstr ""
 #~ "Erreur d'origine inconnue rencontrée au moment de lancer votre commande "
 #~ "de contrôle du volume."

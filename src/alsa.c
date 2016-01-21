@@ -324,7 +324,7 @@ poll_cb(GIOChannel *source, GIOCondition condition, G_GNUC_UNUSED gpointer data)
 		else if (stat == G_IO_STATUS_NORMAL)
 			warn_sound_conn_lost();
 		else if (stat == G_IO_STATUS_ERROR || stat == G_IO_STATUS_EOF)
-			report_error("Error: GIO error has occured. Won't respond to "
+			report_error("Error: GIO error has occurred. Won't respond to "
 				     "external volume changes anymore.");
 		else
 			report_error("Error: Unknown status from "

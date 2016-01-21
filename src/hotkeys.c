@@ -131,7 +131,7 @@ static gchar *muteSymStr = NULL, *downSymStr = NULL, *upSymStr = NULL;
  * When an Xlib error occurs, this function is called. It is
  * set via XSetErrorHandler().
  *
- * @param disp the display where the error occured
+ * @param disp the display where the error occurred
  * @param ev the error event
  * @return it's acceptable to return, but the return value is ignored
  */

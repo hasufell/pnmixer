@@ -555,7 +555,7 @@ msgstr "Настройки громкости…"
 #~ msgstr "Горячие клавиши"
 
 #~ msgid ""
-#~ "An unknown error occured trying to launch your volume control command"
+#~ "An unknown error occurred trying to launch your volume control command"
 #~ msgstr ""
 #~ "Произошла неизвестная ошибка при попытке выполнить вашу команду "
 #~ "управления громкостью"
