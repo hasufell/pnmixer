@@ -44,6 +44,10 @@ struct popup_menu {
 #endif
 };
 
+#ifndef WITH_GTK3
+void on_mute_item_activate(GtkCheckMenuItem *menuitem, PopupMenu *menu);
+#endif
+
 /* Helpers */
 
 /* Updates the mute checkbox according to the current audio state. */

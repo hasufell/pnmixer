@@ -90,7 +90,13 @@ pixbuf_array_new(int size)
 	GdkPixbuf *pixbufs[N_VOLUME_PIXBUFS];
 	gboolean system_theme;
 
-	DEBUG("Building pixbuf array for size %d)", size);
+	DEBUG("Building pixbuf array for size %d", size);
+
+	/* Ensure a minimum size, on Gtk2 this function is invoked with
+	 * a size of zero at startup.
+	 */
+	if (size < 16)
+		size = 16;
 
 	system_theme = prefs_get_boolean("SystemTheme", FALSE);
 
@@ -187,7 +193,6 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 
 	icon_width = gdk_pixbuf_get_width(pixbuf);
 	icon_height = gdk_pixbuf_get_height(pixbuf);
-	printf("icon_width: %d, icon_height: %d\n", icon_width, icon_height);
 
 	/* Cache the pixbuf passed in parameter */
 	if (vol_meter->pixbuf)
@@ -218,11 +223,9 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 	/* Get the volume meter coordinates and height */
 	x = vol_meter->x_offset;
 	y = vol_meter->y_offset;
-	printf("x: %d, y: %d\n", x, y);
 
 	div_factor = (icon_height - (y * 2)) / 100.0;
 	h = volume * div_factor;
-	printf("div_factor: %lf, h: %d\n", div_factor, h);
 
 	g_assert(x >= 0 && x < icon_width);
 	g_assert(y >= 0 && y + h < icon_height);
