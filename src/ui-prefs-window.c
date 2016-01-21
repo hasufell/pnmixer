@@ -26,16 +26,18 @@
 #include <gdk/gdkx.h>
 #include <X11/XKBlib.h>
 
-#include "ui-prefs-window.h"
+#include "audio.h"
 #include "prefs.h"
-#include "alsa.h"
+#include "ui-prefs-window.h"
+#include "ui-hotkey-dialog.h"
 
+#include "alsa.h"
 #include "main.h"
 
 #ifdef WITH_GTK3
-#define PREFS_UI_FILE "prefs-gtk3.glade"
+#define PREFS_UI_FILE "prefs-window-gtk3.glade"
 #else
-#define PREFS_UI_FILE "prefs-gtk2.glade"
+#define PREFS_UI_FILE "prefs-window-gtk2.glade"
 #endif
 
 /**
@@ -74,8 +76,6 @@ struct prefs_window {
 	GtkWidget *hotkeys_enable_check;
 	GtkWidget *hotkeys_vol_label;
 	GtkWidget *hotkeys_vol_spin;
-	GtkWidget *hotkeys_dialog;
-	GtkWidget *hotkeys_dialog_key_label;
 	GtkWidget *hotkeys_mute_label;
 	GtkWidget *hotkeys_up_label;
 	GtkWidget *hotkeys_down_label;
@@ -174,7 +174,7 @@ fill_card_combo(GtkWidget *combo, GtkWidget *channels_combo)
 {
 	struct acard *c;
 	GSList *cur_card;
-	struct acard *active_card;
+	const gchar *active_card;
 	int idx, sidx = 0;
 
 	GtkTreeIter iter;
@@ -182,7 +182,7 @@ fill_card_combo(GtkWidget *combo, GtkWidget *channels_combo)
 		GTK_LIST_STORE(gtk_combo_box_get_model(GTK_COMBO_BOX(combo)));
 
 	cur_card = cards;
-	active_card = alsa_get_active_card();
+	active_card = audio_get_card();
 	idx = 0;
 	while (cur_card) {
 		c = cur_card->data;
@@ -190,7 +190,7 @@ fill_card_combo(GtkWidget *combo, GtkWidget *channels_combo)
 			cur_card = cur_card->next;
 			continue;
 		}
-		if (active_card && !strcmp(c->name, active_card->name)) {
+		if (!g_strcmp0(c->name, active_card)) {
 			gchar *sel_chan = prefs_get_channel(c->name);
 			sidx = idx;
 			fill_channel_combo(c->channels, channels_combo, sel_chan);
@@ -295,181 +295,78 @@ on_hotkeys_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 }
 
 /**
- * Handles the 'key-press-event' signal on the GtkDialog 'hotkeys_dialog'
- * which was opened by acquire_hotkey().
+ * Handles 'button-press-event' signal on one of the GtkEventBoxes used to
+ * define a hotkey: 'hotkeys_mute/up/down_eventbox'.
+ * Runs a dialog window where user can define a new hotkey.
+ * User should double-click on the event box to define a new hotkey.
  *
- * @param dialog the dialog window which received the signal.
- * @param ev the GdkEventKey which triggered the signal.
+ * @param widget the object which received the signal.
+ * @param event the GdkEventButton which triggered this signal.
  * @param window user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
  * FALSE to propagate the event further.
  */
 gboolean
-on_hotkey_pressed(G_GNUC_UNUSED GtkWidget *dialog,
-                  GdkEventKey *ev, PrefsWindow *window)
+on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
+                                       PrefsWindow *window)
 {
-	gchar *key_text;
-	guint keyval;
-	GdkModifierType state, consumed;
-	GtkLabel *key_label = GTK_LABEL(window->hotkeys_dialog_key_label);
+	const gchar *widget_name;
+	GtkLabel *key_label;
+	const gchar *key_text;
+	gchar *resp;
+	gint action;
+	
+	/* We want a left-click */
+	if (event->button != 1)
+		return FALSE;
 
-	state = ev->state;
-	gdk_keymap_translate_keyboard_state(gdk_keymap_get_default(),
-					    ev->hardware_keycode,
-					    state, ev->group, &keyval, NULL, NULL, &consumed);
+	/* We want it to be double-click */
+	if (event->type == GDK_2BUTTON_PRESS)
+		return FALSE;
 
-	state &= ~consumed;
-	state &= gtk_accelerator_get_default_mod_mask();
+	/* Get the name of the widget that triggered this handler */
+	widget_name = gtk_widget_get_name(widget);
 
-	key_text = gtk_accelerator_name(keyval, state);
-	gtk_label_set_text(key_label, key_text);
-	g_free(key_text);
-
-	return FALSE;
-}
-
-/**
- * Handler for the signal 'key-release-event' on the GtkDialog 'hotkeys_dialog'
- * which was opened by acquire_hotkey().
- *
- * @param dialog the dialog window which received the signal.
- * @param ev the GdkEventKey which triggered the signal.
- * @param window user data set when the signal handler was connected.
- * @return TRUE to stop other handlers from being invoked for the event.
- * FALSE to propagate the event further.
- */
-gboolean
-on_hotkey_released(GtkWidget *dialog,
-                   G_GNUC_UNUSED GdkEventKey *ev,
-                   G_GNUC_UNUSED PrefsWindow *window)
-{
-	gtk_dialog_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
-
-	return FALSE;
-}
-
-/**
- * This is called from within the callback function
- * on_hotkey_event_box_button_pressed() in callbacks. which is triggered when
- * one of the hotkey boxes hotkeys_mute_eventbox, hotkeys_up_eventbox or
- * hotkeys_down_eventbox (GtkEventBox) in the preferences received
- * the button-press-event signal.
- *
- * Then this function grabs the keyboard, opens the hotkeys_dialog
- * and updates the GtkLabel with the pressed hotkey.
- * The GtkLabel is later read by on_ok_button_clicked() in
- * callbacks.c which stores the result in the global keyFile.
- *
- * @param widget_name the name of the widget (hotkeys_mute_eventbox, hotkeys_up_eventbox
- * or hotkeys_down_eventbox)
- * @param window struct holding the GtkWidgets of the preferences windows
- */
-static void
-acquire_hotkey(const char *widget_name, PrefsWindow *window)
-{
-	gint resp, action;
-	GtkWidget *diag = window->hotkeys_dialog;
-	GtkLabel *dialog_key_label = GTK_LABEL(window->hotkeys_dialog_key_label);
-	GdkGrabStatus grab_status;
-
-	action =
+	action = 
 		(!strcmp(widget_name, "hotkeys_mute_eventbox")) ? 0 :
 		(!strcmp(widget_name, "hotkeys_up_eventbox")) ? 1 :
 		(!strcmp(widget_name, "hotkeys_down_eventbox")) ? 2 : -1;
 
-	g_assert(action >= 0);
-
-	/* Set the right key label for the dialog window */
 	switch (action) {
 	case 0:
-		gtk_label_set_text(dialog_key_label, _("Mute/Unmute"));
+		key_label = GTK_LABEL(window->hotkeys_mute_label);
+		key_text = _("Mute/Unmute");
 		break;
 	case 1:
-		gtk_label_set_text(dialog_key_label, _("Volume Up"));
+		key_label = GTK_LABEL(window->hotkeys_up_label);
+		key_text = _("Volume Up");
 		break;
 	case 2:
-		gtk_label_set_text(dialog_key_label, _("Volume Down"));
+		key_label = GTK_LABEL(window->hotkeys_down_label);
+		key_text = _("Volume Down");
 		break;
 	default:
 		break;
 	}
 
-	/* Grab keyboard */
-	grab_status =
-#ifdef WITH_GTK3
-		gdk_device_grab(gtk_get_current_event_device(),
-		                gdk_screen_get_root_window(gdk_screen_get_default()),
-		                GDK_OWNERSHIP_APPLICATION,
-		                TRUE, GDK_ALL_EVENTS_MASK, NULL, GDK_CURRENT_TIME);
-#else
-		gdk_keyboard_grab(gtk_widget_get_root_window(GTK_WIDGET(diag)),
-		                  TRUE, GDK_CURRENT_TIME);
-#endif
+	/* Run the hotkey dialog */
+	resp = hotkey_dialog_do(GTK_WINDOW(window->prefs_window), key_text);
 
-	if (grab_status != GDK_GRAB_SUCCESS) {
-		report_error(_("Could not grab the keyboard."));
-		return;
+	/* Handle the response */
+	if (resp == NULL)
+		return FALSE;
+
+	/* <Primary>c is used to disable the hotkey */
+	if (!g_ascii_strcasecmp(resp, "<Primary>c")) {
+		g_free(resp);
+		resp = g_strdup_printf("(%s)", _("None"));
 	}
 
-	/* Run the dialog window */
-	resp = gtk_dialog_run(GTK_DIALOG(diag));
+	/* Set */
+	gtk_label_set_text(key_label, resp);
+	g_free(resp);
 
-	/* Ungrab keyboard */
-#ifdef WITH_GTK3
-	gdk_device_ungrab(gtk_get_current_event_device(), GDK_CURRENT_TIME);
-#else
-	gdk_keyboard_ungrab(GDK_CURRENT_TIME);
-#endif
-
-	/* Handle the response from the dialog window */
-	if (resp == GTK_RESPONSE_OK) {
-		const gchar *key_name;
-		GtkLabel *key_label;
-
-		key_name = gtk_label_get_text(dialog_key_label);
-
-		if (!strcasecmp(key_name, "<Primary>c"))
-			key_name = "(None)";
-		
-		switch (action) {
-		case 0:
-			key_label = GTK_LABEL(window->hotkeys_mute_label);
-			break;
-		case 1:
-			key_label = GTK_LABEL(window->hotkeys_up_label);
-			break;
-		case 2:
-			key_label = GTK_LABEL(window->hotkeys_down_label);
-			break;
-		default:
-			break;
-		}
-
-		gtk_label_set_text(key_label, key_name);
-	}
-
-	/* Hide window at last */
-	gtk_widget_hide(diag);
-}
-
-/**
- * Callback function when one of the hotkey event boxes hotkeys_mute_eventbox,
- * hotkeys_up_eventbox or hotkeys_down_eventbox (GtkEventBox) in the preferences
- * received the button-press-event signal.
- *
- * @param widget the object which received the signal
- * @param event the GdkEventButton which triggered this signal
- * @param window struct holding the GtkWidgets of the preferences windows
- * @return TRUE to stop other handlers from being invoked for the event.
- * False to propagate the event further
- */
-gboolean
-on_hotkey_event_box_button_pressed(GtkWidget *widget, GdkEventButton *event,
-                                   PrefsWindow *window)
-{
-	if (event->button == 1 && event->type == GDK_2BUTTON_PRESS)
-		acquire_hotkey(gtk_buildable_get_name(GTK_BUILDABLE(widget)), window);
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -919,8 +816,6 @@ prefs_window_create(void)
 	assign_gtk_widget(builder, window, hotkeys_enable_check);
 	assign_gtk_widget(builder, window, hotkeys_vol_label);
 	assign_gtk_widget(builder, window, hotkeys_vol_spin);
-	assign_gtk_widget(builder, window, hotkeys_dialog);
-	assign_gtk_widget(builder, window, hotkeys_dialog_key_label);
 	assign_gtk_widget(builder, window, hotkeys_mute_label);
 	assign_gtk_widget(builder, window, hotkeys_up_label);
 	assign_gtk_widget(builder, window, hotkeys_down_label);

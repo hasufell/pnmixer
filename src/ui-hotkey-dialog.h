@@ -1,4 +1,4 @@
-/* ui-about-dialog.h
+/* ui-hotkey-dialog.h
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,16 +9,16 @@
  */
 
 /**
- * @file ui-about-dialog.h
- * Header for ui-about-dialog.c, holding public functions and globals.
- * @brief header for ui-about-dialog.c
+ * @file ui-hotkey-dialog.h
+ * Header for ui-hotkey-dialog.c, holding public functions and globals.
+ * @brief header for ui-hotkey-dialog.c
  */
 
-#ifndef UI_ABOUT_DIALOG_H_
-#define UI_ABOUT_DIALOG_H_
+#ifndef UI_HOTKEY_DIALOG_H_
+#define UI_HOTKEY_DIALOG_H_
 
 #include <gtk/gtk.h>
 
-void about_dialog_do(GtkWindow *parent);
+gchar *hotkey_dialog_do(GtkWindow *parent, const gchar *hotkey_desc);
 
-#endif				// UI_ABOUT_DIALOG_H_
+#endif				// UI_HOTKEY_DIALOG_H_

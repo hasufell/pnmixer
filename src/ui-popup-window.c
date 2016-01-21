@@ -127,7 +127,7 @@ update_volume_slider(PopupWindow *window, int volume)
  * on the GtkWindow. Used to hide the volume popup window.
  *
  * @param widget the object which received the signal.
- * @param event the GdkEventKey which triggered this signal. 
+ * @param event the GdkEvent which triggered this signal. 
  * @param window user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
  * FALSE to propagate the event further.

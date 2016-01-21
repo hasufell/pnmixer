@@ -16,6 +16,7 @@ pnmixer_SOURCES =		\
 	prefs.c			\
 	support.c		\
 	ui-about-dialog.c	\
+	ui-hotkey-dialog.c	\
 	ui-popup-menu.c		\
 	ui-popup-window.c	\
 	ui-prefs-window.c	\

@@ -26,21 +26,44 @@
 #include "main.h"
 
 #ifdef WITH_GTK3
-#define ABOUT_UI_FILE      "about-gtk3.glade"
+#define ABOUT_UI_FILE      "about-dialog-gtk3.glade"
 #else
-#define ABOUT_UI_FILE      "about-gtk2.glade"
+#define ABOUT_UI_FILE      "about-dialog-gtk2.glade"
 #endif
 
-static GtkAboutDialog *instance;
+struct about_dialog {
+	GtkWidget *about_dialog;
+};
+
+typedef struct about_dialog AboutDialog;
+
+static AboutDialog *instance;
 
 /* Helpers */
 
-static GtkAboutDialog *
-about_dialog_create(void)
+static void
+about_dialog_run(AboutDialog *dialog)
+{
+	GtkDialog *about_dialog = GTK_DIALOG(dialog->about_dialog);
+
+	gtk_dialog_run(about_dialog);
+}
+
+static void
+about_dialog_destroy(AboutDialog *dialog)
+{
+	gtk_widget_destroy(dialog->about_dialog);
+	g_free(dialog);
+}
+
+static AboutDialog *
+about_dialog_create(GtkWindow *parent)
 {
 	gchar *uifile;
 	GtkBuilder *builder;
-	GtkAboutDialog *dialog;
+	AboutDialog *dialog;
+
+	dialog = g_new0(AboutDialog, 1);
 
 	/* Build UI file */
 	uifile = get_ui_file(ABOUT_UI_FILE);
@@ -49,12 +72,14 @@ about_dialog_create(void)
 	DEBUG("Building about dialog from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
-	/* Get the GtkAboutDialog widget from builder */
-	dialog = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "dialog"));
+	/* Save some widgets for later use */
+	assign_gtk_widget(builder, dialog, about_dialog);
 
-	/* Configure it */
-	gtk_about_dialog_set_version(dialog, VERSION);
-	gtk_window_set_transient_for(GTK_WINDOW(dialog), main_window);
+	/* Configure some widgets */
+	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog->about_dialog), VERSION);
+
+	/* Set transient parent */
+	gtk_window_set_transient_for(GTK_WINDOW(dialog->about_dialog), parent);
 
 	/* Cleanup */
 	g_object_unref(builder);
@@ -68,15 +93,17 @@ about_dialog_create(void)
 /**
  * Creates the about dialog, run it and destroy it.
  * Only one instance at a time is allowed.
+ *
+ * @param parent The parent window for this dialog.
  */
 void
-about_dialog_run(void)
+about_dialog_do(GtkWindow *parent)
 {
 	if (instance)
 		return;
 
-	instance = about_dialog_create();
-	gtk_dialog_run(GTK_DIALOG(instance));
-	gtk_widget_destroy(GTK_WIDGET(instance));
+	instance = about_dialog_create(parent);
+	about_dialog_run(instance);
+	about_dialog_destroy(instance);
 	instance = NULL;
 }

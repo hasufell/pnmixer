@@ -155,7 +155,7 @@ void
 on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
                        G_GNUC_UNUSED PopupMenu *menu)
 {
-	about_dialog_run();
+	about_dialog_do(main_window);
 }
 
 /* Public functions */
