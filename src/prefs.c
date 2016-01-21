@@ -158,7 +158,7 @@ prefs_get_double_list(const gchar *key, gsize *n)
 	gsize numcols = 0;
 	gdouble *ret = NULL;
 	GError *error = NULL;
-	
+
 	ret = g_key_file_get_double_list(keyFile, "PNMixer", key, &numcols, &error);
 	if (error) {
 		g_error_free(error);
@@ -170,7 +170,7 @@ prefs_get_double_list(const gchar *key, gsize *n)
 	 */
 	if (!g_strcmp0(key, "VolMeterColor")) {
 		gsize i;
-		
+
 		if (ret && numcols != 3) {
 			g_free(ret);
 			ret = NULL;
@@ -181,7 +181,7 @@ prefs_get_double_list(const gchar *key, gsize *n)
 			ret[0] = 0.909803921569;
 			ret[1] = 0.43137254902;
 			ret[2] = 0.43137254902;
-		}	
+		}
 
 		for (i = 0; i < 3; i++) {
 			if (ret[i] < 0)
@@ -337,7 +337,7 @@ prefs_load(void)
 {
 	GError *err = NULL;
 	gchar *filename = g_build_filename(g_get_user_config_dir(),
-	                                   "pnmixer", "config", NULL);
+					   "pnmixer", "config", NULL);
 
 	if (keyFile != NULL)
 		g_key_file_free(keyFile);
@@ -375,7 +375,7 @@ prefs_save(void)
 	gsize len;
 	GError *err = NULL;
 	gchar *filename = g_build_filename(g_get_user_config_dir(),
-	                                   "pnmixer", "config", NULL);
+					   "pnmixer", "config", NULL);
 	gchar *filedata = g_key_file_to_data(keyFile, &len, NULL);
 
 	g_file_set_contents(filename, filedata, len, &err);
@@ -397,7 +397,7 @@ void
 prefs_ensure_save_dir(void)
 {
 	gchar *prefs_dir = g_build_filename(g_get_user_config_dir(),
-	                                   "pnmixer", NULL);
+					    "pnmixer", NULL);
 
 	if (!g_file_test(prefs_dir, G_FILE_TEST_IS_DIR)) {
 		if (g_file_test(prefs_dir, G_FILE_TEST_EXISTS))

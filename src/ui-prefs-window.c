@@ -311,13 +311,13 @@ on_hotkeys_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
  */
 gboolean
 on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
-                                       PrefsWindow *window)
+				       PrefsWindow *window)
 {
 	const gchar *hotkey;
 	GtkLabel *hotkey_label;
 
 	gchar *resp;
-	
+
 	/* We want a left-click */
 	if (event->button != 1)
 		return FALSE;
@@ -382,7 +382,7 @@ on_noti_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 #else
 void
 on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
-                             G_GNUC_UNUSED PrefsWindow *window)
+			     G_GNUC_UNUSED PrefsWindow *window)
 {
 }
 #endif
@@ -412,7 +412,7 @@ retrieve_window_values(PrefsWindow *window)
 		orientation = "horizontal";
 #endif
 	prefs_set_string("SliderOrientation", orientation);
-	
+
 	// volume text display
 	GtkWidget *vtc = window->vol_text_check;
 	gboolean active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(vtc));
@@ -487,7 +487,7 @@ retrieve_window_values(PrefsWindow *window)
 	GtkWidget *fsss = window->fine_scroll_step_spin;
 	gdouble fine_step = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fsss));
 	prefs_set_double("FineScrollStep", fine_step);
-	
+
 	// middle click
 	GtkWidget *mcc = window->middle_click_combo;
 	idx = gtk_combo_box_get_active(GTK_COMBO_BOX(mcc));
@@ -507,7 +507,7 @@ retrieve_window_values(PrefsWindow *window)
 	GtkWidget *hs = window->hotkeys_vol_spin;
 	gint hotstep = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(hs));
 	prefs_set_integer("HotkeyVolumeStep", hotstep);
-	
+
 	// hotkeys
 	GtkWidget *kl;
 	gint keycode;
@@ -569,7 +569,7 @@ populate_window_values(PrefsWindow *window)
 	slider_orientation = prefs_get_string("SliderOrientation", NULL);
 	if (slider_orientation) {
 		GtkComboBox *combo_box = GTK_COMBO_BOX
-			(window->vol_orientation_combo);
+					 (window->vol_orientation_combo);
 #ifndef WITH_GTK3
 		/* Gtk2 ComboBoxes don't have item ids */
 		if (!strcmp(slider_orientation, "horizontal"))
@@ -581,7 +581,7 @@ populate_window_values(PrefsWindow *window)
 #endif
 		g_free(slider_orientation);
 	}
-	
+
 	// volume text display
 	gtk_toggle_button_set_active
 	(GTK_TOGGLE_BUTTON(window->vol_text_check),
@@ -600,7 +600,7 @@ populate_window_values(PrefsWindow *window)
 	 prefs_get_boolean("DrawVolMeter", FALSE));
 
 	on_vol_meter_draw_check_toggled(GTK_TOGGLE_BUTTON(window->vol_meter_draw_check),
-	                          window);
+					window);
 
 	// volume meter position
 	gtk_spin_button_set_value
@@ -615,17 +615,17 @@ populate_window_values(PrefsWindow *window)
 	vol_meter_color_button_color.green = vol_meter_clrs[1];
 	vol_meter_color_button_color.blue = vol_meter_clrs[2];
 	vol_meter_color_button_color.alpha = 1.0;
-	gtk_color_chooser_set_rgba(
-	GTK_COLOR_CHOOSER(window->vol_meter_color_button),
-	&vol_meter_color_button_color);
+	gtk_color_chooser_set_rgba
+	(GTK_COLOR_CHOOSER(window->vol_meter_color_button),
+	 &vol_meter_color_button_color);
 #else
 	GdkColor vol_meter_color_button_color;
 	vol_meter_color_button_color.red = (guint32) (vol_meter_clrs[0] * 65536);
 	vol_meter_color_button_color.green = (guint32) (vol_meter_clrs[1] * 65536);
 	vol_meter_color_button_color.blue = (guint32) (vol_meter_clrs[2] * 65536);
-	gtk_color_button_set_color(
-	GTK_COLOR_BUTTON(window->vol_meter_color_button),
-	&vol_meter_color_button_color);
+	gtk_color_button_set_color
+	(GTK_COLOR_BUTTON(window->vol_meter_color_button),
+	 &vol_meter_color_button_color);
 #endif
 	g_free(vol_meter_clrs);
 
@@ -648,7 +648,7 @@ populate_window_values(PrefsWindow *window)
 		gtk_entry_set_text(GTK_ENTRY(window->vol_control_entry), vol_cmd);
 		g_free(vol_cmd);
 	}
-	                           
+
 	// volume scroll steps
 	gtk_spin_button_set_value
 	(GTK_SPIN_BUTTON(window->scroll_step_spin),
@@ -686,19 +686,19 @@ populate_window_values(PrefsWindow *window)
 
 	// hotkeys
 	set_label_for_keycode(GTK_LABEL(window->hotkeys_mute_label),
-	                      prefs_get_integer("VolMuteKey", -1),
-	                      prefs_get_integer("VolMuteMods", 0));
+			      prefs_get_integer("VolMuteKey", -1),
+			      prefs_get_integer("VolMuteMods", 0));
 
 	set_label_for_keycode(GTK_LABEL(window->hotkeys_up_label),
-	                      prefs_get_integer("VolUpKey", -1),
-	                      prefs_get_integer("VolUpMods", 0));
+			      prefs_get_integer("VolUpKey", -1),
+			      prefs_get_integer("VolUpMods", 0));
 
 	set_label_for_keycode(GTK_LABEL(window->hotkeys_down_label),
-	                      prefs_get_integer("VolDownKey", -1),
-	                      prefs_get_integer("VolDownMods", 0));
+			      prefs_get_integer("VolDownKey", -1),
+			      prefs_get_integer("VolDownMods", 0));
 
 	on_hotkeys_enable_check_toggled(GTK_TOGGLE_BUTTON(window->hotkeys_enable_check),
-			 window);
+					window);
 
 	// notifications
 #ifdef HAVE_LIBN
@@ -896,7 +896,7 @@ on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
  */
 gboolean
 on_prefs_window_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
-                                GdkEventKey *event, PrefsWindow *window)
+				GdkEventKey *event, PrefsWindow *window)
 {
 	switch (event->keyval) {
 	case GDK_KEY_Escape:

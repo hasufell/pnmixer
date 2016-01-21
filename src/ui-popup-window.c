@@ -101,7 +101,7 @@ update_mute_check(PopupWindow *window, int muted)
 	mute_check = GTK_TOGGLE_BUTTON(window->mute_check);
 
 	n_handlers_blocked = g_signal_handlers_block_by_func
-		(G_OBJECT(mute_check), on_mute_check_toggled, window);
+			     (G_OBJECT(mute_check), on_mute_check_toggled, window);
 	g_assert(n_handlers_blocked == 1);
 
 	if (muted)
@@ -110,7 +110,7 @@ update_mute_check(PopupWindow *window, int muted)
 		gtk_toggle_button_set_active(mute_check, TRUE);
 
 	g_signal_handlers_unblock_by_func
-		(G_OBJECT(mute_check), on_mute_check_toggled, window);
+	(G_OBJECT(mute_check), on_mute_check_toggled, window);
 }
 
 /* Update the volume slider according to the current audio state. */
@@ -127,14 +127,14 @@ update_volume_slider(PopupWindow *window, int volume)
  * on the GtkWindow. Used to hide the volume popup window.
  *
  * @param widget the object which received the signal.
- * @param event the GdkEvent which triggered this signal. 
+ * @param event the GdkEvent which triggered this signal.
  * @param window user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
  * FALSE to propagate the event further.
  */
 gboolean
 on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
-                      PopupWindow *window)
+		      PopupWindow *window)
 {
 	switch (event->type) {
 
@@ -184,7 +184,7 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  */
 gboolean
 on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
-                          gdouble value, G_GNUC_UNUSED PopupWindow *window)
+			  gdouble value, G_GNUC_UNUSED PopupWindow *window)
 {
 	GtkAdjustment *gtk_adj;
 
@@ -216,7 +216,7 @@ on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
  */
 void
 on_mute_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
-                      G_GNUC_UNUSED PopupWindow *window)
+		      G_GNUC_UNUSED PopupWindow *window)
 {
 	audio_mute(popup_noti);
 }
@@ -275,35 +275,35 @@ popup_window_show(PopupWindow *window)
 
 	if (pointer_dev == NULL)
 		return;
-	
+
 	if (gdk_device_grab(pointer_dev,
-	                    gtk_widget_get_window(popup_window),
-	                    GDK_OWNERSHIP_NONE,
-	                    TRUE,
-	                    GDK_BUTTON_PRESS_MASK,
-	                    NULL,
-	                    GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
+			    gtk_widget_get_window(popup_window),
+			    GDK_OWNERSHIP_NONE,
+			    TRUE,
+			    GDK_BUTTON_PRESS_MASK,
+			    NULL,
+			    GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
 		g_warning("Could not grab %s\n",
-		          gdk_device_get_name(pointer_dev));
+			  gdk_device_get_name(pointer_dev));
 
 	GdkDevice *keyboard_dev = gdk_device_get_associated_device(pointer_dev);
 
 	if (keyboard_dev == NULL)
 		return;
-				
+
 	if (gdk_device_grab(keyboard_dev,
-	                    gtk_widget_get_window(popup_window),
-	                    GDK_OWNERSHIP_NONE,
-	                    TRUE,
-	                    GDK_KEY_PRESS_MASK,
-	                    NULL, GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
+			    gtk_widget_get_window(popup_window),
+			    GDK_OWNERSHIP_NONE,
+			    TRUE,
+			    GDK_KEY_PRESS_MASK,
+			    NULL, GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
 		g_warning("Could not grab %s\n",
-		          gdk_device_get_name(keyboard_dev));
+			  gdk_device_get_name(keyboard_dev));
 #else
 	gdk_pointer_grab(gtk_widget_get_window(popup_window), TRUE,
-	                 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);	
+			 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);
 	gdk_keyboard_grab(gtk_widget_get_window(popup_window), TRUE,
-	                  GDK_CURRENT_TIME);
+			  GDK_CURRENT_TIME);
 #endif
 }
 

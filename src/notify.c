@@ -191,7 +191,7 @@ do_notify_volume(G_GNUC_UNUSED gint level, G_GNUC_UNUSED gboolean muted)
 
 void
 do_notify_text(G_GNUC_UNUSED const gchar *summary,
-		G_GNUC_UNUSED const gchar *body)
+	       G_GNUC_UNUSED const gchar *body)
 {
 }
 

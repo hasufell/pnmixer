@@ -79,8 +79,8 @@ checkModKey(int got, int want)
  */
 static GdkFilterReturn
 key_filter(GdkXEvent *gdk_xevent,
-		G_GNUC_UNUSED GdkEvent *event,
-		G_GNUC_UNUSED gpointer data)
+	   G_GNUC_UNUSED GdkEvent *event,
+	   G_GNUC_UNUSED gpointer data)
 {
 	int type;
 	guint key, state;

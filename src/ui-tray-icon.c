@@ -141,7 +141,7 @@ vol_meter_free(VolMeter *vol_meter)
 }
 
 /* Returns a new VolMeter instance. Returns NULL if VolMeter is disabled. */
-static VolMeter*
+static VolMeter *
 vol_meter_new(void)
 {
 	VolMeter *vol_meter;
@@ -288,13 +288,13 @@ update_tooltip(TrayIcon *icon, int volume, int muted)
 
 	card_name = audio_get_card();
 	channel = audio_get_channel();
-	
+
 	if (muted == 1)
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
-		         card_name, channel, _("Volume"), volume);
+			 card_name, channel, _("Volume"), volume);
 	else
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%\n%s"),
-		         card_name, channel, _("Volume"), volume, _("Muted"));
+			 card_name, channel, _("Volume"), volume, _("Muted"));
 
 	gtk_status_icon_set_tooltip_text(icon->status_icon, tooltip);
 }
@@ -310,7 +310,7 @@ update_tooltip(TrayIcon *icon, int volume, int muted)
  */
 static void
 on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
-            G_GNUC_UNUSED TrayIcon *icon)
+	    G_GNUC_UNUSED TrayIcon *icon)
 {
 	do_toggle_popup_window();
 }
@@ -328,7 +328,7 @@ on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  */
 static void
 on_popup_menu(GtkStatusIcon *status_icon, guint button,
-              guint activate_time, G_GNUC_UNUSED TrayIcon *icon)
+	      guint activate_time, G_GNUC_UNUSED TrayIcon *icon)
 {
 	do_show_popup_menu(gtk_status_icon_position_menu, status_icon, button, activate_time);
 }
@@ -345,7 +345,7 @@ on_popup_menu(GtkStatusIcon *status_icon, guint button,
  */
 static gboolean
 on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
-                        GdkEventButton *event, G_GNUC_UNUSED TrayIcon *icon)
+			GdkEventButton *event, G_GNUC_UNUSED TrayIcon *icon)
 {
 	int middle_click_action;
 
@@ -386,12 +386,12 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  */
 static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
-                G_GNUC_UNUSED TrayIcon *icon)
+		G_GNUC_UNUSED TrayIcon *icon)
 {
 	if (event->direction == GDK_SCROLL_UP)
 		audio_raise_volume(mouse_noti);
-        else if (event->direction == GDK_SCROLL_DOWN)
-	        audio_lower_volume(mouse_noti);
+	else if (event->direction == GDK_SCROLL_DOWN)
+		audio_lower_volume(mouse_noti);
 
 	return FALSE;
 }
@@ -407,8 +407,7 @@ on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
  * @return FALSE, so that Gtk+ scales the icon as necessary.
  */
 static gboolean
-on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size,
-                TrayIcon *icon)
+on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size, TrayIcon *icon)
 {
 	DEBUG("Tray icon size is now %d", size);
 

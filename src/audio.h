@@ -29,7 +29,7 @@ void audio_raise_volume(gboolean notify);
 void audio_lower_volume(gboolean notify);
 void audio_set_volume(int volume, gboolean notify);
 
-const char* audio_get_card(void);
-const char* audio_get_channel(void);
+const char *audio_get_card(void);
+const char *audio_get_channel(void);
 
 #endif				// AUDIO_H

@@ -48,9 +48,9 @@ audio_is_muted(void)
 void
 audio_mute(gboolean notify)
 {
-        setmute(notify);
+	setmute(notify);
 
-        do_update_ui();
+	do_update_ui();
 }
 
 int
@@ -96,13 +96,13 @@ audio_set_volume(int volume, gboolean notify)
 	do_update_ui();
 }
 
-const char*
+const char *
 audio_get_card(void)
 {
 	return (alsa_get_active_card())->name;
 }
 
-const char*
+const char *
 audio_get_channel(void)
 {
 	return alsa_get_active_channel();

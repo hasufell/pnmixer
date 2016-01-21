@@ -55,7 +55,7 @@ static HotkeyDialog *instance;
  */
 gboolean
 on_hotkey_dialog_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
-                                 GdkEventKey *event, HotkeyDialog *dialog)
+				 GdkEventKey *event, HotkeyDialog *dialog)
 {
 	GdkModifierType state, consumed;
 	GtkLabel *key_pressed_label;
@@ -68,7 +68,7 @@ on_hotkey_dialog_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
 	gdk_keymap_translate_keyboard_state(gdk_keymap_get_default(),
 					    event->hardware_keycode,
 					    state, event->group, &key_val,
-	                                    NULL, NULL, &consumed);
+					    NULL, NULL, &consumed);
 
 	state &= ~consumed;
 	state &= gtk_accelerator_get_default_mod_mask();
@@ -92,8 +92,8 @@ on_hotkey_dialog_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
  */
 gboolean
 on_hotkey_dialog_key_release_event(GtkWidget *widget,
-                                   G_GNUC_UNUSED GdkEventKey *event,
-                                   G_GNUC_UNUSED HotkeyDialog *dialog)
+				   G_GNUC_UNUSED GdkEventKey *event,
+				   G_GNUC_UNUSED HotkeyDialog *dialog)
 {
 	gtk_dialog_response(GTK_DIALOG(widget), GTK_RESPONSE_OK);
 
@@ -135,12 +135,12 @@ hotkey_dialog_run(HotkeyDialog *dialog)
 	grab_status =
 #ifdef WITH_GTK3
 		gdk_device_grab(gtk_get_current_event_device(),
-		                gdk_screen_get_root_window(gdk_screen_get_default()),
-		                GDK_OWNERSHIP_APPLICATION,
-		                TRUE, GDK_ALL_EVENTS_MASK, NULL, GDK_CURRENT_TIME);
+				gdk_screen_get_root_window(gdk_screen_get_default()),
+				GDK_OWNERSHIP_APPLICATION,
+				TRUE, GDK_ALL_EVENTS_MASK, NULL, GDK_CURRENT_TIME);
 #else
 		gdk_keyboard_grab(gtk_widget_get_root_window(GTK_WIDGET(hotkey_dialog)),
-		                  TRUE, GDK_CURRENT_TIME);
+				  TRUE, GDK_CURRENT_TIME);
 #endif
 
 	if (grab_status != GDK_GRAB_SUCCESS) {

@@ -216,14 +216,14 @@ get_stock_pixbuf(const char *filename, gint size)
 GtkBuilder *
 gtk_builder_new_from_file (const gchar *filename)
 {
-  GError *error = NULL;
-  GtkBuilder *builder;
+	GError *error = NULL;
+	GtkBuilder *builder;
 
-  builder = gtk_builder_new ();
-  if (!gtk_builder_add_from_file (builder, filename, &error))
-    g_error ("failed to add UI: %s", error->message);
+	builder = gtk_builder_new ();
+	if (!gtk_builder_add_from_file (builder, filename, &error))
+		g_error ("failed to add UI: %s", error->message);
 
-  return builder;
+	return builder;
 }
 #endif
 

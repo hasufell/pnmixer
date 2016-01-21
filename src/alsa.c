@@ -149,7 +149,7 @@ get_cards(void)
 			while (tmp) {
 				struct acard *c = tmp->data;
 				printf("\t%s\t%s\t%s\n", c->dev, c->name,
-					   c->channels ? "" : "No chann");
+				       c->channels ? "" : "No chann");
 				tmp = tmp->next;
 			}
 			printf("-----------------------\n");
@@ -205,14 +205,14 @@ open_mixer(const char *card, struct snd_mixer_selem_regopt *opts, int level)
 	}
 	if (level == 0 && (err = snd_mixer_attach(mixer, card)) < 0) {
 		DEBUG("Card %s: mixer attach error: %s", card,
-			    snd_strerror(err));
+		      snd_strerror(err));
 		snd_mixer_close(mixer);
 		return NULL;
 	}
 	if ((err = snd_mixer_selem_register(
 			   mixer, level > 0 ? opts : NULL, NULL)) < 0) {
 		DEBUG("Card %s: mixer register error: %s", card,
-			    snd_strerror(err));
+		      snd_strerror(err));
 		snd_mixer_close(mixer);
 		return NULL;
 	}
@@ -497,7 +497,7 @@ alsaset(void)
 	if (!active_card->channels) {
 		GSList *item;
 		DEBUG("Card '%s' has no playable channels, iterating on card list",
-			    active_card->dev);
+		      active_card->dev);
 		for (item = cards; item; item = item->next) {
 			active_card = item->data;
 			if (active_card->channels)
@@ -726,7 +726,7 @@ getvol(void)
 		snd_mixer_selem_get_playback_volume(elem,
 						    SND_MIXER_SCHN_FRONT_RIGHT, &val);
 		DEBUG("[getvol] From mixer: %li  pmin: %li  pmax: %li",
-			    val, pmin, pmax);
+		      val, pmin, pmax);
 		return convert_prange(val, pmin, pmax);
 	}
 }

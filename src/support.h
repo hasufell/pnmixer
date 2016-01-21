@@ -64,7 +64,7 @@ void warn_sound_conn_lost(void);
 		if (want_debug == TRUE) \
 			fprintf(stderr, "debug: " fmt "\n", ##__VA_ARGS__); \
 	} while (0) \
-
+ 
 #define WARN(fmt, ...)	  \
 	fprintf(stderr, "warning: " fmt "\n", ##__VA_ARGS__)
 
@@ -81,7 +81,7 @@ void warn_sound_conn_lost(void);
 #define gtk_builder_get_adjustment(builder, name)	  \
 	GTK_ADJUSTMENT(gtk_builder_get_object(builder, name))
 
-/* 
+/*
  * 'assign' functions are used to retrieve a widget from a GtkBuilder
  * and to assign it into a structure. This is used a lot when we build
  * a window, and need to keep a pointer toward some widgets for later use.

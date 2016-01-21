@@ -90,7 +90,7 @@ apply_prefs(gint alsa_change)
 
 	/* Update the whole ui */
 	do_update_ui();
-	
+
 	/* Reload alsa */
 	if (alsa_change)
 		audio_reinit();
@@ -176,7 +176,7 @@ do_custom_command(void)
 		g_free(cmd);
 	} else
 		report_error(_("You have not specified a custom command to run, "
-		               "please specify one in preferences."));
+			       "please specify one in preferences."));
 }
 
 /**

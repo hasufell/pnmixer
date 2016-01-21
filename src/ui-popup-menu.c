@@ -81,13 +81,13 @@ update_mute_check(PopupMenu *menu)
 	mute_item = GTK_CHECK_MENU_ITEM(menu->mute_item);
 
 	n_handlers_blocked = g_signal_handlers_block_by_func
-		(G_OBJECT(mute_item), on_mute_item_activate, menu);
+			     (G_OBJECT(mute_item), on_mute_item_activate, menu);
 	g_assert(n_handlers_blocked == 1);
 
 	gtk_check_menu_item_set_active(mute_item, active);
 
 	g_signal_handlers_unblock_by_func
-		(G_OBJECT(mute_item), on_mute_item_activate, menu);
+	(G_OBJECT(mute_item), on_mute_item_activate, menu);
 #endif
 }
 
@@ -95,7 +95,7 @@ update_mute_check(PopupMenu *menu)
 
 /**
  * Handles a click on 'mute_item', toggling the mute audio state.
- * 
+ *
  * @param menuitem the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
  */
@@ -105,7 +105,7 @@ on_mute_item_activate(G_GNUC_UNUSED GtkMenuItem *menuitem,
 #else
 on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
 #endif
-                      G_GNUC_UNUSED PopupMenu *menu)
+		      G_GNUC_UNUSED PopupMenu *menu)
 {
 	audio_mute(popup_noti);
 }
@@ -118,7 +118,7 @@ on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
  */
 void
 on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-                       G_GNUC_UNUSED PopupMenu *menu)
+		       G_GNUC_UNUSED PopupMenu *menu)
 {
 	do_mixer();
 }
@@ -131,7 +131,7 @@ on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-                       G_GNUC_UNUSED PopupMenu *menu)
+		       G_GNUC_UNUSED PopupMenu *menu)
 {
 	do_open_prefs();
 }
@@ -144,7 +144,7 @@ on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-                        G_GNUC_UNUSED PopupMenu *menu)
+			G_GNUC_UNUSED PopupMenu *menu)
 {
 	audio_reinit();
 }
@@ -157,7 +157,7 @@ on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-                       G_GNUC_UNUSED PopupMenu *menu)
+		       G_GNUC_UNUSED PopupMenu *menu)
 {
 	about_dialog_do(main_window);
 }
@@ -177,10 +177,10 @@ on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
-                guint button, guint activate_time)
+		guint button, guint activate_time)
 {
 	gtk_menu_popup(GTK_MENU(menu->menu), NULL, NULL,
-	               func, data, button, activate_time);
+		       func, data, button, activate_time);
 }
 
 /**
