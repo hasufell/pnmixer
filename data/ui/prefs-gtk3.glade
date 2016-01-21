@@ -57,7 +57,7 @@
                 <property name="receives_default">False</property>
                 <property name="halign">start</property>
                 <property name="draw_indicator">True</property>
-                <signal name="toggled" handler="on_noti_enable_toggled" swapped="no"/>
+                <signal name="toggled" handler="on_noti_enable_check_toggled" swapped="no"/>
               </object>
               <packing>
                 <property name="y_options">GTK_EXPAND</property>
@@ -222,14 +222,14 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkWindow" id="window">
+  <object class="GtkWindow" id="prefs_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">PNMixer Preferences</property>
     <property name="resizable">False</property>
     <property name="default_width">350</property>
     <property name="default_height">500</property>
     <property name="icon_name">preferences-system</property>
-    <signal name="key-press-event" handler="on_key_press_event" swapped="no"/>
+    <signal name="key-press-event" handler="on_prefs_window_key_press_event" swapped="no"/>
     <child>
           <object class="GtkBox" id="vbox1">
             <property name="visible">True</property>
@@ -298,7 +298,7 @@
                                     <property name="receives_default">False</property>
                                     <property name="halign">start</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_vol_text_toggled" swapped="no"/>
+                                    <signal name="toggled" handler="on_vol_text_check_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
@@ -374,15 +374,14 @@
                                 <property name="row_spacing">15</property>
                                 <child>
                                   <object class="GtkCheckButton" id="vol_meter_draw_check">
-                                    <property name="label" translatable="yes">Draw Volume Meter on Tray Icon
-(Will cause slightly higher CPU usage)</property>
+                                    <property name="label" translatable="yes">Draw Volume Meter on Tray Icon</property>
                                     <property name="use_action_appearance">False</property>
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="receives_default">False</property>
                                     <property name="halign">start</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_vol_meter_draw_toggled" swapped="no"/>
+                                    <signal name="toggled" handler="on_vol_meter_draw_check_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
@@ -562,7 +561,7 @@
                                   <object class="GtkComboBoxText" id="card_combo">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <signal name="changed" handler="on_card_changed" swapped="no"/>
+                                    <signal name="changed" handler="on_card_combo_changed" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="left_attach">1</property>
@@ -826,7 +825,7 @@
                                       <item translatable="yes" id="mixer">Volume Control</item>
                                       <item translatable="yes" id="custom">Custom (set below)</item>
                                     </items>
-                                    <signal name="changed" handler="on_middle_click_changed" swapped="no"/>
+                                    <signal name="changed" handler="on_middle_click_combo_changed" swapped="no"/>
                                   </object>
                                   <packing>
 				    <property name="left_attach">1</property>
@@ -914,7 +913,7 @@
                                     <property name="receives_default">False</property>
                                     <property name="halign">start</property>
                                     <property name="draw_indicator">True</property>
-                                    <signal name="toggled" handler="on_hotkeys_enabled_toggled" swapped="no"/>
+                                    <signal name="toggled" handler="on_hotkeys_enable_check_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="right_attach">2</property>
@@ -1278,7 +1277,7 @@
     <property name="destroy_with_parent">True</property>
     <property name="icon_name">input-keyboard</property>
     <property name="type_hint">dialog</property>
-    <property name="transient_for">window</property>
+    <property name="transient_for">prefs_window</property>
     <signal name="key-press-event" handler="on_hotkey_pressed" swapped="no"/>
     <signal name="key-release-event" handler="on_hotkey_released" swapped="no"/>
     <child internal-child="vbox">

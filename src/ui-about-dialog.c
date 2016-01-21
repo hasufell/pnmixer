@@ -33,7 +33,7 @@
 
 static GtkAboutDialog *instance;
 
-/* Private functions */
+/* Helpers */
 
 static GtkAboutDialog *
 about_dialog_create(void)

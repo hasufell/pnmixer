@@ -43,7 +43,7 @@
  */
 struct prefs_window {
 	/* Top-level widgets */
-	GtkWidget *window;
+	GtkWidget *prefs_window;
 	GtkWidget *notebook;
 	GtkWidget *ok_button;
 	GtkWidget *cancel_button;
@@ -100,8 +100,43 @@ static PrefsWindow *instance;
 
 /* Helpers */
 
+/* Gets one of the hotkey code and mode in the Hotkeys settings
+ * from the specified label (parsed as an accelerator name).
+ */
+static void
+get_keycode_for_label(GtkLabel *label, gint *code, GdkModifierType *mods)
+{
+	guint keysym;
+	const gchar *key_text;
+
+	key_text = gtk_label_get_text(label);
+	gtk_accelerator_parse(key_text, &keysym, mods);
+	if (keysym != 0)
+		*code = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
+	else
+		*code = -1;
+}
+
+/* Sets one of the hotkey labels in the Hotkeys settings
+ * to the specified keycode (converted to a accelerator name).
+ */
+static void
+set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
+{
+	int keysym;
+	gchar *key_text;
+
+	if (code < 0)
+		return;
+
+	keysym = XkbKeycodeToKeysym(gdk_x11_get_default_xdisplay(), code, 0, 0);
+	key_text = gtk_accelerator_name(keysym, mods);
+	gtk_label_set_text(GTK_LABEL(label), key_text);
+	g_free(key_text);
+}
+
 /**
- * Fills the GtkComboBoxText chan_combo with the currently available
+ * Fills the GtkComboBoxText 'combo' with the currently available
  * channels of the card.
  *
  * @param channels list of available channels
@@ -171,21 +206,17 @@ fill_card_combo(GtkWidget *combo, GtkWidget *channels_combo)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), sidx);
 }
 
-/*
- * Widgets signals handlers.
- * Link between signal name and handler is declared in the ui file.
- * These functions must not be static.
- */
+/* Signals handlers */
 
 /**
- * Handler for the signal 'toggled' on the GtkCheckButton vol_text_check.
+ * Handles the 'toggled' signal on the GtkCheckButton 'vol_text_check'.
  * Updates the preferences window.
  *
- * @param button the button which received the signal
- * @param window user data set when the signal handler was connected
+ * @param button the button which received the signal.
+ * @param window user data set when the signal handler was connected.
  */
 void
-on_vol_text_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_vol_text_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
 	gtk_widget_set_sensitive(window->vol_pos_label, active);
@@ -193,14 +224,14 @@ on_vol_text_toggled(GtkToggleButton *button, PrefsWindow *window)
 }
 
 /**
- * Handler for the signal 'toggled' on the GtkCheckButton vol_meter_draw_check.
+ * Handles the 'toggled' signal on the GtkCheckButton 'vol_meter_draw_check'.
  * Updates the preferences window.
  *
- * @param button the button which received the signal
- * @param window user data set when the signal handler was connected
+ * @param button the button which received the signal.
+ * @param window user data set when the signal handler was connected.
  */
 void
-on_vol_meter_draw_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_vol_meter_draw_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
 	gtk_widget_set_sensitive(window->vol_meter_pos_label, active);
@@ -210,14 +241,14 @@ on_vol_meter_draw_toggled(GtkToggleButton *button, PrefsWindow *window)
 }
 
 /**
- * Handler for the signal 'changed' on the GtkComboBoxText card_combo.
+ * Handles the 'changed' signal on the GtkComboBoxText 'card_combo'.
  * This basically refills the channel list if the card changes.
  *
- * @param box the box which received the signal
- * @param window user data set when the signal handler was connected
+ * @param box the box which received the signal.
+ * @param window user data set when the signal handler was connected.
  */
 void
-on_card_changed(GtkComboBoxText *box, PrefsWindow *window)
+on_card_combo_changed(GtkComboBoxText *box, PrefsWindow *window)
 {
 	struct acard *card;
 	gchar *card_name;
@@ -234,14 +265,14 @@ on_card_changed(GtkComboBoxText *box, PrefsWindow *window)
 }
 
 /**
- * Handler for the signal 'changed' on the GtkComboBoxText middle_click_combo.
+ * Handles the 'changed' signal on the GtkComboBoxText 'middle_click_combo'.
  * Updates the preferences window.
  *
- * @param box the combobox which received the signal
- * @param window user data set when the signal handler was connected
+ * @param box the combobox which received the signal.
+ * @param window user data set when the signal handler was connected.
  */
 void
-on_middle_click_changed(GtkComboBoxText *box, PrefsWindow *window)
+on_middle_click_combo_changed(GtkComboBoxText *box, PrefsWindow *window)
 {
 	gboolean cust = gtk_combo_box_get_active(GTK_COMBO_BOX(box)) == 3;
 	gtk_widget_set_sensitive(window->custom_label, cust);
@@ -249,14 +280,14 @@ on_middle_click_changed(GtkComboBoxText *box, PrefsWindow *window)
 }
 
 /**
- * Handler for the signal 'toggled' on the GtkCheckButton hotkeys_enable_check.
+ * Handles the 'toggled' signal on the GtkCheckButton 'hotkeys_enable_check'.
  * Updates the preferences window.
  *
- * @param button the button which received the signal
- * @param window user data set when the signal handler was connected
+ * @param button the button which received the signal.
+ * @param window user data set when the signal handler was connected.
  */
 void
-on_hotkeys_enabled_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_hotkeys_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
 	gtk_widget_set_sensitive(window->hotkeys_vol_label, active);
@@ -264,19 +295,18 @@ on_hotkeys_enabled_toggled(GtkToggleButton *button, PrefsWindow *window)
 }
 
 /**
- * Handler for the signal 'key-press-event' on the GtkDialog hotkeys_dialog
+ * Handles the 'key-press-event' signal on the GtkDialog 'hotkeys_dialog'
  * which was opened by acquire_hotkey().
  *
- * @param dialog the dialog window which received the signal
- * @param ev the GdkEventKey which triggered the signal
- * @param window struct holding the GtkWidgets of the preferences windows
+ * @param dialog the dialog window which received the signal.
+ * @param ev the GdkEventKey which triggered the signal.
+ * @param window user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
  * FALSE to propagate the event further.
  */
 gboolean
 on_hotkey_pressed(G_GNUC_UNUSED GtkWidget *dialog,
-                  GdkEventKey *ev,
-                  PrefsWindow *window)
+                  GdkEventKey *ev, PrefsWindow *window)
 {
 	gchar *key_text;
 	guint keyval;
@@ -299,12 +329,12 @@ on_hotkey_pressed(G_GNUC_UNUSED GtkWidget *dialog,
 }
 
 /**
- * Handler for the signal 'key-release-event' on the GtkDialog hotkeys_dialog
+ * Handler for the signal 'key-release-event' on the GtkDialog 'hotkeys_dialog'
  * which was opened by acquire_hotkey().
  *
- * @param dialog the dialog window which received the signal
- * @param ev the GdkEventKey which triggered the signal
- * @param window struct holding the GtkWidgets of the preferences windows
+ * @param dialog the dialog window which received the signal.
+ * @param ev the GdkEventKey which triggered the signal.
+ * @param window user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
  * FALSE to propagate the event further.
  */
@@ -443,15 +473,15 @@ on_hotkey_event_box_button_pressed(GtkWidget *widget, GdkEventButton *event,
 }
 
 /**
- * Handler for the signal 'toggled' on the GtkCheckButton noti_enable_check.
+ * Handles the 'toggled' signal on the GtkCheckButton 'noti_enable_check'.
  * Updates the preferences window.
  *
- * @param button the button which received the signal
- * @param window user data set when the signal handler was connected
+ * @param button the button which received the signal.
+ * @param window user data set when the signal handler was connected.
  */
 #ifdef HAVE_LIBN
 void
-on_noti_enable_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_noti_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
 	gtk_widget_set_sensitive(window->noti_timeout_label, active);
@@ -463,33 +493,12 @@ on_noti_enable_toggled(GtkToggleButton *button, PrefsWindow *window)
 }
 #else
 void
-on_noti_enable_toggled(G_GNUC_UNUSED GtkToggleButton *button,
-                       G_GNUC_UNUSED PrefsWindow *window)
+on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
+                             G_GNUC_UNUSED PrefsWindow *window)
 {
 }
 #endif
 
-/**
- * Gets one of the hotkey code and mode in the Hotkeys settings
- * from the specified label (parsed as an accelerator name).
- *
- * @param label the label to parse
- * @param code the resulting keycode
- * @param mods the resulting pressed keymode
- */
-static void
-get_keycode_for_label(GtkLabel *label, gint *code, GdkModifierType *mods)
-{
-	guint keysym;
-	const gchar *key_text;
-
-	key_text = gtk_label_get_text(label);
-	gtk_accelerator_parse(key_text, &keysym, mods);
-	if (keysym != 0)
-		*code = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
-	else
-		*code = -1;
-}
 
 /**
  * Callback function when the ok_button (GtkButton) of the
@@ -501,6 +510,8 @@ get_keycode_for_label(GtkLabel *label, gint *code, GdkModifierType *mods)
 static void
 retrieve_window_values(PrefsWindow *window)
 {
+	DEBUG("Retrieving prefs window values");
+
 	// volume slider orientation
 	GtkWidget *soc = window->vol_orientation_combo;
 	const gchar *orientation;
@@ -658,36 +669,13 @@ retrieve_window_values(PrefsWindow *window)
 #endif
 }
 
-/**
- * Sets one of the hotkey labels in the Hotkeys settings
- * to the specified keycode (converted to a accelerator name).
- *
- * @param label the label to set
- * @param code the keycode to convert to accelerator name
- * @param mods the pressed keymod
- */
-static void
-set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
-{
-	int keysym;
-	gchar *key_text;
-
-	if (code < 0)
-		return;
-
-	keysym = XkbKeycodeToKeysym(gdk_x11_get_default_xdisplay(), code, 0, 0);
-	key_text = gtk_accelerator_name(keysym, mods);
-	gtk_label_set_text(GTK_LABEL(label), key_text);
-	g_free(key_text);
-}
-
 static void
 populate_window_values(PrefsWindow *window)
 {
 	gdouble *vol_meter_clrs;
 	gchar *slider_orientation, *vol_cmd, *custcmd;
 
-	DEBUG("Populating prefs window");
+	DEBUG("Populating prefs window values");
 
 	// volume slider orientation
 	slider_orientation = prefs_get_string("SliderOrientation", NULL);
@@ -711,7 +699,7 @@ populate_window_values(PrefsWindow *window)
 	(GTK_TOGGLE_BUTTON(window->vol_text_check),
 	 prefs_get_boolean("DisplayTextVolume", FALSE));
 
-	on_vol_text_toggled(GTK_TOGGLE_BUTTON(window->vol_text_check), window);
+	on_vol_text_check_toggled(GTK_TOGGLE_BUTTON(window->vol_text_check), window);
 
 	// volume text position
 	gtk_combo_box_set_active
@@ -723,7 +711,7 @@ populate_window_values(PrefsWindow *window)
 	(GTK_TOGGLE_BUTTON(window->vol_meter_draw_check),
 	 prefs_get_boolean("DrawVolMeter", FALSE));
 
-	on_vol_meter_draw_toggled(GTK_TOGGLE_BUTTON(window->vol_meter_draw_check),
+	on_vol_meter_draw_check_toggled(GTK_TOGGLE_BUTTON(window->vol_meter_draw_check),
 	                          window);
 
 	// volume meter position
@@ -735,22 +723,18 @@ populate_window_values(PrefsWindow *window)
 	vol_meter_clrs = prefs_get_double_list("VolMeterColor", NULL);
 #ifdef WITH_GTK3
 	GdkRGBA vol_meter_color_button_color;
-
 	vol_meter_color_button_color.red = vol_meter_clrs[0];
 	vol_meter_color_button_color.green = vol_meter_clrs[1];
 	vol_meter_color_button_color.blue = vol_meter_clrs[2];
 	vol_meter_color_button_color.alpha = 1.0;
-
 	gtk_color_chooser_set_rgba(
 	GTK_COLOR_CHOOSER(window->vol_meter_color_button),
 	&vol_meter_color_button_color);
 #else
 	GdkColor vol_meter_color_button_color;
-
 	vol_meter_color_button_color.red = (guint32) (vol_meter_clrs[0] * 65536);
 	vol_meter_color_button_color.green = (guint32) (vol_meter_clrs[1] * 65536);
 	vol_meter_color_button_color.blue = (guint32) (vol_meter_clrs[2] * 65536);
-
 	gtk_color_button_set_color(
 	GTK_COLOR_BUTTON(window->vol_meter_color_button),
 	&vol_meter_color_button_color);
@@ -791,7 +775,7 @@ populate_window_values(PrefsWindow *window)
 	(GTK_COMBO_BOX(window->middle_click_combo),
 	 prefs_get_integer("MiddleClickAction", 0));
 
-	on_middle_click_changed(GTK_COMBO_BOX_TEXT(window->middle_click_combo), window);
+	on_middle_click_combo_changed(GTK_COMBO_BOX_TEXT(window->middle_click_combo), window);
 
 	// custom command
 	gtk_entry_set_invisible_char(GTK_ENTRY(window->custom_entry), 8226);
@@ -825,7 +809,7 @@ populate_window_values(PrefsWindow *window)
 	                      prefs_get_integer("VolDownKey", -1),
 	                      prefs_get_integer("VolDownMods", 0));
 
-	on_hotkeys_enabled_toggled(GTK_TOGGLE_BUTTON(window->hotkeys_enable_check),
+	on_hotkeys_enable_check_toggled(GTK_TOGGLE_BUTTON(window->hotkeys_enable_check),
 			 window);
 
 	// notifications
@@ -854,7 +838,7 @@ populate_window_values(PrefsWindow *window)
 	(GTK_SPIN_BUTTON(window->noti_timeout_spin),
 	 prefs_get_integer("NotificationTimeout", 1500));
 
-	on_noti_enable_toggled(GTK_TOGGLE_BUTTON(window->noti_enable_check), window);
+	on_noti_enable_check_toggled(GTK_TOGGLE_BUTTON(window->noti_enable_check), window);
 #endif
 }
 
@@ -863,13 +847,13 @@ populate_window_values(PrefsWindow *window)
 static void
 prefs_window_show(PrefsWindow *window)
 {
-	gtk_widget_show(window->window);
+	gtk_widget_show(window->prefs_window);
 }
 
 static void
 prefs_window_destroy(PrefsWindow *window)
 {
-	gtk_widget_destroy(window->window);
+	gtk_widget_destroy(window->prefs_window);
 	g_free(window);
 }
 
@@ -904,7 +888,7 @@ prefs_window_create(void)
 
 	/* Save some widgets for later use */
 	// Top level widgets
-	assign_gtk_widget(builder, window, window);
+	assign_gtk_widget(builder, window, prefs_window);
 	assign_gtk_widget(builder, window, notebook);
 	assign_gtk_widget(builder, window, ok_button);
 	assign_gtk_widget(builder, window, cancel_button);
@@ -967,22 +951,15 @@ prefs_window_create(void)
 	return window;
 }
 
-/* Public functions */
-
-void
-prefs_window_open(void)
-{
-	/* Only one instance at a time */
-	if (instance)
-		return;
-
-	instance = prefs_window_create();
-	prefs_window_show(instance);
-}
-
-
 /* Ok & Cancel signal handlers */
 
+/**
+ * Handles the 'clicked' signal on the GtkButton 'ok_button',
+ * therefore closing the preferences window, applying and saving changes.
+ *
+ * @param button the GtkButton that received the signal.
+ * @param window user data set when the signal handler was connected.
+ */
 void
 on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 {
@@ -1002,6 +979,13 @@ on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 	instance = NULL;
 }
 
+/**
+ * Handles the 'clicked' signal on the GtkButton 'cancel_button',
+ * therefore closing the preferences window and discarding any changes.
+ *
+ * @param button the GtkButton that received the signal.
+ * @param window user data set when the signal handler was connected.
+ */
 void
 on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 {
@@ -1012,26 +996,25 @@ on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 }
 
 /**
- * Callback function when a key is hit in prefs_window. Currently handles
- * Esc key (calls on_cancel_button_clicked())
- * and
- * Return key (calls on_ok_button_clicked()).
+ * Handles the 'key-press-event' signal on the GtkWindow 'prefs_window',
+ * currently handles Esc key (aka Cancel) and Return key (aka OK).
  *
- * @param widget the widget that received the signal
- * @param event the key event that was triggered
- * @param data struct holding the GtkWidgets of the preferences windows
+ * @param widget the widget that received the signal.
+ * @param event the key event that was triggered.
+ * @param window user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
- * False to propagate the event further
+ * FALSE to propagate the event further.
  */
 gboolean
-on_key_press_event(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, PrefsWindow *window)
+on_prefs_window_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
+                                GdkEventKey *event, PrefsWindow *window)
 {
 	switch (event->keyval) {
 	case GDK_KEY_Escape:
-		on_cancel_button_clicked(NULL, window);
+		gtk_button_clicked(GTK_BUTTON(window->cancel_button));
 		break;
 	case GDK_KEY_Return:
-		on_ok_button_clicked(NULL, window);
+		gtk_button_clicked(GTK_BUTTON(window->ok_button));
 		break;
 	default:
 		break;
@@ -1039,3 +1022,20 @@ on_key_press_event(G_GNUC_UNUSED GtkWidget *widget, GdkEventKey *event, PrefsWin
 
 	return FALSE;
 }
+
+/* Public functions */
+
+/**
+ * Creates the preferences window and display it.
+ */
+void
+prefs_window_open(void)
+{
+	/* Only one instance at a time */
+	if (instance)
+		return;
+
+	instance = prefs_window_create();
+	prefs_window_show(instance);
+}
+
