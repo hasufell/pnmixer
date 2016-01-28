@@ -59,17 +59,27 @@ void warn_sound_conn_lost(void);
 /**
  * Macro to print verbose debug info in case we want debugging.
  */
+
+#define VT_ESC    "\033"
+#define VT_RESET  "[0m"
+#define VT_RED    "[0;31m"
+#define VT_GREY   "[0;37m"
+#define VT_YELLOW "[1;33m"
+
+#define ERROR(fmt, ...)	  \
+	fprintf(stderr, VT_ESC VT_RED "error: " VT_ESC VT_RESET fmt "\n", ##__VA_ARGS__)
+
+#define WARN(fmt, ...)	  \
+	fprintf(stderr, VT_ESC VT_YELLOW "warning: " VT_ESC VT_RESET fmt "\n", ##__VA_ARGS__)
+
+#define _DEBUG(fmt, ...)	\
+	fprintf(stderr, VT_ESC VT_GREY "debug: " VT_ESC VT_RESET fmt "\n", ##__VA_ARGS__)
+
 #define DEBUG(fmt, ...)	\
 	do { \
 		if (want_debug == TRUE) \
-			fprintf(stderr, "debug: " fmt "\n", ##__VA_ARGS__); \
+			_DEBUG(fmt, ##__VA_ARGS__); \
 	} while (0) \
- 
-#define WARN(fmt, ...)	  \
-	fprintf(stderr, "warning: " fmt "\n", ##__VA_ARGS__)
-
-#define ERROR(fmt, ...)	  \
-	fprintf(stderr, "error: " fmt "\n", ##__VA_ARGS__)
 
 /*
  * GtkBuilder helpers
