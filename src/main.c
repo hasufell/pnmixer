@@ -57,19 +57,7 @@ apply_prefs(gint alsa_change)
 	scroll_step = prefs_get_integer("ScrollStep", 5);
 
 	/* Hotkeys preferences */
-	if (prefs_get_boolean("EnableHotKeys", FALSE)) {
-		gint mk, uk, dk, mm, um, dm, hstep;
-		mk = prefs_get_integer("VolMuteKey", -1);
-		uk = prefs_get_integer("VolUpKey", -1);
-		dk = prefs_get_integer("VolDownKey", -1);
-		mm = prefs_get_integer("VolMuteMods", 0);
-		um = prefs_get_integer("VolUpMods", 0);
-		dm = prefs_get_integer("VolDownMods", 0);
-		hstep = prefs_get_integer("HotkeyVolumeStep", 1);
-		hotkeys_grab(mk, uk, dk, mm, um, dm, hstep);
-	} else
-		// will actually just ungrab everything
-		hotkeys_grab(-1, -1, -1, 0, 0, 0, 1);
+	hotkeys_reload_prefs();
 
 	/* Notifications preferences */
 	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
@@ -255,7 +243,7 @@ main(int argc, char *argv[])
 	/* Init everything */
 	audio_init();
 	init_libnotify();
-	hotkeys_add_filter();
+	hotkeys_init();
 
 	popup_menu = popup_menu_create();
 	popup_window = popup_window_create();
@@ -280,6 +268,7 @@ main(int argc, char *argv[])
 	popup_window_destroy(popup_window);
 	popup_menu_destroy(popup_menu);
 
+	hotkeys_cleanup();
 	uninit_libnotify();
 	audio_cleanup();
 

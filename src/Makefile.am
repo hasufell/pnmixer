@@ -10,6 +10,7 @@ bin_PROGRAMS = pnmixer
 pnmixer_SOURCES =		\
 	alsa.c			\
 	audio.c			\
+	hotkey.c		\
 	hotkeys.c		\
 	main.c			\
 	notify.c		\

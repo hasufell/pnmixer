@@ -17,7 +17,8 @@
 #ifndef HOTKEYS_H_
 #define HOTKEYS_H_
 
-void hotkeys_add_filter(void);
-void hotkeys_grab(int, int, int, int, int, int, int);
+void hotkeys_init(void);
+void hotkeys_cleanup(void);
+void hotkeys_reload_prefs(void);
 
 #endif				// HOTKEYS_H

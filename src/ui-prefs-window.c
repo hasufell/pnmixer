@@ -24,10 +24,10 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
-#include <X11/XKBlib.h>
 
 #include "audio.h"
 #include "prefs.h"
+#include "hotkey.h"
 #include "ui-prefs-window.h"
 #include "ui-hotkey-dialog.h"
 
@@ -109,15 +109,10 @@ static PrefsWindow *instance;
 static void
 get_keycode_for_label(GtkLabel *label, gint *code, GdkModifierType *mods)
 {
-	guint keysym;
-	const gchar *key_text;
+	const gchar *key_accel;
 
-	key_text = gtk_label_get_text(label);
-	gtk_accelerator_parse(key_text, &keysym, mods);
-	if (keysym != 0)
-		*code = XKeysymToKeycode(gdk_x11_get_default_xdisplay(), keysym);
-	else
-		*code = -1;
+	key_accel = gtk_label_get_text(label);
+	hotkey_accel_to_code(key_accel, code, mods);
 }
 
 /* Sets one of the hotkey labels in the Hotkeys settings
@@ -126,16 +121,14 @@ get_keycode_for_label(GtkLabel *label, gint *code, GdkModifierType *mods)
 static void
 set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
 {
-	int keysym;
-	gchar *key_text;
+	gchar *key_accel;
 
 	if (code < 0)
 		return;
 
-	keysym = XkbKeycodeToKeysym(gdk_x11_get_default_xdisplay(), code, 0, 0);
-	key_text = gtk_accelerator_name(keysym, mods);
-	gtk_label_set_text(GTK_LABEL(label), key_text);
-	g_free(key_text);
+	key_accel = hotkey_code_to_accel(code, mods);
+	gtk_label_set_text(label, key_accel);
+	g_free(key_accel);
 }
 
 /**
