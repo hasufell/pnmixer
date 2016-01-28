@@ -19,7 +19,7 @@
 #include "config.h"
 #endif
 
-#include "alsa.h"
+#include "audio.h"
 #include "main.h"
 #include "notify.h"
 #include "prefs.h"
@@ -96,12 +96,12 @@ void
 do_notify_volume(gint level, gboolean muted)
 {
 	static NotifyNotification *notification = NULL;
-	gchar *summary, *icon, *active_card_name;
-	const char *active_channel;
+	gchar *summary, *icon;
+	const char *active_card_name, *active_channel;
 	GError *error = NULL;
 
-	active_card_name = (alsa_get_active_card())->name;
-	active_channel = alsa_get_active_channel();
+	active_card_name = audio_get_card();
+	active_channel = audio_get_channel();
 
 	if (notification == NULL) {
 		notification = NOTIFICATION_NEW("", NULL, NULL);

@@ -17,6 +17,8 @@
 #ifndef AUDIO_H_
 #define AUDIO_H_
 
+#include <glib.h>
+
 void audio_init(void);
 void audio_cleanup(void);
 void audio_reinit(void);

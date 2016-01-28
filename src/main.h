@@ -18,7 +18,6 @@
 #define MAIN_H_
 
 #include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 
 extern GtkWindow *main_window;
 extern int scroll_step;
