@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+#ifndef WITH_GTK3
+#include <gdk/gdkkeysyms.h>
+#endif
 
 #include "audio.h"
 #include "prefs.h"

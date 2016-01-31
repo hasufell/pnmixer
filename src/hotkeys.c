@@ -110,7 +110,6 @@ hotkeys_reload_prefs(void)
 {
 	gboolean enabled;
 	gint key, mods;
-	gint vol_step;
 	gboolean mute_err, up_err, down_err;
 
 	/* Free any hotkey that may be currently assigned */

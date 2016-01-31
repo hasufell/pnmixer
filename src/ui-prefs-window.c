@@ -24,6 +24,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+#ifndef WITH_GTK3
+#include <gdk/gdkkeysyms.h>
+#endif
 
 #include "audio.h"
 #include "prefs.h"
@@ -134,72 +137,90 @@ set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
 /**
  * Fills the GtkComboBoxText 'combo' with the currently available
  * channels of the card.
+ * 
  *
- * @param channels list of available channels
  * @param combo the GtkComboBoxText widget for the channels
+ * @param channels list of available channels
  * @param selected the currently selected channel
  */
+
+/**
+ * Fills the GtkComboBoxText 'chan_combo' with the currently available channels
+ * for a given card.
+ * The active channel in the combo box is set to the SELECTED channel found in
+ * preferences for this card.
+ *
+ * @param combo the GtkComboBoxText widget for the channels.
+ * @param card_name the card to use to get the channels list.
+ */
 static void
-fill_channel_combo(GSList *channels, GtkWidget *combo, gchar *selected)
+fill_chan_combo(GtkComboBoxText *combo, const gchar *card_name)
 {
-	int idx = 0, sidx = 0;
-	GtkTreeIter iter;
-	GtkListStore *store =
-		GTK_LIST_STORE(gtk_combo_box_get_model(GTK_COMBO_BOX(combo)));
-	gtk_list_store_clear(store);
-	while (channels) {
-		gtk_list_store_append(store, &iter);
-		gtk_list_store_set(store, &iter, 0, channels->data, -1);
-		if (selected && !strcmp(channels->data, selected))
+	int idx, sidx;
+	gchar *selected_channel;
+	GSList *channel_list, *item;
+
+	DEBUG("Filling channels ComboBox for card '%s'", card_name);
+ 
+	selected_channel = prefs_get_channel(card_name);
+	channel_list = audio_get_channel_list(card_name);
+
+	/* Empty the combo box */
+	gtk_combo_box_text_remove_all(combo);
+
+	/* Fill the combo box with the channels, save the selected channel index */
+	for (sidx = idx = 0, item = channel_list; item; idx++, item = item->next) {
+		const char *channel_name = item->data;
+		gtk_combo_box_text_append_text(combo, channel_name);
+
+		if (!g_strcmp0(channel_name, selected_channel))
 			sidx = idx;
-		idx++;
-		channels = channels->next;
 	}
+
+	/* Set the combo box active item */
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), sidx);
+
+	/* Cleanup */
+	g_slist_free_full(channel_list, g_free);
+	g_free(selected_channel);
 }
 
 /**
- * Fills the GtkComboBoxText card_combo with the currently available
- * cards and calls fill_channel_combo() as well.
+ * Fills the GtkComboBoxText 'card_combo' with the currently available cards.
+ * The active card in the combo box is set to the currently ACTIVE card,
+ * which may be different from the SELECTED card found in preferences.
  *
- * @param combo the GtkComboBoxText widget for the alsa cards
- * @param channels_combo the GtkComboBoxText widget for the card channels
+ * @param combo the GtkComboBoxText widget for the cards.
  */
 static void
-fill_card_combo(GtkWidget *combo, GtkWidget *channels_combo)
+fill_card_combo(GtkComboBoxText *combo)
 {
-	struct acard *c;
-	GSList *cur_card;
+	int idx, sidx;
 	const gchar *active_card;
-	int idx, sidx = 0;
+	GSList *card_list, *item;
 
-	GtkTreeIter iter;
-	GtkListStore *store =
-		GTK_LIST_STORE(gtk_combo_box_get_model(GTK_COMBO_BOX(combo)));
+	DEBUG("Filling cards ComboBox");
 
-	cur_card = cards;
 	active_card = audio_get_card();
-	idx = 0;
-	while (cur_card) {
-		c = cur_card->data;
-		if (!c->channels) {
-			cur_card = cur_card->next;
-			continue;
-		}
-		if (!g_strcmp0(c->name, active_card)) {
-			gchar *sel_chan = prefs_get_channel(c->name);
+	card_list = audio_get_card_list();
+
+	/* Empty the combo box */
+	gtk_combo_box_text_remove_all(combo);
+
+	/* Fill the combo box with the cards, save the active card index */
+	for (sidx = idx = 0, item = card_list; item; idx++, item = item->next) {
+		const char *card_name = item->data;
+		gtk_combo_box_text_append_text(combo, card_name);
+
+		if (!g_strcmp0(card_name, active_card))
 			sidx = idx;
-			fill_channel_combo(c->channels, channels_combo, sel_chan);
-			if (sel_chan)
-				g_free(sel_chan);
-		}
-		gtk_list_store_append(store, &iter);
-		gtk_list_store_set(store, &iter, 0, c->name, -1);
-		cur_card = cur_card->next;
-		idx++;
 	}
 
+	/* Set the combo box active item */
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), sidx);
+
+	/* Cleanup */
+	g_slist_free_full(card_list, g_free);
 }
 
 /* Signals handlers */
@@ -246,18 +267,11 @@ on_vol_meter_draw_check_toggled(GtkToggleButton *button, PrefsWindow *window)
 void
 on_card_combo_changed(GtkComboBoxText *box, PrefsWindow *window)
 {
-	struct acard *card;
 	gchar *card_name;
 
 	card_name = gtk_combo_box_text_get_active_text(box);
-	card = find_card(card_name);
+	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo), card_name);
 	g_free(card_name);
-
-	if (card) {
-		gchar *sel_chan = prefs_get_channel(card->name);
-		fill_channel_combo(card->channels, window->chan_combo, sel_chan);
-		g_free(sel_chan);
-	}
 }
 
 /**
@@ -627,8 +641,9 @@ populate_window_values(PrefsWindow *window)
 	(GTK_TOGGLE_BUTTON(window->system_theme),
 	 prefs_get_boolean("SystemTheme", FALSE));
 
-	// fill in card/channel combo boxes
-	fill_card_combo(window->card_combo, window->chan_combo);
+	// fill in card & channel combo boxes
+	fill_card_combo(GTK_COMBO_BOX_TEXT(window->card_combo));
+	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo), audio_get_card());
 
 	// normalize volume
 	gtk_toggle_button_set_active

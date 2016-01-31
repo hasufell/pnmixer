@@ -17,7 +17,7 @@
 #ifndef HOTKEY_H_
 #define HOTKEY_H_
 
-#include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 
 struct hotkey {
 	/* These values should only be accessed for reading,
@@ -36,6 +36,6 @@ void hotkey_free(Hotkey *key);
 gboolean hotkey_matches(Hotkey *hotkey, guint code, GdkModifierType mods);
 
 gchar *hotkey_code_to_accel(guint code, GdkModifierType mods);
-void hotkey_accel_to_code(const gchar *accel, guint *code, GdkModifierType *mods);
+void hotkey_accel_to_code(const gchar *accel, gint *code, GdkModifierType *mods);
 
 #endif				// HOTKEY_H

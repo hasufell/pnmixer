@@ -141,7 +141,7 @@ hotkey_code_to_accel(guint code, GdkModifierType mods)
  * @param mods the key modifiers after parsing.
  */
 void
-hotkey_accel_to_code(const gchar *accel, guint *code, GdkModifierType *mods)
+hotkey_accel_to_code(const gchar *accel, gint *code, GdkModifierType *mods)
 {
 	Display *disp;
 	guint sym;
@@ -174,7 +174,7 @@ hotkey_matches(Hotkey *hotkey, guint code, GdkModifierType mods)
 		return FALSE;
 
 	for (i = 0; i < G_N_ELEMENTS(keymasks); i++)
-		if ((int) (hotkey->mods | keymasks[i]) == mods)
+		if ((hotkey->mods | keymasks[i]) == mods)
 			return TRUE;
 
 	return FALSE;

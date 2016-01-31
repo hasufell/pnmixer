@@ -23,15 +23,18 @@ void audio_init(void);
 void audio_cleanup(void);
 void audio_reinit(void);
 
+int audio_get_volume(void);
+void audio_set_volume(int volume, gboolean notify);
+void audio_lower_volume(gboolean notify);
+void audio_raise_volume(gboolean notify);
+
 int audio_is_muted(void);
 void audio_mute(gboolean notify);
 
-int audio_get_volume(void);
-void audio_raise_volume(gboolean notify);
-void audio_lower_volume(gboolean notify);
-void audio_set_volume(int volume, gboolean notify);
-
 const char *audio_get_card(void);
 const char *audio_get_channel(void);
+
+GSList *audio_get_card_list(void);
+GSList *audio_get_channel_list(const char *card);
 
 #endif				// AUDIO_H
