@@ -8,7 +8,7 @@ AM_CPPFLAGS = \
 bin_PROGRAMS = pnmixer
 
 pnmixer_SOURCES =		\
-	alsa-card.c		\
+	alsa.c			\
 	audio.c			\
 	hotkey.c		\
 	hotkeys.c		\

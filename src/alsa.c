@@ -8,60 +8,62 @@
  * <http://github.com/nicklan/pnmixer>
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#define _GNU_SOURCE /* exp10() */
+#include <math.h>
+#include <glib.h>
+#include <alsa/asoundlib.h>
+
+#include "prefs.h"
+#include "alsa.h"
+
+#define ALSA_DEFAULT_CARD "(default)"
+#define ALSA_DEFAULT_HCTL "default"
+
 /*
- * ALSA volume normalization code adapted from original alsa source:
- *
- *    volume_mapping.c
+ * Alsa log and debug macros.
+ */
+
+#define ALSA_DEBUG(fmt, ...)	  \
+	DEBUG("Alsa: " fmt, ##__VA_ARGS__)
+
+#define ALSA_WARN(fmt, ...)	  \
+	WARN("Alsa: " fmt, ##__VA_ARGS__)
+
+#define ALSA_ERR(err, fmt, ...)	  \
+	ERROR("Alsa: " fmt ": %s", ##__VA_ARGS__, snd_strerror(err))
+
+#define ALSA_CARD_DEBUG(card, fmt, ...)	  \
+	DEBUG("Alsa: '%s': " fmt, card, ##__VA_ARGS__)
+
+#define ALSA_CARD_WARN(card, fmt, ...)	  \
+	WARN("Alsa: '%s': " fmt, card, ##__VA_ARGS__)
+
+#define ALSA_CARD_ERR(card, err, fmt, ...)	  \
+	ERROR("Alsa: '%s': " fmt ": %s", card, ##__VA_ARGS__, snd_strerror(err))
+
+/*
+ * Alsa volume management.
+ * Parts of this code were taken and adapted from the original
+ * alsa-utils package, `alsamixer` program, `volume_mapping.c` file.
  *
  * Copyright (c) 2010 Clemens Ladisch <clemens@ladisch.de>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- *
  */
 
-/**
- * @file alsa.c
- * This file holds the communication of pnmixer
- * with alsa, such as getting available cards as well as
- * setting callback functions for events, and so on.
- * @brief alsa subsystem
- */
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#define _GNU_SOURCE
-#include "alsa.h"
-#include "support.h"
-#include "notify.h"
-#include "prefs.h"
-
-#include "audio.h"
-#include "main.h"
-
-#include <math.h>
-#include <alsa/asoundlib.h>
-#include <string.h>
-
-#define MAX_LINEAR_DB_SCALE	24
+#define MAX_LINEAR_DB_SCALE 24
 
 static inline gboolean
-use_linear_dB_scale(long dBmin, long dBmax)
+use_linear_dB_scale(long db_min, long db_max)
 {
-	return dBmax - dBmin <= MAX_LINEAR_DB_SCALE * 100;
+	return db_max - db_min <= MAX_LINEAR_DB_SCALE * 100;
 }
-
-GSList *cards = NULL;
-static int smixer_level = 0;
-static struct snd_mixer_selem_regopt smixer_options;
-static snd_mixer_elem_t *elem;
-static snd_mixer_t *handle;
-struct acard *active_card;
-
-static GSList *get_channels(const char *card);
 
 static long
 lrint_dir(double x, int dir)
@@ -74,175 +76,366 @@ lrint_dir(double x, int dir)
 		return lrint(x);
 }
 
-/**
- * Callback function which is called on an element
- * of the alsa cards GSList, e.g. via g_slist_free_full.
- *
- * @param data the current alsa card
- */
-static void
-card_free(gpointer data)
+/* Return something between 0 and 1 */
+static double
+get_volume(const char *hctl, snd_mixer_elem_t *elem, double *volume)
 {
-	struct acard *c = (struct acard *) data;
-	g_free(c->name);
-	g_free(c->dev);
-	g_slist_free_full(c->channels, g_free);
-	g_free(data);
+	snd_mixer_selem_channel_id_t channel = SND_MIXER_SCHN_FRONT_RIGHT;
+	int err;
+	long min, max, value;
+
+	*volume = 0;
+
+	err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't get playback volume range");
+		return FALSE;
+	}
+
+	if (min >= max) {
+		ALSA_CARD_WARN(hctl, "Invalid playback volume range [%ld - %ld]", min, max);
+		return FALSE;
+	}
+
+	err = snd_mixer_selem_get_playback_volume(elem, channel, &value);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't get playback volume");
+		return FALSE;
+	}
+
+	*volume = (value - min) / (double) (max - min);
+
+	return TRUE;
 }
 
-/**
- * Partly based on get_cards function in alsamixer.
- * This gets all alsa cards and fills the global
- * GSList 'cards'.
- * The list always starts with the 'default' card.
- */
-static void
-get_cards(void)
+static gboolean
+set_volume(const char *hctl, snd_mixer_elem_t *elem,
+           double volume, int dir)
 {
-	int err, num;
-	snd_ctl_card_info_t *info;
-	snd_ctl_t *ctl;
-	char buf[10];
-	struct acard *cur_card, *default_card;
+	int err;
+	long min, max, value;
 
-	if (cards != NULL)
-		g_slist_free_full(cards, card_free);
+	err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't get playback volume range");
+		return FALSE;
+	}
 
-	cards = NULL;
+	if (min >= max) {
+		ALSA_CARD_WARN(hctl, "Invalid playback volume range [%ld - %ld]", min, max);
+		return FALSE;
+	}
 
-	default_card = g_malloc(sizeof(struct acard));
-	default_card->name = g_strdup("(default)");
-	default_card->dev = g_strdup("default");
-	default_card->channels = get_channels("default");
+	value = lrint_dir(volume * (max - min), dir) + min;
 
-	cards = g_slist_append(cards, default_card);
+	err = snd_mixer_selem_set_playback_volume_all(elem, value);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't set playback volume to %ld", value);
+		return FALSE;
+	}
 
-	// don't need to free this as it's alloca'd
-	snd_ctl_card_info_alloca(&info);
-	num = -1;
-	for (;;) {
-		err = snd_card_next(&num);
+	// TODO: what about the 'intentionally set twice' thing ?
+
+	return TRUE;
+}
+
+
+/* Return something between 0 and 1 */
+static gboolean
+get_normalized_volume(const char *hctl, snd_mixer_elem_t *elem, double *volume)
+{
+	snd_mixer_selem_channel_id_t channel = SND_MIXER_SCHN_FRONT_RIGHT;
+	int err;
+	long min, max, value;
+	double normalized, min_norm;
+
+	*volume = 0;
+
+	err = snd_mixer_selem_get_playback_dB_range(elem, &min, &max);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't get playback dB range");
+		return FALSE;
+	}
+
+	if (min >= max) {
+		ALSA_CARD_WARN(hctl, "Invalid playback dB range [%ld - %ld]", min, max);
+		return FALSE;
+	}
+	
+	err = snd_mixer_selem_get_playback_dB(elem, channel, &value);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't get playback dB");
+		return FALSE;
+	}
+
+	if (use_linear_dB_scale(min, max)) {
+		normalized = (value - min) / (double) (max - min);
+	} else {
+		normalized = exp10((value - max) / 6000.0);
+		if (min != SND_CTL_TLV_DB_GAIN_MUTE) {
+			min_norm = exp10((min - max) / 6000.0);
+			normalized = (normalized - min_norm) / (1 - min_norm);
+		}
+	}
+
+	*volume = normalized;
+
+	return TRUE;
+}
+
+static gboolean
+set_normalized_volume(const char *hctl, snd_mixer_elem_t *elem,
+                      double volume, int dir)
+{
+	int err;
+	long min, max, value;
+
+	err = snd_mixer_selem_get_playback_dB_range(elem, &min, &max);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't get playback dB range");
+		return FALSE;
+	}
+
+	if (min >= max) {
+		ALSA_CARD_WARN(hctl, "Invalid playback dB range [%ld - %ld]", min, max);
+		return FALSE;
+	}
+
+	if (use_linear_dB_scale(min, max)) {
+		value = lrint_dir(volume * (max - min), dir) + min;
+	} else {
+		if (min != SND_CTL_TLV_DB_GAIN_MUTE) {
+			double min_norm = exp10((min - max) / 6000.0);
+			volume = volume * (1 - min_norm) + min_norm;
+		}
+		value = lrint_dir(6000.0 * log10(volume), dir) + max;
+	}
+
+	err = snd_mixer_selem_set_playback_dB_all(elem, value, dir);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't set playback dB to %ld", value);
+		return FALSE;
+	}
+
+	// TODO: what about the 'intentionally set twice' thing ?
+
+	return TRUE;
+}
+
+static gboolean
+get_mute(const char *hctl, snd_mixer_elem_t *elem, gboolean *muted)
+{
+	snd_mixer_selem_channel_id_t channel = SND_MIXER_SCHN_FRONT_RIGHT;
+	int err;
+	int value;
+
+	*muted = FALSE;
+
+	if (snd_mixer_selem_has_playback_switch(elem)) {
+		err = snd_mixer_selem_get_playback_switch(elem, channel, &value);
 		if (err < 0) {
-			report_error("Can't get sounds cards: %s", snd_strerror(err));
-			return;
+			ALSA_CARD_ERR(hctl, err, "Can't get playback switch");
+			return FALSE;
 		}
-		if (num < 0)
-			break;
-		sprintf(buf, "hw:%d", num);
-		if (snd_ctl_open(&ctl, buf, 0) < 0)
-			continue;
-		err = snd_ctl_card_info(ctl, info);
-		snd_ctl_close(ctl);
-		if (err < 0)
-			continue;
-		cur_card = g_malloc(sizeof(struct acard));
-		cur_card->name = g_strdup(snd_ctl_card_info_get_name(info));
-		sprintf(buf, "hw:%d", num);
-		cur_card->dev = g_strdup(buf);
-		cur_card->channels = get_channels(buf);
-		cards = g_slist_append(cards, cur_card);
+	} else {
+		/* If there's no playback switch, assume not muted */
+		value = 1;
 	}
-	if (want_debug == TRUE) {
-		GSList *tmp = cards;
-		if (tmp) {
-			printf("------ Card list ------\n");
-			while (tmp) {
-				struct acard *c = tmp->data;
-				printf("\t%s\t%s\t%s\n", c->dev, c->name,
-				       c->channels ? "" : "No chann");
-				tmp = tmp->next;
-			}
-			printf("-----------------------\n");
-		}
-	}
+
+	/* Value returned: 0 = muted, 1 = not muted */
+	*muted = value == 0 ? TRUE : FALSE;
+
+	return TRUE;
 }
 
-/**
- * Get the acard struct corresponding to a card name
- * by searching the global GSList 'cards'.
- *
- * @param card_name the card name to get the device string of
- * @return a pointer toward the corresponding acard struct or NULL on failure
- */
-struct acard *
-find_card(const char *card_name)
+static gboolean
+set_mute(const char *hctl, snd_mixer_elem_t *elem, gboolean mute)
 {
-	GSList *item;
+	int err;
+	int value;
 
-	if (!card_name)
+	/* Value to set: 0 = muted, 1 = not muted */
+	value = mute ? 0 : 1;
+
+	if (snd_mixer_selem_has_playback_switch(elem)) {
+		err = snd_mixer_selem_set_playback_switch_all(elem, value);
+		if (err < 0) {
+			ALSA_CARD_ERR(hctl, err, "Can't set playback switch");
+			return FALSE;
+		}
+	} else {
+		/* If there's no playback switch, do nothing */
+	}
+
+	return TRUE;
+}
+
+/*
+ * Mixer handling
+ */
+
+static snd_mixer_elem_t *
+mixer_elem_get(const char *hctl, snd_mixer_t *mixer, const char *channel)
+{
+	snd_mixer_elem_t *elem = NULL;
+
+	/* Look for the given channel amongst mixer elements */
+	if (channel) {
+		snd_mixer_selem_id_t *sid;
+		snd_mixer_selem_id_alloca(&sid);
+		snd_mixer_selem_id_set_name(sid, channel);
+		elem = snd_mixer_find_selem(mixer, sid);
+		if (elem == NULL)
+			ALSA_CARD_WARN(hctl, "Can't find channel %s", channel);
+	}
+
+	/* If we got a playable mixer element at this point, we're done ! */
+	if (elem && snd_mixer_selem_has_playback_volume(elem))
+		return elem;
+
+	/* Otherwise, iterate on mixer elements until we find a playable one */
+	ALSA_CARD_DEBUG(hctl, "Looking for a playable mixer element...");
+	elem = snd_mixer_first_elem(mixer);
+	while (elem) {
+		if (snd_mixer_selem_has_playback_volume(elem))
+			break;
+		elem = snd_mixer_elem_next(elem);
+	}
+
+	if (elem == NULL)
+		ALSA_CARD_DEBUG(hctl, "No playable mixer element found");
+
+	return elem;
+}
+
+static void
+mixer_close(const char *hctl, snd_mixer_t *mixer)
+{
+	int err;
+
+	ALSA_CARD_DEBUG(hctl, "Closing mixer");
+
+	snd_mixer_free(mixer);
+
+	err = snd_mixer_detach(mixer, hctl);
+	if (err < 0)
+		ALSA_CARD_ERR(hctl, err, "Can't detach mixer");
+
+	err = snd_mixer_close(mixer);
+	if (err < 0)
+		ALSA_CARD_ERR(hctl, err, "Can't close mixer");
+}
+
+static snd_mixer_t *
+mixer_open(const char *hctl)
+{
+	int err;
+	snd_mixer_t *mixer = NULL;
+
+	ALSA_CARD_DEBUG(hctl, "Opening mixer");
+
+	err = snd_mixer_open(&mixer, 0);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't open mixer");
 		return NULL;
+	}
 
-	for (item = cards; item; item = item->next) {
-		struct acard *c = item->data;
-		if (!strcmp(c->name, card_name))
-			return c;
+	err = snd_mixer_attach(mixer, hctl);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't attach card to mixer");
+		goto failure;
+	}
+	
+	err = snd_mixer_selem_register(mixer, NULL, NULL);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't register mixer simple element");
+		goto failure;
+	}
+
+	err = snd_mixer_load(mixer);
+	if (err < 0) {
+		ALSA_CARD_ERR(hctl, err, "Can't load mixer elements");
+		goto failure;
+	}
+
+	return mixer;
+
+failure:
+	snd_mixer_close(mixer);
+	return NULL;
+}
+
+static char *
+get_hctl_from_name(const char *card_name)
+{
+	int err;
+	int number;
+
+	/* Handle the special 'default' card */
+	if (!g_strcmp0(card_name, ALSA_DEFAULT_CARD))
+		return g_strdup(ALSA_DEFAULT_HCTL);
+
+	/* Iterate on cards and try to find the one it */
+	for (number = -1;;) {
+		char *name;
+
+		/* Get next soundcard */
+		err = snd_card_next(&number);
+		if (err < 0) {
+			ALSA_ERR(err, "Can't enumerate sound cards");
+			break;
+		}
+
+		if (number < 0)
+			break;
+
+		/* Get card name */
+		err = snd_card_get_name(number, &name);
+		if (err < 0) {
+			ALSA_ERR(err, "Can't get card name");
+			break;
+		}
+
+		/* Check if it's the card we're looking for */
+		if (!g_strcmp0(name, card_name)) {
+			g_free(name);
+			return g_strdup_printf("hw:%d", number);
+		}
+
+		/* Nope. Don't forget to free before continuing. */
+		g_free(name);
 	}
 
 	return NULL;
 }
 
-/**
- * Opens the mixer, attaches the alsa card to it,
- * registers the mixer simple element class and
- * loads the mixer elements.
- *
- * @param card HCTL name
- * @param opts Options container
- * @param level mixer level
- * @return the mixer handle, or NULL on failure
- */
-static snd_mixer_t *
-open_mixer(const char *card, struct snd_mixer_selem_regopt *opts, int level)
-{
-	int err;
-	snd_mixer_t *mixer = NULL;
 
-	DEBUG("Card %s: opening mixer", card);
-
-	if ((err = snd_mixer_open(&mixer, 0)) < 0) {
-		DEBUG("Card %s: mixer open error: %s", card, snd_strerror(err));
-		return NULL;
-	}
-	if (level == 0 && (err = snd_mixer_attach(mixer, card)) < 0) {
-		DEBUG("Card %s: mixer attach error: %s", card,
-		      snd_strerror(err));
-		snd_mixer_close(mixer);
-		return NULL;
-	}
-	if ((err = snd_mixer_selem_register(
-			   mixer, level > 0 ? opts : NULL, NULL)) < 0) {
-		DEBUG("Card %s: mixer register error: %s", card,
-		      snd_strerror(err));
-		snd_mixer_close(mixer);
-		return NULL;
-	}
-	if ((err = snd_mixer_load(mixer)) < 0) {
-		DEBUG("Card %s: mixer load error: %s", card, snd_strerror(err));
-		snd_mixer_close(mixer);
-		return NULL;
-	}
-
-	return mixer;
-}
-
-/**
- * Callback function for the mixer element which is
- * set in alsaset().
- *
- * @param e mixer element
- * @param mask event mask
- * @return 0 on success otherwise a negative error code
+/*
+ * Alsa callback
+ * // TODO !
+ * check for volume change, mute.
+ * also check for card disonnected.
  */
 static int
-alsa_cb(G_GNUC_UNUSED snd_mixer_elem_t *e, unsigned int mask)
+alsa_cb(snd_mixer_elem_t *elem, unsigned int mask)
 {
-	/* Test MASK_REMOVE first, according to Alsa documentation */
+//	const char *channel_name;
+	(void) elem;
+
+	/* Test MASK_REMOVE first, according to Alsa documentation.
+	 * If set, it means the mixer element has been removed.
+	 */
 	if (mask == SND_CTL_EVENT_MASK_REMOVE) {
+		// TODO: test if we can access elem or not
+		// Document that !
+		ALSA_DEBUG("Channel has been removed");
 		return 0;
 	}
 
 	/* Then check if mixer value changed */
 	if (mask & SND_CTL_EVENT_MASK_VALUE) {
+		// TODO: send signal instead !
+		#if 0
 		int muted;
 		muted = ismuted();
 		do_update_ui();
@@ -253,523 +446,266 @@ alsa_cb(G_GNUC_UNUSED snd_mixer_elem_t *e, unsigned int mask)
 			else
 				do_notify_volume(vol, TRUE);
 		}
+		#else
+		(void) 0;
+		#endif
+
 	}
 
 	return 0;
 }
 
-/**
- * We need to re-init alsa in an idle moment, it doesn't seem
- * very safe to do that while handling data in poll_cb().
- * This function is attached via g_idle_add() in poll_cb().
- *
- * @param data passed to the function,
- * set when the source was created
- * @return FALSE if the source should be removed,
- * TRUE otherwise
- */
-static gboolean
-idle_alsa_reinit(G_GNUC_UNUSED gpointer data)
-{
-	audio_reinit();
-	return FALSE;
-}
+/* Public card-related functions */
 
-static gchar sbuf[256];
-static GIOChannelError *serr = NULL;
-static gsize sread = 1;
-
-/**
- * Callback function for external volume changes,
- * set in set_io_watch().
- *
- * @param source the GIOChannel event source
- * @param condition the condition which has been satisfied
- * @param data user data set inb g_io_add_watch() or g_io_add_watch_full()
- * @return FALSE if the event source should be removed
- */
-static gboolean
-poll_cb(GIOChannel *source, GIOCondition condition, G_GNUC_UNUSED gpointer data)
-{
-	snd_mixer_handle_events(handle);
-
-	if (condition == G_IO_ERR) {
-		/* This happens when the file descriptor we're watching disappeared.
-		 * For example, if the USB soundcard has been unplugged.
-		 * In this case, reloading alsa is the nice thing to do, it will
-		 * cause PNMixer to select the first card available.
-		 */
-		do_notify_text(_("Soundcard disconnected"),
-			       _("Soundcard has been disconnected, reloading Alsa..."));
-		g_idle_add(idle_alsa_reinit, NULL);
-		return FALSE;
-	}
-	sread = 1;
-	while (sread) {
-		/* This handles the case where alsa_cb doesn't read all the data on
-		 * source. If we don't clear it out we'll go into an infinite
-		 * callback loop since there will be data on the channel forever.
-		 */
-		GIOStatus stat =
-			g_io_channel_read_chars(source, sbuf, 256,
-						&sread, (GError **) & serr);
-		if (serr) {
-			g_error_free((GError *) serr);
-			serr = NULL;
-		}
-		// normal, means alsa_cb cleared out the channel
-		if (stat == G_IO_STATUS_AGAIN)
-			continue;
-		// actually bad, alsa failed to clear channel
-		else if (stat == G_IO_STATUS_NORMAL)
-			warn_sound_conn_lost();
-		else if (stat == G_IO_STATUS_ERROR || stat == G_IO_STATUS_EOF)
-			report_error("Error: GIO error has occurred. Won't respond to "
-				     "external volume changes anymore.");
-		else
-			report_error("Error: Unknown status from "
-				     "g_io_channel_read_chars.");
-		return TRUE;
-	}
-	return TRUE;
-}
-
-// PCOUNT_MAX is a very arbitrary value.
-// The number of poll descriptors I witnessed has always been one.
-#define PCOUNT_MAX 8
-guint gio_watch_ids[PCOUNT_MAX] = { 0 };
-
-/**
- * Sets the io watch for external volume changes
- * and registers the poll_cb() callback function.
- *
- * @param mixer mixer handle
- */
-static void
-set_io_watch(snd_mixer_t *mixer)
-{
-	int i, pcount;
-	struct pollfd fds[PCOUNT_MAX];
-
-	pcount = snd_mixer_poll_descriptors_count(mixer);
-	assert(pcount <= PCOUNT_MAX);
-	pcount = snd_mixer_poll_descriptors(mixer, fds, pcount);
-
-	if (pcount <= 0) {
-		report_error("Warning: Couldn't get any poll descriptors. "
-			     "Won't respond to external volume changes.");
-		return;
-	}
-
-	for (i = 0; i < pcount; i++) {
-		GIOChannel *gioc = g_io_channel_unix_new(fds[i].fd);
-		gio_watch_ids[i] = g_io_add_watch(gioc, G_IO_IN | G_IO_ERR,
-						  poll_cb, NULL);
-		g_io_channel_unref(gioc);
-	}
-}
-
-/**
- * Unsets the io watch.
- */
-static void
-unset_io_watch(void)
-{
-	int i;
-	for (i = 0; i < PCOUNT_MAX; i++) {
-		if (gio_watch_ids[i] == 0)
-			break;
-		g_source_remove(gio_watch_ids[i]);
-		gio_watch_ids[i] = 0;
-	}
-}
-
-/**
- * Detaches a mixer from the specified card and closes the
- * mixer.
- *
- * @param mixer mixer handle
- * @param card HCTL name of the alsa card
- * @return 0 on success otherwise negative error code
- */
-static int
-close_mixer(snd_mixer_t *mixer, const char *card)
-{
-	int err;
-
-	DEBUG("Card %s: closing mixer", card);
-
-	if ((err = snd_mixer_detach(mixer, card)) < 0)
-		report_error("Card %s: mixer detach error: %s", card,
-			     snd_strerror(err));
-	snd_mixer_free(mixer);
-	if ((err = snd_mixer_close(mixer)) < 0)
-		report_error("Card %s: mixer close error: %s", card,
-			     snd_strerror(err));
-	return err;
-}
-
-/**
- * Get all playable channels for a single alsa card and
- * return them as a GSList.
- *
- * @param card HCTL name of the alsa card
- * @return the GSList of channels
- */
-static GSList *
-get_channels(const char *card)
-{
-	int ccount, i;
-	snd_mixer_t *mixer;
-	snd_mixer_elem_t *telem;
-	GSList *channels = NULL;
-
-	mixer = open_mixer(card, NULL, 0);
-	if (mixer == NULL)
-		return NULL;
-
-	ccount = snd_mixer_get_count(mixer);
-	telem = snd_mixer_first_elem(mixer);
-
-	for (i = 0; i < ccount; i++) {
-		if (snd_mixer_selem_has_playback_volume(telem))
-			channels = g_slist_append(channels,
-						  strdup(snd_mixer_selem_get_name(telem)));
-		telem = snd_mixer_elem_next(telem);
-	}
-
-	if (want_debug == TRUE) {
-		GSList *tmp = channels;
-		if (tmp) {
-			printf("Card %s: available channels\n", card);
-			while (tmp) {
-				printf("\t%s\n", (char *) tmp->data);
-				tmp = tmp->next;
-			}
-		} else {
-			printf("Card %s: no playable channels\n", card);
-		}
-	}
-
-	close_mixer(mixer, card);
-
-	return channels;
-}
-
-/**
- * Initializes the alsa system by getting the cards
- * and channels and setting the io watch for external
- * volume changes.
- *
- * @return 0 on success otherwise negative error code
- */
-static int
-alsaset(void)
-{
-	char *card_name;
+struct alsa_card {
+	char *name;
+	char *hctl;
 	char *channel;
+	snd_mixer_t *mixer;
+	snd_mixer_elem_t *mixer_elem;
+	gboolean normalize;
+};
 
-	// update list of available cards
-	DEBUG("Getting available cards...");
-	get_cards();
-	assert(cards != NULL);
-
-	// get selected card
-	assert(active_card == NULL);
-	card_name = prefs_get_string("AlsaCard", NULL);
-	DEBUG("Selected card: %s", card_name);
-	if (card_name) {
-		active_card = find_card(card_name);
-		g_free(card_name);
-	}
-
-	// if not available, use the default card
-	if (!active_card) {
-		DEBUG("Using default soundcard");
-		active_card = cards->data;
-	}
-	// If no playable channels, iterate on card list until a valid card is
-	// found.
-	// In most situations, the first card of the list (which is the
-	// Alsa default card) can be opened.
-	// However, in some situations the default card may be unavailable.
-	// For example, when it's an USB DAC, and it's disconnected.
-	if (!active_card->channels) {
-		GSList *item;
-		DEBUG("Card '%s' has no playable channels, iterating on card list",
-		      active_card->dev);
-		for (item = cards; item; item = item->next) {
-			active_card = item->data;
-			if (active_card->channels)
-				break;
-		}
-		assert(item != NULL);
-	}
-	// open card
-	DEBUG("Opening card '%s'...", active_card->dev);
-	smixer_options.device = active_card->dev;
-	handle = open_mixer(active_card->dev, &smixer_options, smixer_level);
-	assert(handle != NULL);
-
-	// Set the channel
-	// We have to handle the fact that the channel name defined
-	// in PNMixer configuration is not necessarily valid.
-	// For example, this may happen when the default alsa soundcard
-	// is modified. The channel names of the new default card may
-	// not match the channel names of the previous default card.
-	assert(elem == NULL);
-	channel = prefs_get_channel(active_card->name);
-	if (channel) {
-		snd_mixer_selem_id_t *sid;
-		snd_mixer_selem_id_alloca(&sid);
-		snd_mixer_selem_id_set_name(sid, channel);
-		elem = snd_mixer_find_selem(handle, sid);
-		g_free(channel);
-	}
-	if (elem == NULL) {
-		elem = snd_mixer_first_elem(handle);
-	}
-	assert(elem != NULL);
-
-	// Set callback
-	DEBUG("Using channel '%s'", snd_mixer_selem_get_name(elem));
-	snd_mixer_elem_set_callback(elem, alsa_cb);
-
-	// set watch for volume changes
-	set_io_watch(handle);
-
-	return 0;
-}
-
-/**
- * Deinitializes the alsa system by
- * closing the mixer.
- */
-static void
-alsaunset(void)
+const char *
+alsa_card_get_name(AlsaCard *card)
 {
-	if (active_card == NULL)
-		return;
-
-	unset_io_watch();
-
-	// 'elem' must be set to NULL at last, because alsa_cb()
-	// is invoked when closing mixer, and elem is needed.
-	close_mixer(handle, active_card->dev);
-	handle = NULL;
-	elem = NULL;
-	active_card = NULL;
+	return card->name;
 }
 
-/**
- * Get the normalized current volume.
- *
- * @param elem current mixer element
- * @param channel current channel
- * @return normalized volume
- */
-static double
-get_normalized_volume(snd_mixer_elem_t *elem,
-		      snd_mixer_selem_channel_id_t channel)
+const char *
+alsa_card_get_channel(AlsaCard *card)
 {
-	long min, max, value;
-	double normalized, min_norm;
-	int err;
-
-	err = snd_mixer_selem_get_playback_dB_range(elem, &min, &max);
-	if (err < 0 || min >= max) {
-		err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-		if (err < 0 || min == max)
-			return 0;
-
-		err = snd_mixer_selem_get_playback_volume(elem, channel, &value);
-		if (err < 0)
-			return 0;
-
-		return (value - min) / (double) (max - min);
-	}
-
-	err = snd_mixer_selem_get_playback_dB(elem, channel, &value);
-	if (err < 0)
-		return 0;
-
-	if (use_linear_dB_scale(min, max))
-		return (value - min) / (double) (max - min);
-
-	normalized = exp10((value - max) / 6000.0);
-	if (min != SND_CTL_TLV_DB_GAIN_MUTE) {
-		min_norm = exp10((min - max) / 6000.0);
-		normalized = (normalized - min_norm) / (1 - min_norm);
-	}
-
-	return normalized;
+	return card->channel;
 }
 
-/**
- * Converts the current volume in the real volume range
- * reported by snd_mixer_selem_get_playback_volume_range()
- * into the 0-100 range.
- *
- * @param val current volume value
- * @param min current minimum volume
- * @param max current maximum volume
- * @return volume converted into 0-100 range
- */
-static int
-convert_prange(long val, long min, long max)
-{
-	long range = max - min;
-	if (range == 0)
-		return 0;
-	val -= min;
-	return rint(val / (double) range * 100);
-}
-
-/**
- * Adjusts the current volume and sends a notification (if enabled).
- *
- * @param vol new volume value
- * @param dir select direction (-1 = accurate or first bellow, 0 = accurate,
- * 1 = accurate or first above)
- * @param notify whether to send notification
- * @return 0 on success otherwise negative error code
- */
+/* Return volume in percent */
 int
-setvol(int vol, int dir, gboolean notify)
+alsa_card_get_volume(AlsaCard *card)
 {
-	long min = 0, max = 0, value;
-	int cur_perc = getvol();
-	double dvol = 0.01 * vol;
-	gboolean normalize = prefs_get_boolean("NormalizeVolume", FALSE);
+	double volume = 0;
+	gboolean gotten = FALSE;
 
-	int err = snd_mixer_selem_get_playback_dB_range(elem, &min, &max);
-	if (err < 0 || min >= max || !normalize) {
-		err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-		value = lrint_dir(dvol * (max - min), dir) + min;
-		snd_mixer_selem_set_playback_volume_all(elem, value);
-		if (enable_noti && notify && cur_perc != getvol())
-			do_notify_volume(getvol(), FALSE);
-		// intentionally set twice
-		return snd_mixer_selem_set_playback_volume_all(elem, value);
-	}
+	if (card->normalize)
+		gotten = get_normalized_volume(card->hctl, card->mixer_elem, &volume);
 
-	if (use_linear_dB_scale(min, max)) {
-		value = lrint_dir(dvol * (max - min), dir) + min;
-		return snd_mixer_selem_set_playback_dB_all(elem, value, dir);
-	}
+	if (!gotten)
+		get_volume(card->hctl, card->mixer_elem, &volume);
 
-	if (min != SND_CTL_TLV_DB_GAIN_MUTE) {
-		double min_norm = exp10((min - max) / 6000.0);
-		dvol = dvol * (1 - min_norm) + min_norm;
-	}
-
-	value = lrint_dir(6000.0 * log10(dvol), dir) + max;
-	snd_mixer_selem_set_playback_dB_all(elem, value, dir);
-	if (enable_noti && notify && cur_perc != getvol())
-		do_notify_volume(getvol(), FALSE);
-	// intentionally set twice
-	return snd_mixer_selem_set_playback_dB_all(elem, value, dir);
+	return lrint(volume * 100);
 }
 
-/**
- * Mutes or unmutes playback and sends a notification (if enabled).
- *
- * @param notify whether to send notification
- */
+/* Set volume in percent */
 void
-setmute(gboolean notify)
+alsa_card_set_volume(AlsaCard *card, int value, int dir)
 {
-	if (!snd_mixer_selem_has_playback_switch(elem))
-		return;
-	if (ismuted()) {
-		snd_mixer_selem_set_playback_switch_all(elem, 0);
-		if (enable_noti && notify)
-			do_notify_volume(getvol(), TRUE);
-	} else {
-		snd_mixer_selem_set_playback_switch_all(elem, 1);
-		if (enable_noti && notify)
-			do_notify_volume(getvol(), FALSE);
-	}
+	double volume = value / (double) 100;
+	gboolean set = FALSE;
+
+	if (card->normalize)
+	        set = set_normalized_volume(card->hctl, card->mixer_elem, volume, dir);
+
+	if (!set)
+		set_volume(card->hctl, card->mixer_elem, volume, dir);
 }
 
-/**
- * Check whether sound is currently muted.
- *
- * @return 0 if mixer is muted, 1 otherwise
- */
-int
-ismuted(void)
+gboolean
+alsa_card_is_muted(AlsaCard *card)
 {
-	int muted = 1;
-	if (snd_mixer_selem_has_playback_switch(elem))
-		snd_mixer_selem_get_playback_switch(elem,
-						    SND_MIXER_SCHN_FRONT_LEFT, &muted);
+	gboolean muted;
+
+	get_mute(card->hctl, card->mixer_elem, &muted);
+
 	return muted;
 }
 
-/**
- * Gets the current volume in the range from 0 - 100.
- *
- * @return current volume
- */
-int
-getvol(void)
+void
+alsa_card_toggle_mute(AlsaCard *card)
 {
-	gboolean normalize = prefs_get_boolean("NormalizeVolume", FALSE);
+	gboolean muted;
 
-	if (normalize) {
-		return lrint(get_normalized_volume(
-				     elem, SND_MIXER_SCHN_FRONT_RIGHT) * 100);
-	} else {
-		long val, pmin = 0, pmax = 0;
-		snd_mixer_selem_get_playback_volume_range(elem, &pmin, &pmax);
-		snd_mixer_selem_get_playback_volume(elem,
-						    SND_MIXER_SCHN_FRONT_RIGHT, &val);
-		DEBUG("[getvol] From mixer: %li  pmin: %li  pmax: %li",
-		      val, pmin, pmax);
-		return convert_prange(val, pmin, pmax);
+	muted = alsa_card_is_muted(card);
+	set_mute(card->hctl, card->mixer_elem, !muted);
+}
+
+void
+alsa_card_free(AlsaCard *card)
+{
+	if (card == NULL)
+		return;
+
+	if (card->mixer)
+		mixer_close(card->hctl, card->mixer);
+
+	g_free(card->channel);
+	g_free(card->hctl);
+	g_free(card->name);
+	g_free(card);
+}
+
+static AlsaCard *
+alsa_card_new(gboolean normalize, const char *card_name, const char *channel)
+{
+	AlsaCard *card;
+
+	card = g_new0(AlsaCard, 1);
+
+	/* Save normalize param */
+	card->normalize = normalize;
+
+	/* Save card name */
+	if (!card_name)
+		card_name = ALSA_DEFAULT_CARD;
+	card->name = g_strdup(card_name);
+
+	/* Get corresponding HCTL name */
+	card->hctl = get_hctl_from_name(card_name);
+	if (card->hctl == NULL)
+		goto failure;
+
+	/* Open mixer */
+	card->mixer = mixer_open(card->hctl);
+	if (card->mixer == NULL)
+		goto failure;
+
+	/* Get mixer element */
+	card->mixer_elem = mixer_elem_get(card->hctl, card->mixer, channel);
+	if (card->mixer_elem == NULL)
+		goto failure;
+
+	/* Save channel name - it may be different from the one given in param ! */
+	card->channel = g_strdup(snd_mixer_selem_get_name(card->mixer_elem));
+
+	/* Set callback */
+	snd_mixer_elem_set_callback(card->mixer_elem, alsa_cb);
+
+	/* Sum up the situation */
+	ALSA_DEBUG("Initialized ! Card '%s', channel '%s'",
+	           card->name, card->channel);
+
+	return card;
+
+failure:
+	alsa_card_free(card);
+	return NULL;
+}
+
+AlsaCard *
+alsa_card_new_from_name(gboolean normalize, const char *card_name)
+{
+	AlsaCard *card;
+	char *channel;
+
+	channel = prefs_get_channel(card_name);
+	card = alsa_card_new(normalize, card_name, channel);
+	g_free(channel);
+
+	return card;
+}
+
+AlsaCard *
+alsa_card_new_from_list(gboolean normalize, GSList *card_list)
+{
+	AlsaCard *card = NULL;
+	GSList *item;
+
+	for (item = card_list; item; item = item->next) {
+		char *channel;
+		const char *card_name;
+
+		card_name = item->data;
+		channel = prefs_get_channel(card_name);
+		card = alsa_card_new(normalize, card_name, channel);
+		g_free(channel);
+
+		if (card)
+			break;
 	}
+
+	return card;
 }
 
-/**
- * Initializes the alsa system. Deinitializes first
- * if we want to re-initialize.
+/*
+ * Alsa listing functions
  */
-void
-alsa_init(void)
+
+/* Must be freed */
+GSList *
+alsa_list_cards(void)
 {
-	if (active_card)	// re-init, need to close down first
-		alsaunset();
-	alsaset();
+	int err;
+	int number;
+	GSList *list = NULL;
+
+	/* Always first in the list, the 'default' card */
+	list = g_slist_append(list, g_strdup(ALSA_DEFAULT_CARD));
+
+	/* Then, iterate on available cards */
+	for (number = -1;;) {
+		char *name;
+
+		/* Get next soundcard */
+		err = snd_card_next(&number);
+		if (err < 0) {
+			ALSA_ERR(err, "Can't enumerate sound cards");
+			break;
+		}
+
+		if (number < 0)
+			break;
+
+		/* Get card name */
+		err = snd_card_get_name(number, &name);
+		if (err < 0) {
+			ALSA_ERR(err, "Can't get card name");
+			break;
+		}
+
+		/* Add it to the list */
+		list = g_slist_append(list, name);
+	}
+
+	return list;
 }
 
-/**
- * Closes the alsa mixer handle.
+/* For a given card name, return the list of playable channels,
+ * as a GSList.
+ * Must be freed using g_free.
  */
-void
-alsa_close(void)
+GSList *
+alsa_list_channels(const char *card_name)
 {
-	snd_mixer_close(handle);
-}
+	char *hctl = NULL;
+	snd_mixer_t *mixer = NULL;
+	snd_mixer_elem_t *elem = NULL;
+	GSList *list = NULL;
 
-/**
- * Get the card in use.
- *
- * @return a pointer toward the active card
- */
-struct acard *
-alsa_get_active_card(void)
-{
-	return active_card;
-}
+	/* Get HCTL */
+	hctl = get_hctl_from_name(card_name);
+	if (hctl == NULL)
+		goto exit;
 
-/**
- * Get the channel name in use.
- *
- * @return the channel name
- */
-const char *
-alsa_get_active_channel(void)
-{
-	return elem ? snd_mixer_selem_get_name(elem) : NULL;
+	/* Open mixer */
+	mixer = mixer_open(hctl);
+	if (mixer == NULL)
+		goto exit;
+
+	/* Build channel list */
+	elem = snd_mixer_first_elem(mixer);
+	while (elem) {
+		if (snd_mixer_selem_has_playback_volume(elem)) {
+			const char *chan_name = snd_mixer_selem_get_name(elem);
+			list = g_slist_append(list, g_strdup(chan_name));
+		}
+		elem = snd_mixer_elem_next(elem);
+	}
+
+exit:
+	/* Close mixer */
+	if (mixer)
+		mixer_close(hctl, mixer);
+
+	if (hctl)
+		g_free(hctl);
+
+	return list;
 }
