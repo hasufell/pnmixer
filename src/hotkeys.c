@@ -23,11 +23,11 @@
 #include <gdk/gdkx.h>
 #include <X11/XKBlib.h>
 
-#include "audio.h"
-#include "main.h"
-#include "hotkey.h"
-#include "support.h"
 #include "prefs.h"
+#include "audio.h"
+#include "support.h"
+#include "notif.h"
+#include "hotkey.h"
 
 static Hotkey *mute_hotkey;
 static Hotkey *up_hotkey;
@@ -59,12 +59,16 @@ key_filter(GdkXEvent *gdk_xevent,
 	state = xevent->state;
 
 	if (type == KeyPress) {
-		if (hotkey_matches(mute_hotkey, key, state))
-			audio_mute(hotkey_noti);
-		else if (hotkey_matches(up_hotkey, key, state))
-			audio_raise_volume(hotkey_noti);
-		else if (hotkey_matches(down_hotkey, key, state))
-			audio_lower_volume(hotkey_noti);
+		if (hotkey_matches(mute_hotkey, key, state)) {
+			audio_toggle_mute();
+			notif_inform(NOTIF_HOTKEY);
+		} else if (hotkey_matches(up_hotkey, key, state)) {
+			audio_raise_volume();
+			notif_inform(NOTIF_HOTKEY);
+		} else if (hotkey_matches(down_hotkey, key, state)) {
+			audio_lower_volume();
+			notif_inform(NOTIF_HOTKEY);
+		}
 		// just ignore unknown hotkeys
 	}
 

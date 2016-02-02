@@ -13,7 +13,7 @@ pnmixer_SOURCES =		\
 	hotkey.c		\
 	hotkeys.c		\
 	main.c			\
-	notify.c		\
+	notif.c			\
 	prefs.c			\
 	support.c		\
 	ui-about-dialog.c	\

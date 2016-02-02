@@ -31,10 +31,10 @@
 #include "audio.h"
 #include "prefs.h"
 #include "hotkey.h"
+#include "support.h"
 #include "ui-prefs-window.h"
 #include "ui-hotkey-dialog.h"
 
-#include "alsa.h"
 #include "main.h"
 
 #ifdef WITH_GTK3

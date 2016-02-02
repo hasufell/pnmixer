@@ -23,6 +23,7 @@
 #include <gtk/gtk.h>
 
 #include "audio.h"
+#include "notif.h"
 #include "support.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
@@ -107,7 +108,8 @@ on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
 #endif
 		      G_GNUC_UNUSED PopupMenu *menu)
 {
-	audio_mute(popup_noti);
+	audio_toggle_mute();
+	notif_inform(NOTIF_POPUP);
 }
 
 /**

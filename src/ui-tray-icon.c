@@ -24,6 +24,7 @@
 #include <gtk/gtk.h>
 
 #include "audio.h"
+#include "notif.h"
 #include "prefs.h"
 #include "support.h"
 #include "ui-tray-icon.h"
@@ -356,7 +357,8 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 
 	switch (middle_click_action) {
 	case 0:
-		audio_mute(mouse_noti);
+		audio_toggle_mute();
+		notif_inform(NOTIF_TRAY);
 		break;
 	case 1:
 		do_open_prefs();
@@ -388,10 +390,13 @@ static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
 		G_GNUC_UNUSED TrayIcon *icon)
 {
-	if (event->direction == GDK_SCROLL_UP)
-		audio_raise_volume(mouse_noti);
-	else if (event->direction == GDK_SCROLL_DOWN)
-		audio_lower_volume(mouse_noti);
+	if (event->direction == GDK_SCROLL_UP) {
+		audio_raise_volume();
+		notif_inform(NOTIF_TRAY);
+	} else if (event->direction == GDK_SCROLL_DOWN) {
+		audio_lower_volume();
+		notif_inform(NOTIF_TRAY);
+	}
 
 	return FALSE;
 }

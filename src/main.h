@@ -22,9 +22,6 @@
 extern GtkWindow *main_window;
 extern int scroll_step;
 
-gboolean enable_noti, hotkey_noti, mouse_noti, popup_noti, external_noti;
-gint noti_timeout;
-
 void do_open_prefs(void);
 void do_mixer(void);
 void do_custom_command(void);

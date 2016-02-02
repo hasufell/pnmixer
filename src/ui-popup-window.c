@@ -27,6 +27,7 @@
 #endif
 
 #include "audio.h"
+#include "notif.h"
 #include "prefs.h"
 #include "support.h"
 #include "ui-popup-window.h"
@@ -206,7 +207,9 @@ on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
 	if (value > gtk_adjustment_get_upper(gtk_adj))
 		value = gtk_adjustment_get_upper(gtk_adj);
 
-	audio_set_volume((int) value, popup_noti);
+	// TODO: remove this cast
+	audio_set_volume((int) value);
+	notif_inform(NOTIF_POPUP);
 
 	return FALSE;
 }
@@ -222,7 +225,8 @@ void
 on_mute_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
 		      G_GNUC_UNUSED PopupWindow *window)
 {
-	audio_mute(popup_noti);
+	audio_toggle_mute();
+	notif_inform(NOTIF_POPUP);
 }
 
 /**

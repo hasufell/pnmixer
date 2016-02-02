@@ -20,8 +20,6 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "support.h"
-
 gboolean prefs_get_boolean(const gchar *key, gboolean def);
 gint     prefs_get_integer(const gchar *key, gint def);
 gdouble  prefs_get_double(const gchar *key, gdouble def);

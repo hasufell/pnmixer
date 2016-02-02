@@ -25,9 +25,9 @@
 
 #include <glib.h>
 
-#include "audio.h"
 #include "main.h"
-#include "notify.h"
+#include "audio.h"
+#include "notif.h"
 #include "support.h"
 #include "hotkeys.h"
 #include "prefs.h"
@@ -53,19 +53,11 @@ static TrayIcon *tray_icon;
 void
 apply_prefs(gint alsa_change)
 {
-	/* Scroll step */
-	scroll_step = prefs_get_integer("ScrollStep", 5);
-
 	/* Hotkeys preferences */
 	hotkeys_reload_prefs();
 
 	/* Notifications preferences */
-	enable_noti = prefs_get_boolean("EnableNotifications", FALSE);
-	hotkey_noti = prefs_get_boolean("HotkeyNotifications", TRUE);
-	mouse_noti = prefs_get_boolean("MouseNotifications", TRUE);
-	popup_noti = prefs_get_boolean("PopupNotifications", FALSE);
-	external_noti = prefs_get_boolean("ExternalNotifications", FALSE);
-	noti_timeout = prefs_get_integer("NotificationTimeout", 1500);
+	notif_reload_prefs();
 
 	/* Popup window, rebuild it from scratch. This is needed in case
 	 * the slider orientation was modified.
@@ -235,26 +227,25 @@ main(int argc, char *argv[])
 	add_pixmap_directory(PACKAGE_DATA_DIR "/" PACKAGE "/pixmaps");
 	add_pixmap_directory("./data/pixmaps");
 
-	/* Load preferences */
+	/* Load preferences.
+	 * This must be done at first, all the following init code rely on it.
+	 */
 	prefs_ensure_save_dir();
 	prefs_load();
+	scroll_step = prefs_get_integer("ScrollStep", 5);
 
-
-	/* Init everything */
+	/* Init the low-level */
 	audio_init();
-	init_libnotify();
+	notif_init();
 	hotkeys_init();
 
+	/* Init the high-level (aka the ui) */
 	popup_menu = popup_menu_create();
 	popup_window = popup_window_create();
 	tray_icon = tray_icon_create();
 
 	// We make the main window public, it's needed as a transient parent
 	main_window = popup_window_get_gtk_window(popup_window);
-
-	/* Apply preferences */
-	DEBUG("Applying prefs...");
-	apply_prefs(0);
 
 	/* Run */
 	DEBUG("Running main loop...");
@@ -269,7 +260,7 @@ main(int argc, char *argv[])
 	popup_menu_destroy(popup_menu);
 
 	hotkeys_cleanup();
-	uninit_libnotify();
+	notif_cleanup();
 	audio_cleanup();
 
 	return EXIT_SUCCESS;

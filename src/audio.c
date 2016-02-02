@@ -16,72 +16,13 @@
  * @brief Audio subsystem
  */
 
-#include "prefs.h"
 #include "alsa.h"
+#include "prefs.h"
+#include "support.h"
+
 #include "main.h"
 
 static AlsaCard *soundcard;
-
-int
-audio_is_muted(void)
-{
-	return alsa_card_is_muted(soundcard);
-}
-
-void
-audio_mute(gboolean notify)
-{
-	alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
-}
-
-int
-audio_get_volume(void)
-{
-	return alsa_card_get_volume(soundcard);
-}
-
-void
-audio_set_volume(int volume, gboolean notify)
-{
-	alsa_card_set_volume(soundcard, volume, 0);
-
-	if (alsa_card_is_muted(soundcard))
-		alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
-}
-
-void
-audio_lower_volume(gboolean notify)
-{
-	int volume = alsa_card_get_volume(soundcard);
-
-	alsa_card_set_volume(soundcard, volume - scroll_step, -1);
-
-	if (alsa_card_is_muted(soundcard))
-		alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
-}
-
-void
-audio_raise_volume(gboolean notify)
-{
-	int volume = alsa_card_get_volume(soundcard);
-
-	alsa_card_set_volume(soundcard, volume + scroll_step, 1);
-
-	if (alsa_card_is_muted(soundcard))
-		alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
-}
 
 const char *
 audio_get_card(void)
@@ -105,6 +46,68 @@ GSList *
 audio_get_channel_list(const char *card_name)
 {
 	return alsa_list_channels(card_name);
+}
+
+int
+audio_is_muted(void)
+{
+	return alsa_card_is_muted(soundcard);
+}
+
+void
+audio_toggle_mute(void)
+{
+	alsa_card_toggle_mute(soundcard);
+
+	// TODO: remove that
+	do_update_ui();
+}
+
+int
+audio_get_volume(void)
+{
+	return alsa_card_get_volume(soundcard);
+}
+
+// TODO: this should be double, right ?
+void
+audio_set_volume(int volume)
+{
+	alsa_card_set_volume(soundcard, volume, 0);
+
+	if (alsa_card_is_muted(soundcard))
+		alsa_card_toggle_mute(soundcard);
+
+	// TODO: remove that
+	do_update_ui();
+}
+
+void
+audio_lower_volume(void)
+{
+	int volume = alsa_card_get_volume(soundcard);
+
+	alsa_card_set_volume(soundcard, volume - scroll_step, -1);
+
+	if (alsa_card_is_muted(soundcard))
+		alsa_card_toggle_mute(soundcard);
+
+	// TODO: remove that
+	do_update_ui();
+}
+
+void
+audio_raise_volume(void)
+{
+	int volume = alsa_card_get_volume(soundcard);
+
+	alsa_card_set_volume(soundcard, volume + scroll_step, 1);
+
+	if (alsa_card_is_muted(soundcard))
+		alsa_card_toggle_mute(soundcard);
+
+	// TODO: remove that
+	do_update_ui();
 }
 
 void
