@@ -250,7 +250,7 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 
 /* Update the tray icon pixbuf according to the current audio state. */
 static void
-update_icon(TrayIcon *icon, int volume, int muted)
+update_icon(TrayIcon *icon, int volume, gboolean muted)
 {
 	GdkPixbuf **pixbufs;
 	GdkPixbuf *pixbuf;
@@ -260,7 +260,7 @@ update_icon(TrayIcon *icon, int volume, int muted)
 
 	pixbufs = icon->pixbufs;
 
-	if (muted == 1) {
+	if (!muted) {
 		if (volume == 0)
 			pixbuf = pixbufs[VOLUME_OFF];
 		else if (volume < 33)
@@ -273,7 +273,7 @@ update_icon(TrayIcon *icon, int volume, int muted)
 		pixbuf = pixbufs[VOLUME_MUTED];
 	}
 
-	if (muted == 1 && icon->vol_meter)
+	if (icon->vol_meter && muted == FALSE)
 		pixbuf = vol_meter_draw(icon->vol_meter, pixbuf, volume);
 
 	gtk_status_icon_set_from_pixbuf(icon->status_icon, pixbuf);
@@ -281,7 +281,7 @@ update_icon(TrayIcon *icon, int volume, int muted)
 
 /* Update the tray icon tooltip according to the current audio state. */
 static void
-update_tooltip(TrayIcon *icon, int volume, int muted)
+update_tooltip(TrayIcon *icon, int volume, gboolean muted)
 {
 	const char *card_name;
 	const char *channel;
@@ -290,7 +290,7 @@ update_tooltip(TrayIcon *icon, int volume, int muted)
 	card_name = audio_get_card();
 	channel = audio_get_channel();
 
-	if (muted == 1)
+	if (!muted)
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
 			 card_name, channel, _("Volume"), volume);
 	else
@@ -443,7 +443,7 @@ void
 tray_icon_update(TrayIcon *icon)
 {
 	int volume = audio_get_volume();
-	int muted = audio_is_muted();
+	gboolean muted = audio_is_muted();
 
 	update_icon(icon, volume, muted);
 	update_tooltip(icon, volume, muted);
@@ -520,6 +520,9 @@ tray_icon_create(void)
 			 G_CALLBACK(on_size_changed), icon);
 
 	gtk_status_icon_set_visible(icon->status_icon, TRUE);
+
+	/* Load preferences */
+	tray_icon_reload_prefs(icon);
 
 	return icon;
 }

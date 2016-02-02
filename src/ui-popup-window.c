@@ -98,7 +98,7 @@ configure_vol_increment(GtkAdjustment *vol_scale_adj)
 
 /* Update the mute checkbox according to the current audio state. */
 static void
-update_mute_check(PopupWindow *window, int muted)
+update_mute_check(PopupWindow *window, gboolean muted)
 {
 	GtkToggleButton *mute_check;
 	gint n_handlers_blocked;
@@ -109,10 +109,7 @@ update_mute_check(PopupWindow *window, int muted)
 			     (G_OBJECT(mute_check), on_mute_check_toggled, window);
 	g_assert(n_handlers_blocked == 1);
 
-	if (muted)
-		gtk_toggle_button_set_active(mute_check, FALSE);
-	else
-		gtk_toggle_button_set_active(mute_check, TRUE);
+	gtk_toggle_button_set_active(mute_check, muted);
 
 	g_signal_handlers_unblock_by_func
 	(G_OBJECT(mute_check), on_mute_check_toggled, window);
@@ -352,7 +349,7 @@ void
 popup_window_update(PopupWindow *window)
 {
 	int volume = audio_get_volume();
-	int muted = audio_is_muted();
+	gboolean muted = audio_is_muted();
 
 	update_mute_check(window, muted);
 	update_volume_slider(window, volume);

@@ -48,7 +48,7 @@ audio_get_channel_list(const char *card_name)
 	return alsa_list_channels(card_name);
 }
 
-int
+gboolean
 audio_is_muted(void)
 {
 	return alsa_card_is_muted(soundcard);

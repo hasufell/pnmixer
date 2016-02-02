@@ -28,7 +28,7 @@ void audio_set_volume(int volume);
 void audio_lower_volume(void);
 void audio_raise_volume(void);
 
-int audio_is_muted(void);
+gboolean audio_is_muted(void);
 void audio_toggle_mute(void);
 
 const char *audio_get_card(void);

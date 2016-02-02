@@ -55,12 +55,7 @@ void on_mute_item_activate(GtkCheckMenuItem *menuitem, PopupMenu *menu);
 static void
 update_mute_check(PopupMenu *menu)
 {
-	gboolean active;
-
-	if (audio_is_muted() == 1)
-		active = FALSE;
-	else
-		active = TRUE;
+	gboolean active = audio_is_muted();
 
 #ifdef WITH_GTK3
 	/* On Gtk3 version, we listen for the signal sent by the GtkMenuItem.

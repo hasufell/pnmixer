@@ -53,11 +53,14 @@ static TrayIcon *tray_icon;
 void
 apply_prefs(gint alsa_change)
 {
-	/* Hotkeys preferences */
-	hotkeys_reload_prefs();
+	/* Scroll step */
+	scroll_step = prefs_get_integer("ScrollStep", 5);
 
 	/* Notifications preferences */
 	notif_reload_prefs();
+
+	/* Hotkeys preferences */
+	hotkeys_reload_prefs();
 
 	/* Popup window, rebuild it from scratch. This is needed in case
 	 * the slider orientation was modified.
