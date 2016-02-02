@@ -869,7 +869,7 @@ on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 	prefs_save();
 
 	/* Make it effective */
-	apply_prefs(1);
+	apply_prefs();
 
 	/* Destroy the window */
 	prefs_window_destroy(instance);

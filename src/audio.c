@@ -16,6 +16,7 @@
  * @brief Audio subsystem
  */
 
+#include "audio.h"
 #include "alsa.h"
 #include "prefs.h"
 #include "support.h"
@@ -23,6 +24,104 @@
 #include "main.h"
 
 static AlsaCard *soundcard;
+static int scroll_step;
+
+/*
+ * Audio Closures.
+ * An Audio Closure represents a callback and the data pointer associated.
+ */
+
+struct audio_closure {
+	AudioCallback callback;
+	gpointer data;
+};
+
+typedef struct audio_closure AudioClosure;
+
+static void
+audio_closure_free(AudioClosure *closure)
+{
+	g_free(closure);
+}
+
+static AudioClosure *
+audio_closure_new(AudioCallback callback, gpointer data)
+{
+	AudioClosure *closure;
+
+	closure = g_new0(AudioClosure, 1);
+	closure->callback = callback;
+	closure->data = data;
+}
+
+/*
+ * Audio Signals
+ */
+static GSList *signal_handlers[AUDIO_N_SIGNALS];
+
+static void
+invoke_card_changed_handlers(GSList *handlers)
+{
+	GSList *list;
+
+	DEBUG("Invoking card changed handlers");
+
+	for (; list; list = list->next) {
+		AudioClosure *closure = list->data;
+		AudioCardChangedCallback callback = closure->callback;
+		callback(closure->data);
+	}
+}
+
+static void
+invoke_values_changed_handlers(gboolean mute, gdouble volume)
+{
+	GSList *list = signal_handlers[AUDIO_VALUES_CHANGED];
+
+	DEBUG("Invoking values changed handlers");
+
+	for (; list; list = list->next) {
+		AudioClosure *closure = list->data;
+		AudioValuesChangedCallback callback =
+			(AudioValuesChangedCallback) closure->callback;
+		callback(closure->data, mute, volume);
+	}
+}
+
+void
+audio_signal_disconnect(AudioSignal signal, AudioCallback callback)
+{
+	GSList *item;
+	GSList **list_ref;
+
+	list_ref = &signal_handlers[signal];
+
+	// TODO: tester ca
+	for (item = *list_ref; item; item = item->next) {
+		AudioClosure *closure = item->data;
+		if (closure->callback == callback) {
+			*list_ref = g_slist_remove_link(*list_ref, item);
+			g_slist_free_full(item, (GDestroyNotify) audio_closure_free);
+			break;
+		}
+	}
+
+	if (item == NULL)
+		WARN("Signal handler to disconnect wasn't found");
+}
+
+void
+audio_signal_connect(AudioSignal signal, AudioCallback callback, gpointer data)
+{
+	AudioClosure *closure;
+	GSList *list;
+
+	closure = audio_closure_new(callback, data);
+	list = signal_handlers[signal];
+	list = g_slist_append(list, closure);
+}
+
+
 
 const char *
 audio_get_card(void)
@@ -58,56 +157,45 @@ void
 audio_toggle_mute(void)
 {
 	alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
 }
 
-int
+gdouble
 audio_get_volume(void)
 {
 	return alsa_card_get_volume(soundcard);
 }
 
-// TODO: this should be double, right ?
 void
-audio_set_volume(int volume)
+audio_set_volume(gdouble volume)
 {
 	alsa_card_set_volume(soundcard, volume, 0);
 
 	if (alsa_card_is_muted(soundcard))
 		alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
 }
 
 void
 audio_lower_volume(void)
 {
-	int volume = alsa_card_get_volume(soundcard);
+	gdouble volume;
 
+	volume = alsa_card_get_volume(soundcard);
 	alsa_card_set_volume(soundcard, volume - scroll_step, -1);
 
 	if (alsa_card_is_muted(soundcard))
 		alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
 }
 
 void
 audio_raise_volume(void)
 {
-	int volume = alsa_card_get_volume(soundcard);
+	gdouble volume;
 
+	volume = alsa_card_get_volume(soundcard);
 	alsa_card_set_volume(soundcard, volume + scroll_step, 1);
 
 	if (alsa_card_is_muted(soundcard))
 		alsa_card_toggle_mute(soundcard);
-
-	// TODO: remove that
-	do_update_ui();
 }
 
 void
@@ -117,6 +205,9 @@ audio_init(void)
 	gboolean normalize;
 	AlsaCard *card;
 	GSList *card_list, *item;
+
+	/* Set the global var for scroll step */
+	scroll_step = prefs_get_double("ScrollStep", 5);
 
 	/* Get preferences */
 	card_name = prefs_get_string("AlsaCard", NULL);
@@ -150,6 +241,8 @@ end:
 	/* If there's no card, let's suicide */
 	soundcard = card;
 	g_assert(soundcard);
+
+	alsa_card_set_values_changed_callback(card, invoke_values_changed_handlers);
 }
 
 void

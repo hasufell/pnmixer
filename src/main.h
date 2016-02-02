@@ -20,7 +20,6 @@
 #include <gtk/gtk.h>
 
 extern GtkWindow *main_window;
-extern int scroll_step;
 
 void do_open_prefs(void);
 void do_mixer(void);
@@ -30,6 +29,6 @@ void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
 			guint button, guint activate_time);
 void do_update_ui(void);
 
-void apply_prefs(gint alsa_change);
+void apply_prefs(void);
 
 #endif				// MAIN_H

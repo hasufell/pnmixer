@@ -28,10 +28,13 @@ AlsaCard *alsa_card_new_from_name(gboolean normalize, const char *card);
 AlsaCard *alsa_card_new_from_list(gboolean normalize, GSList *card_list);
 void alsa_card_free(AlsaCard *card);
 
+typedef void (*AlsaValuesChangedCb)(gboolean muted, gdouble volume);
+void alsa_card_set_values_changed_callback(AlsaCard *card, AlsaValuesChangedCb cb);
+
 const char *alsa_card_get_name(AlsaCard *card);
 const char *alsa_card_get_channel(AlsaCard *card);
-int alsa_card_get_volume(AlsaCard *card);
-void alsa_card_set_volume(AlsaCard *card, int value, int dir);
+gdouble alsa_card_get_volume(AlsaCard *card);
+void alsa_card_set_volume(AlsaCard *card, gdouble value, int dir);
 gboolean alsa_card_is_muted(AlsaCard *card);
 void alsa_card_toggle_mute(AlsaCard *card);
 

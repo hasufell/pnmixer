@@ -37,7 +37,6 @@
 #include "ui-tray-icon.h"
 
 GtkWindow *main_window = NULL;
-int scroll_step;
 
 static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
@@ -51,11 +50,8 @@ static TrayIcon *tray_icon;
  * @param alsa_change whether we want to trigger alsa-reinitalization
  */
 void
-apply_prefs(gint alsa_change)
+apply_prefs(void)
 {
-	/* Scroll step */
-	scroll_step = prefs_get_integer("ScrollStep", 5);
-
 	/* Notifications preferences */
 	notif_reload_prefs();
 
@@ -75,8 +71,7 @@ apply_prefs(gint alsa_change)
 	do_update_ui();
 
 	/* Reload alsa */
-	if (alsa_change)
-		audio_reinit();
+	audio_reinit();
 }
 
 /**
@@ -235,7 +230,6 @@ main(int argc, char *argv[])
 	 */
 	prefs_ensure_save_dir();
 	prefs_load();
-	scroll_step = prefs_get_integer("ScrollStep", 5);
 
 	/* Init the low-level */
 	audio_init();

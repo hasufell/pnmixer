@@ -424,6 +424,7 @@ struct alsa_card {
 	char *channel;
 	snd_mixer_t *mixer;
 	guint mixer_watch_ids[MIXER_WATCHES_N_MAX];
+	AlsaValuesChangedCb mixer_values_changed_cb;
 	snd_mixer_elem_t *mixer_elem;
 	gboolean normalize;
 };
@@ -453,7 +454,19 @@ mixer_elem_cb(snd_mixer_elem_t *elem, unsigned int mask)
 
 	/* Now test for a value change */
 	if (mask & SND_CTL_EVENT_MASK_VALUE) {
+		AlsaCard *card;
+		AlsaValuesChangedCb callback;
+
 		ALSA_DEBUG("Event value changed", channel);
+		card = snd_mixer_elem_get_callback_private(elem);
+		callback = card->mixer_values_changed_cb;
+
+		if (callback) {
+			gboolean muted = alsa_card_is_muted(card);
+			gdouble volume = alsa_card_get_volume(card);
+			callback(muted, volume);
+		}
+		
 #if 0		
 		// TODO: send signal instead !
 		int muted;
@@ -480,6 +493,7 @@ alsa_card_set_mixer_elem_cb(AlsaCard *card)
 	snd_mixer_elem_t *mixer_elem = card->mixer_elem;
 
 	snd_mixer_elem_set_callback(mixer_elem, mixer_elem_cb);
+	snd_mixer_elem_set_callback_private(mixer_elem, card);
 }
 
 /**
@@ -613,10 +627,10 @@ alsa_card_get_channel(AlsaCard *card)
 }
 
 /* Return volume in percent */
-int
+gdouble
 alsa_card_get_volume(AlsaCard *card)
 {
-	double volume = 0;
+	gdouble volume = 0;
 	gboolean gotten = FALSE;
 
 	if (card->normalize)
@@ -625,21 +639,32 @@ alsa_card_get_volume(AlsaCard *card)
 	if (!gotten)
 		get_volume(card->hctl, card->mixer_elem, &volume);
 
-	return lrint(volume * 100);
+	return volume * 100;
 }
 
 /* Set volume in percent */
 void
-alsa_card_set_volume(AlsaCard *card, int value, int dir)
+alsa_card_set_volume(AlsaCard *card, gdouble value, int dir)
 {
-	double volume = value / (double) 100;
+	gboolean muted;
+	gdouble volume;
 	gboolean set = FALSE;
+	AlsaValuesChangedCb callback;
+
+	volume = value / 100.0;
 
 	if (card->normalize)
 	        set = set_normalized_volume(card->hctl, card->mixer_elem, volume, dir);
 
 	if (!set)
 		set_volume(card->hctl, card->mixer_elem, volume, dir);
+
+	callback = card->mixer_values_changed_cb;
+	if (callback) {
+		muted = alsa_card_is_muted(card);
+		volume = alsa_card_get_volume(card);
+		callback(muted, volume);
+	}
 }
 
 gboolean
@@ -648,7 +673,6 @@ alsa_card_is_muted(AlsaCard *card)
 	gboolean muted;
 
 	get_mute(card->hctl, card->mixer_elem, &muted);
-
 	return muted;
 }
 
@@ -656,9 +680,28 @@ void
 alsa_card_toggle_mute(AlsaCard *card)
 {
 	gboolean muted;
+	gdouble volume;
+	AlsaValuesChangedCb callback;
 
 	muted = alsa_card_is_muted(card);
 	set_mute(card->hctl, card->mixer_elem, !muted);
+	
+	callback = card->mixer_values_changed_cb;
+	if (callback) {
+		muted = alsa_card_is_muted(card);
+		volume = alsa_card_get_volume(card);
+		callback(muted, volume);
+	}
+}
+
+void
+alsa_card_set_values_changed_callback(AlsaCard *card, AlsaValuesChangedCb cb)
+{
+	card->mixer_values_changed_cb = cb;
+
+	/* Set callbacks */
+	alsa_card_set_mixer_elem_cb(card);
+	alsa_card_set_mixer_watches(card);
 }
 
 void
@@ -710,10 +753,6 @@ alsa_card_new(gboolean normalize, const char *card_name, const char *channel)
 
 	/* Save channel name - it may be different from the one given in param ! */
 	card->channel = g_strdup(snd_mixer_selem_get_name(card->mixer_elem));
-
-	/* Set callbacks */
-	alsa_card_set_mixer_watches(card);
-	alsa_card_set_mixer_elem_cb(card);
 
 	/* Sum up the situation */
 	ALSA_DEBUG("Initialized ! Card '%s', channel '%s'",

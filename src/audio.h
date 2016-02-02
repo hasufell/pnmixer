@@ -19,12 +19,35 @@
 
 #include <glib.h>
 
+enum audio_signal {
+	AUDIO_CARD_INITIALIZED,
+	AUDIO_CARD_CLEANED_UP,
+	AUDIO_VALUES_CHANGED,
+	AUDIO_N_SIGNALS
+};
+
+typedef enum audio_signal AudioSignal;
+
+typedef void (*AudioCallback) (gpointer);
+typedef void (*AudioCardChangedCallback) (gpointer);
+typedef void (*AudioValuesChangedCallback) (gpointer, gboolean, gdouble);
+
+#define AUDIO_CALLBACK(func) ((AudioCallback) func)
+
+	
+
+
+
+
+
+
+
 void audio_init(void);
 void audio_cleanup(void);
 void audio_reinit(void);
 
-int audio_get_volume(void);
-void audio_set_volume(int volume);
+gdouble audio_get_volume(void);
+void audio_set_volume(gdouble volume);
 void audio_lower_volume(void);
 void audio_raise_volume(void);
 
