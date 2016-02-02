@@ -31,6 +31,8 @@
 
 #include "main.h"
 
+#define ICON_MIN_SIZE 16
+
 enum {
 	VOLUME_MUTED,
 	VOLUME_OFF,
@@ -65,8 +67,6 @@ struct tray_icon {
 /*
  * Tray icon pixbuf array.
  * The array contains all the icons currently in use, stored as GdkPixbuf.
- * The array is dynamic. It's built "just-in-time", that's to say the first
- * time it's accessed. It avoids building it multiple times at startup.
  */
 
 /* Frees a pixbuf array. */
@@ -92,12 +92,6 @@ pixbuf_array_new(int size)
 	gboolean system_theme;
 
 	DEBUG("Building pixbuf array for size %d", size);
-
-	/* Ensure a minimum size, on Gtk2 this function is invoked with
-	 * a size of zero at startup.
-	 */
-	if (size < 16)
-		size = 16;
 
 	system_theme = prefs_get_boolean("SystemTheme", FALSE);
 
@@ -248,15 +242,23 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 
 /* Helpers */
 
+/* Rebuild the tray icon according to preferences */
+static void
+rebuild_icon(TrayIcon *icon)
+{
+	pixbuf_array_free(icon->pixbufs);
+	icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
+
+	vol_meter_free(icon->vol_meter);
+	icon->vol_meter = vol_meter_new();
+}
+
 /* Update the tray icon pixbuf according to the current audio state. */
 static void
 update_icon(TrayIcon *icon, int volume, gboolean muted)
 {
 	GdkPixbuf **pixbufs;
 	GdkPixbuf *pixbuf;
-
-	if (icon->pixbufs == NULL)
-		icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
 
 	pixbufs = icon->pixbufs;
 
@@ -416,16 +418,20 @@ on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size, TrayIcon *i
 {
 	DEBUG("Tray icon size is now %d", size);
 
-	icon->status_icon_size = size;
-
-	pixbuf_array_free(icon->pixbufs);
-	icon->pixbufs = NULL;
-
-	if (icon->vol_meter) {
-		vol_meter_free(icon->vol_meter);
-		icon->vol_meter = vol_meter_new();
+	/* Ensure a minimum size. This is needed for Gtk2.
+	 * With Gtk2, this handler is invoked with a zero size at startup,
+	 * which screws up things here and there.
+	 */
+	if (size < ICON_MIN_SIZE) {
+		size = ICON_MIN_SIZE;
+		DEBUG("Forcing size to the minimum value %d", size);
 	}
 
+	/* Save new size */
+	icon->status_icon_size = size;
+
+	/* Rebuild everything */
+	rebuild_icon(icon);
 	tray_icon_update(icon);
 
 	return FALSE;
@@ -458,15 +464,7 @@ tray_icon_update(TrayIcon *icon)
 void
 tray_icon_reload_prefs(TrayIcon *icon)
 {
-	/* Recreate the volume meter */
-	vol_meter_free(icon->vol_meter);
-	icon->vol_meter = vol_meter_new();
-
-	/* Destroy the pixbufs array */
-	pixbuf_array_free(icon->pixbufs);
-	icon->pixbufs = NULL;
-
-	/* Update */
+	rebuild_icon(icon);
 	tray_icon_update(icon);
 }
 
@@ -501,6 +499,7 @@ tray_icon_create(void)
 	/* Create everything */
 	icon->vol_meter = vol_meter_new();
 	icon->status_icon = gtk_status_icon_new();
+	icon->status_icon_size = ICON_MIN_SIZE;
 
 	/* Connect signal handlers */
 	// Left-click
