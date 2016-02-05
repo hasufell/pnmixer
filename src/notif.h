@@ -21,16 +21,10 @@
 #ifndef NOTIF_H_
 #define NOTIF_H_
 
-enum notif_source {
-	NOTIF_UNKNOWN,
-	NOTIF_POPUP,
-	NOTIF_TRAY,
-	NOTIF_HOTKEY,
-};
+typedef struct notif Notif;
 
-void notif_init(void);
-void notif_cleanup(void);
-void notif_reload_prefs(void);
-void notif_inform(enum notif_source source);
+Notif* notif_new(Audio *audio);
+void notif_free(Notif *notif);
+void notif_reload_prefs(Notif *notif);
 
 #endif				// NOTIF_H_

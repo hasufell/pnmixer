@@ -23,7 +23,6 @@
 #include <gtk/gtk.h>
 
 #include "audio.h"
-#include "notif.h"
 #include "support.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
@@ -37,6 +36,7 @@
 #endif
 
 struct popup_menu {
+	Audio *audio;
 	GtkWidget *menu;
 #ifdef WITH_GTK3
 	GtkWidget *mute_check;
@@ -53,10 +53,8 @@ void on_mute_item_activate(GtkCheckMenuItem *menuitem, PopupMenu *menu);
 
 /* Updates the mute checkbox according to the current audio state. */
 static void
-update_mute_check(PopupMenu *menu)
+update_mute_check(PopupMenu *menu, gboolean active)
 {
-	gboolean active = audio_is_muted();
-
 #ifdef WITH_GTK3
 	/* On Gtk3 version, we listen for the signal sent by the GtkMenuItem.
 	 * So, when we change the value of the GtkToggleButton, we don't have
@@ -101,10 +99,9 @@ on_mute_item_activate(G_GNUC_UNUSED GtkMenuItem *menuitem,
 #else
 on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
 #endif
-		      G_GNUC_UNUSED PopupMenu *menu)
+                      PopupMenu *menu)
 {
-	audio_toggle_mute();
-	notif_inform(NOTIF_POPUP);
+	audio_toggle_mute(menu->audio, AUDIO_USER_POPUP);
 }
 
 /**
@@ -143,7 +140,7 @@ void
 on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 			G_GNUC_UNUSED PopupMenu *menu)
 {
-	audio_reinit();
+	do_reload_audio();
 }
 
 /**
@@ -157,6 +154,13 @@ on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 		       G_GNUC_UNUSED PopupMenu *menu)
 {
 	about_dialog_do(main_window);
+}
+
+static void
+on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
+{
+	PopupMenu *menu = (PopupMenu *) data;
+	update_mute_check(menu, event->muted);
 }
 
 /* Public functions */
@@ -180,6 +184,7 @@ popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
 		       func, data, button, activate_time);
 }
 
+#if 0
 /**
  * Updates the popup menu according to the audio status.
  * This has to be called after volume has been changed or muted.
@@ -189,8 +194,10 @@ popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
 void
 popup_menu_update(PopupMenu *menu)
 {
-	update_mute_check(menu);
+	gboolean active = audio_is_muted(menu->audio);
+	update_mute_check(menu, active);
 }
+#endif
 
 /**
  * Destroys the popup menu, freeing any resources.
@@ -200,6 +207,7 @@ popup_menu_update(PopupMenu *menu)
 void
 popup_menu_destroy(PopupMenu *menu)
 {
+	audio_signals_disconnect(menu->audio, on_audio_changed, menu);
 	gtk_widget_destroy(menu->menu);
 	g_free(menu);
 }
@@ -210,7 +218,7 @@ popup_menu_destroy(PopupMenu *menu)
  * @return the newly created PopupMenu instance.
  */
 PopupMenu *
-popup_menu_create(void)
+popup_menu_create(Audio *audio)
 {
 	gchar *uifile;
 	GtkBuilder *builder;
@@ -233,8 +241,12 @@ popup_menu_create(void)
 	assign_gtk_widget(builder, menu, mute_item);
 #endif
 
-	/* Connect signal handlers */
+	/* Connect ui signal handlers */
 	gtk_builder_connect_signals(builder, menu);
+
+	/* Connect audio signal handlers */
+	menu->audio = audio;
+	audio_signals_connect(audio, on_audio_changed, menu);
 
 	/* Cleanup */
 	g_object_unref(builder);

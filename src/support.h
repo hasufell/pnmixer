@@ -53,9 +53,6 @@
 
 extern gboolean want_debug;
 
-void report_error(char *, ...);
-void warn_sound_conn_lost(void);
-
 /**
  * Macro to print verbose debug info in case we want debugging.
  */
@@ -67,15 +64,21 @@ void warn_sound_conn_lost(void);
 #define VT_YELLOW "[1;33m"
 
 #define ERROR(fmt, ...)	  \
-	fprintf(stderr, VT_ESC VT_RED "error: " VT_ESC VT_RESET fmt "\n", ##__VA_ARGS__)
+	fprintf(stderr, \
+	        VT_ESC VT_RED "error" VT_ESC VT_RESET ": %s: " fmt "\n", \
+	        __FILE__, ##__VA_ARGS__)
 
 #define WARN(fmt, ...)	  \
-	fprintf(stderr, VT_ESC VT_YELLOW "warning: " VT_ESC VT_RESET fmt "\n", ##__VA_ARGS__)
+	fprintf(stderr, \
+	        VT_ESC VT_YELLOW "warning" VT_ESC VT_RESET ": %s: " fmt "\n",	\
+	        __FILE__, ##__VA_ARGS__)
 
-#define _DEBUG(fmt, ...)	\
-	fprintf(stderr, VT_ESC VT_GREY "debug: " VT_ESC VT_RESET fmt "\n", ##__VA_ARGS__)
+#define _DEBUG(fmt, ...)	  \
+	fprintf(stderr, \
+	        VT_ESC VT_GREY "debug" VT_ESC VT_RESET ": %s: " fmt "\n", \
+	        __FILE__, ##__VA_ARGS__)
 
-#define DEBUG(fmt, ...)	\
+#define DEBUG(fmt, ...)	  \
 	do { \
 		if (want_debug == TRUE) \
 			_DEBUG(fmt, ##__VA_ARGS__); \
@@ -97,7 +100,7 @@ void warn_sound_conn_lost(void);
  * a window, and need to keep a pointer toward some widgets for later use.
  * This macro is more clever that it seems:
  * - it ensures that the name used in the struct is the same as the name used
- *   in the ui file, therefore forcing a consistent naming across the code.
+ *   in the ui file, therefore enforcing a consistent naming across the code.
  * - it ensures that the widget was found amidst the GtkBuilder objects,
  *   therefore detecting errors that can happen when reworking the ui files.
  */

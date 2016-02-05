@@ -17,9 +17,11 @@
 #ifndef UI_POPUP_MENU_H_
 #define UI_POPUP_MENU_H_
 
+#include "audio.h"
+
 typedef struct popup_menu PopupMenu;
 
-PopupMenu *popup_menu_create(void);
+PopupMenu *popup_menu_create(Audio *audio);
 void popup_menu_destroy(PopupMenu *menu);
 void popup_menu_update(PopupMenu *menu);
 void popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,

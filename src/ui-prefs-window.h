@@ -17,6 +17,8 @@
 #ifndef UI_PREFS_WINDOW_H_
 #define UI_PREFS_WINDOW_H_
 
-void prefs_window_open(void);
+#include "audio.h"
+
+void prefs_window_open(Audio *audio);
 
 #endif				// UI_PREFS_WINDOW_H_

@@ -22,39 +22,150 @@
 #include <glib.h>
 #include <libnotify/notify.h>
 
+#include "audio.h"
 #include "prefs.h"
 #include "support.h"
 #include "notif.h"
 
-gboolean enabled;
-guint timeout;
-gboolean popup;
-gboolean tray;
-gboolean hotkey;
-gboolean external;
+#ifdef HAVE_LIBN
+
+#if NOTIFY_CHECK_VERSION (0, 7, 0)
+#define NOTIFICATION_NEW(summary, body, icon)	\
+  notify_notification_new(summary, body, icon)
+#define NOTIFICATION_SET_HINT_STRING(notification, key, value)	  \
+  notify_notification_set_hint(notification, key, g_variant_new_string(value))
+#define NOTIFICATION_SET_HINT_INT32(notification, key, value)	  \
+  notify_notification_set_hint(notification, key, g_variant_new_int32(value))
+#else
+#define NOTIFICATION_NEW(summary, body, icon)	\
+  notify_notification_new(summary, body, icon, NULL)
+#define NOTIFICATION_SET_HINT_STRING(notification, key, value)	\
+  notify_notification_set_hint_string(notification, key, value)
+#define NOTIFICATION_SET_HINT_INT32(notification, key, value)	\
+  notify_notification_set_hint_int32(notification, key, value)
+#endif
 
 struct notif {
-	enum notif_source source;
-	gint64 time;
+	/* Audio system */
+	Audio *audio;
+	/* Preferences */
+	gboolean enabled;
+	gboolean popup;
+	gboolean tray;
+	gboolean hotkey;
+	gboolean external;
+	/* Notifications */
+	NotifyNotification *volume_notif;
+	NotifyNotification *text_notif;
+
 };
 
-struct notif *pending_notif;
-
-// TODO: handle compil without libnotify
-
-void
-notif_inform(enum notif_source source)
+static void
+show_volume_notif(NotifyNotification *notification,
+                  const gchar *card, const gchar *channel,
+                  gboolean muted, gdouble volume)
 {
-	if (pending_notif) {
-		WARN("Discarding pending notif (%d, %lld)",
-		     pending_notif->source, pending_notif->time);
-		g_free(pending_notif);
-		pending_notif = NULL;
+	GError *error = NULL;
+	gchar *icon, *summary;
+
+	if (muted)
+		icon = "audio-volume-muted";
+	else if (volume == 0)
+		icon = "audio-volume-off";
+	else if (volume < 33)
+		icon = "audio-volume-low";
+	else if (volume < 66)
+		icon = "audio-volume-medium";
+	else
+		icon = "audio-volume-high";
+
+	//TODO: display double volume
+
+	if (muted)
+		summary = g_strdup("Volume muted");
+	else
+		summary = g_strdup_printf("%s (%s)\nVolume: %d%%\n",
+		                          card, channel, (gint) volume);
+
+	notify_notification_update(notification, summary, NULL, icon);
+	NOTIFICATION_SET_HINT_INT32(notification, "value", (gint) volume);
+
+	if (!notify_notification_show(notification, &error)) {
+		ERROR("Could not send notification: %s", error->message);
+		g_error_free(error);
 	}
 
-	pending_notif = g_new0(struct notif, 1);
-	pending_notif->source = source;
-	pending_notif->time = g_get_real_time();
+	g_free(summary);
+}
+
+static void
+show_text_notif(NotifyNotification *notification,
+                const gchar *summary, const gchar *body)
+{
+	GError *error = NULL;
+
+	notify_notification_update(notification, summary, body, NULL);
+
+	if (!notify_notification_show(notification, &error)) {
+		ERROR("Could not send notification: %s", error->message);
+		g_error_free(error);
+	}
+}
+
+static void
+notif_handle_audio_values_changed(Notif *notif, AudioEvent *event)
+{
+	if (!notif->enabled)
+		return;
+
+	switch (event->user) {
+	case AUDIO_USER_UNKNOWN:
+		if (!notif->external)
+			return;
+		break;
+	case AUDIO_USER_POPUP:
+		if (!notif->popup)
+			return;
+		break;
+	case AUDIO_USER_TRAY_ICON:
+		if (!notif->tray)
+			return;
+		break;
+	case AUDIO_USER_HOTKEYS:
+		if (!notif->hotkey)
+			return;
+		break;
+	default:
+		WARN("Unhandled audio user");
+		return;
+	}
+
+	show_volume_notif(notif->volume_notif, event->card, event->channel,
+	                  event->muted, event->volume);
+}
+
+static void
+on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
+{
+	Notif *notif = (Notif *) data;
+
+	switch (event->signal) {
+	case AUDIO_NO_CARD:
+		show_text_notif(notif->text_notif,
+		                _("No sound card"),
+		                _("No playable soundcard found"));
+		break;
+	case AUDIO_CARD_DISCONNECTED:
+		show_text_notif(notif->text_notif,
+		                _("Soundcard disconnected"),
+		                _("Soundcard has been disconnected, reloading..."));
+		break;
+	case AUDIO_VALUES_CHANGED:
+		notif_handle_audio_values_changed(notif, event);
+		break;
+	default:
+		break;
+	}
 }
 
 /**
@@ -62,38 +173,103 @@ notif_inform(enum notif_source source)
  * This has to be called each time the preferences are modified.
  */
 void
-notif_reload_prefs(void)
+notif_reload_prefs(Notif *notif)
 {
-	enabled = prefs_get_boolean("EnableNotifications", FALSE);
+	guint timeout;
+	NotifyNotification *notification;
+
+	/* Get preferences */
+	notif->enabled = prefs_get_boolean("EnableNotifications", FALSE);
+	notif->popup = prefs_get_boolean("PopupNotifications", FALSE);
+	notif->tray = prefs_get_boolean("MouseNotifications", TRUE);
+	notif->hotkey = prefs_get_boolean("HotkeyNotifications", TRUE);
+	notif->external = prefs_get_boolean("ExternalNotifications", FALSE);
+
+	/* Create notifications (they depend on timeout) */
 	timeout = prefs_get_integer("NotificationTimeout", 1500);
-	popup = prefs_get_boolean("PopupNotifications", FALSE);
-	tray = prefs_get_boolean("MouseNotifications", TRUE);
-	hotkey = prefs_get_boolean("HotkeyNotifications", TRUE);
-	external = prefs_get_boolean("ExternalNotifications", FALSE);
+
+	notification = NOTIFICATION_NEW("", NULL, NULL);
+	notify_notification_set_timeout(notification, timeout);
+	NOTIFICATION_SET_HINT_STRING(notification, "x-canonical-private-synchronous", "");
+
+	if (notif->volume_notif)
+		g_object_unref(notif->volume_notif);
+	notif->volume_notif = notification;
+
+	notification = NOTIFICATION_NEW("", NULL, NULL);
+	notify_notification_set_timeout(notification, timeout * 2);
+	NOTIFICATION_SET_HINT_STRING(notification, "x-canonical-private-synchronous", "");		
+	if (notif->text_notif)
+		g_object_unref(notif->text_notif);
+	notif->text_notif = notification;
 }
 
 /**
  * Uninitializes libnotify. This should be called only once at cleanup.
  */
 void
-notif_cleanup(void)
+notif_free(Notif *notif)
 {
-	g_assert(notify_is_initted() == TRUE);
+	if (notif == NULL)
+		return;
 
+	/* Uninit libnotify. This should be run only once */
+	g_assert(notify_is_initted() == TRUE);
 	notify_uninit();
+
+	audio_signals_disconnect(notif->audio, on_audio_changed, notif);
+
+	if (notif->volume_notif)
+		g_object_unref(notif->volume_notif);
+	if (notif->text_notif)
+		g_object_unref(notif->text_notif);
+
+	g_free(notif);
 }
 
 /**
  * Initializes libnotify. This should be called only once at startup.
  */
-void
-notif_init(void)
+Notif *
+notif_new(Audio *audio)
 {
+	Notif *notif;
+
+	/* Init libnotify. This should be run once only */
 	g_assert(notify_is_initted() == FALSE);
-
 	if (!notify_init(PACKAGE))
-		report_error("Unable to initialize libnotify. "
-		             "Notifications will not be sent.");
+		return NULL;
 
-	notif_reload_prefs();
+	notif = g_new0(Notif, 1);
+
+	/* Connect audio signals handlers */
+	notif->audio = audio;
+	audio_signals_connect(audio, on_audio_changed, notif);
+
+	/* Load preferences */
+	notif_reload_prefs(notif);
+
+	return notif;
 }
+
+#else
+
+void
+notif_free(Notif *notif)
+{
+	g_free(notif);
+}
+
+Notif *
+notif_new(G_GNUC_UNUSED Audio *audio)
+{
+	return g_malloc(1);
+}
+
+void
+notif_reload_prefs(G_GNUC_UNUSED Notif *notif)
+{
+}
+
+#endif				// HAVE_LIBN
+

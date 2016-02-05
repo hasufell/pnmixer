@@ -30,9 +30,10 @@
 #include <gtk/gtk.h>
 
 #include "audio.h"
-#include "main.h"
 #include "support.h"
 #include "prefs.h"
+
+#include "main.h"
 
 /*
  * Printing, reporting, debugging.
@@ -47,73 +48,10 @@
 gboolean want_debug;
 
 /**
- * Reports an error, usually via a dialog window or on stderr.
- *
- * @param err the error
- * @param ... more string segments in the format of printf
- */
-void
-report_error(char *fmt, ...)
-{
-	va_list ap;
-	char err_buf[512];
-
-	va_start(ap, fmt);
-	vsnprintf(err_buf, sizeof err_buf, fmt, ap);
-	va_end(ap);
-
-	ERROR("%s", err_buf);
-
-	if (main_window) {
-		GtkWidget *dialog = gtk_message_dialog_new(main_window,
-				    GTK_DIALOG_DESTROY_WITH_PARENT,
-				    GTK_MESSAGE_ERROR,
-				    GTK_BUTTONS_CLOSE,
-				    NULL);
-		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-		g_object_set(dialog, "text", err_buf, NULL);
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-	}
-}
-
-/**
- * Emits a warning if the sound connection is lost, usually
- * via a dialog window (with option to reinitialize alsa) or stderr.
- * Also reload alsa.
- * TODO: move that alsa reloading outisde of here
- */
-void
-warn_sound_conn_lost(void)
-{
-	WARN("Warning: Connection to sound system failed, "
-	     "you probably need to restart pnmixer");
-
-	if (main_window) {
-		gint resp;
-		GtkWidget *dialog = gtk_message_dialog_new(main_window,
-				    GTK_DIALOG_DESTROY_WITH_PARENT,
-				    GTK_MESSAGE_ERROR,
-				    GTK_BUTTONS_YES_NO,
-				    _("Warning: Connection to sound system failed."));
-		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-				_("Do you want to re-initialize the connection to alsa?\n\n"
-				  "If you do not, you will either need to restart PNMixer "
-				  "or select the 'Reload Alsa' option in the right click "
-				  "menu in order for PNMixer to function."));
-		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-		resp = gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-		if (resp == GTK_RESPONSE_YES)
-			audio_reinit();
-	}
-}
-
-/**
  * List of available pixmap directories, populated via
  * add_pixmap_directory().
  */
-static GList *pixmaps_directories = NULL;
+static GSList *pixmaps_directories = NULL;
 
 /**
  * Use this function to set the directory containing
@@ -124,7 +62,7 @@ static GList *pixmaps_directories = NULL;
 void
 add_pixmap_directory(const gchar *directory)
 {
-	pixmaps_directories = g_list_prepend(pixmaps_directories, g_strdup(directory));
+	pixmaps_directories = g_slist_prepend(pixmaps_directories, g_strdup(directory));
 }
 
 /**
@@ -138,7 +76,7 @@ add_pixmap_directory(const gchar *directory)
 static gchar *
 find_pixmap_file(const gchar *filename)
 {
-	GList *elem;
+	GSList *elem;
 
 	/* We step through each of the pixmaps directory to find it. */
 	elem = pixmaps_directories;
@@ -178,8 +116,8 @@ create_pixbuf(const gchar *filename)
 
 	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
 	if (!pixbuf) {
-		report_error(_("Failed to load pixbuf file: %s: %s"),
-			     pathname, error->message);
+		do_report_error(_("Failed to load pixbuf file: %s: %s"),
+		                pathname, error->message);
 		g_error_free(error);
 	}
 	g_free(pathname);

@@ -27,7 +27,11 @@ void do_custom_command(void);
 void do_toggle_popup_window(void);
 void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
 			guint button, guint activate_time);
-void do_update_ui(void);
+void do_reload_audio(void);
+
+
+void do_report_error(char *, ...);
+void do_warn_sound_conn_lost(void);
 
 void apply_prefs(void);
 

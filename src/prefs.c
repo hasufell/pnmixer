@@ -35,6 +35,8 @@
 #include "prefs.h"
 #include "support.h"
 
+#include "main.h"
+
 #define DEFAULT_PREFS "[PNMixer]\n\
 SliderOrientation=vertical\n\
 DisplayTextVolume=true\n\
@@ -346,8 +348,8 @@ prefs_load(void)
 
 	if (g_file_test(filename, G_FILE_TEST_EXISTS)) {
 		if (!g_key_file_load_from_file(keyFile, filename, 0, &err)) {
-			report_error(_("Couldn't load preferences file: %s"),
-				     err->message);
+			do_report_error(_("Couldn't load preferences file: %s"),
+			                err->message);
 			g_error_free(err);
 			g_key_file_free(keyFile);
 			keyFile = NULL;
@@ -355,8 +357,8 @@ prefs_load(void)
 	} else {
 		if (!g_key_file_load_from_data
 		    (keyFile, DEFAULT_PREFS, strlen(DEFAULT_PREFS), 0, &err)) {
-			report_error(_("Couldn't load default preferences: %s"),
-				     err->message);
+			do_report_error(_("Couldn't load default preferences: %s"),
+			                err->message);
 			g_error_free(err);
 			g_key_file_free(keyFile);
 			keyFile = NULL;
@@ -381,7 +383,7 @@ prefs_save(void)
 	g_file_set_contents(filename, filedata, len, &err);
 
 	if (err != NULL) {
-		report_error(_("Couldn't write preferences file: %s"), err->message);
+		do_report_error(_("Couldn't write preferences file: %s"), err->message);
 		g_error_free(err);
 	}
 
@@ -391,7 +393,7 @@ prefs_save(void)
 
 /**
  * Checks if the preferences dir for saving is present and accessible.
- * Creates it if doesn't exist. Reports errors via report_error().
+ * Creates it if doesn't exist. Reports errors via do_report_error().
  */
 void
 prefs_ensure_save_dir(void)
@@ -401,13 +403,13 @@ prefs_ensure_save_dir(void)
 
 	if (!g_file_test(prefs_dir, G_FILE_TEST_IS_DIR)) {
 		if (g_file_test(prefs_dir, G_FILE_TEST_EXISTS))
-			report_error(_
-				     ("Error: %s exists but is not a directory, will "
-				      "not be able to save preferences."), prefs_dir);
+			do_report_error(_("'%s' exists but is not a directory, "
+			                  "won't be able to save preferences."),
+			                prefs_dir);
 		else {
 			if (g_mkdir(prefs_dir, S_IRWXU))
-				report_error(_("Couldn't make prefs directory: %s"),
-					     strerror(errno));
+				do_report_error(_("Couldn't make prefs directory: %s"),
+				                strerror(errno));
 		}
 	}
 

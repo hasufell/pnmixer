@@ -24,7 +24,6 @@
 #include <gtk/gtk.h>
 
 #include "audio.h"
-#include "notif.h"
 #include "prefs.h"
 #include "support.h"
 #include "ui-tray-icon.h"
@@ -58,6 +57,7 @@ struct vol_meter {
 typedef struct vol_meter VolMeter;
 
 struct tray_icon {
+	Audio *audio;
 	VolMeter *vol_meter;
 	GtkStatusIcon *status_icon;
 	gint status_icon_size;
@@ -242,25 +242,13 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 
 /* Helpers */
 
-/* Rebuild the tray icon according to preferences */
-static void
-rebuild_icon(TrayIcon *icon)
-{
-	pixbuf_array_free(icon->pixbufs);
-	icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
-
-	vol_meter_free(icon->vol_meter);
-	icon->vol_meter = vol_meter_new();
-}
-
 /* Update the tray icon pixbuf according to the current audio state. */
 static void
-update_icon(TrayIcon *icon, int volume, gboolean muted)
+update_status_icon_pixbuf(GtkStatusIcon *status_icon,
+                          GdkPixbuf **pixbufs, VolMeter *vol_meter,
+                          gdouble volume, gboolean muted)
 {
-	GdkPixbuf **pixbufs;
 	GdkPixbuf *pixbuf;
-
-	pixbufs = icon->pixbufs;
 
 	if (!muted) {
 		if (volume == 0)
@@ -275,31 +263,53 @@ update_icon(TrayIcon *icon, int volume, gboolean muted)
 		pixbuf = pixbufs[VOLUME_MUTED];
 	}
 
-	if (icon->vol_meter && muted == FALSE)
-		pixbuf = vol_meter_draw(icon->vol_meter, pixbuf, volume);
+	if (vol_meter && muted == FALSE)
+		pixbuf = vol_meter_draw(vol_meter, pixbuf, volume);
 
-	gtk_status_icon_set_from_pixbuf(icon->status_icon, pixbuf);
+	gtk_status_icon_set_from_pixbuf(status_icon, pixbuf);
 }
 
 /* Update the tray icon tooltip according to the current audio state. */
 static void
-update_tooltip(TrayIcon *icon, int volume, gboolean muted)
+update_status_icon_tooltip(GtkStatusIcon *status_icon,
+                           const gchar *card, const gchar *channel,
+                           gdouble volume, gboolean muted)
 {
-	const char *card_name;
-	const char *channel;
 	char tooltip[64];
 
-	card_name = audio_get_card();
-	channel = audio_get_channel();
-
+	// TODO: print double volume with only two decimals, or zero
+	
 	if (!muted)
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
-			 card_name, channel, _("Volume"), volume);
+			 card, channel, _("Volume"), (int) volume);
 	else
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%\n%s"),
-			 card_name, channel, _("Volume"), volume, _("Muted"));
+			 card, channel, _("Volume"), (int) volume, _("Muted"));
 
-	gtk_status_icon_set_tooltip_text(icon->status_icon, tooltip);
+	gtk_status_icon_set_tooltip_text(status_icon, tooltip);
+}
+
+/* Rebuild the tray icon according to preferences */
+static void
+rebuild_tray_icon(TrayIcon *icon)
+{
+	const gchar *card, *channel;
+	gdouble volume;
+	gboolean muted;
+
+	pixbuf_array_free(icon->pixbufs);
+	icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
+
+	vol_meter_free(icon->vol_meter);
+	icon->vol_meter = vol_meter_new();
+
+	card = audio_get_card(icon->audio);
+	channel = audio_get_channel(icon->audio);
+	volume = audio_get_volume(icon->audio);
+	muted = audio_is_muted(icon->audio);
+	update_status_icon_pixbuf(icon->status_icon, icon->pixbufs, icon->vol_meter,
+	                          volume, muted);
+	update_status_icon_tooltip(icon->status_icon, card, channel, volume, muted);
 }
 
 /* Signal handlers */
@@ -359,8 +369,7 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 
 	switch (middle_click_action) {
 	case 0:
-		audio_toggle_mute();
-		notif_inform(NOTIF_TRAY);
+		audio_toggle_mute(icon->audio, AUDIO_USER_TRAY_ICON);
 		break;
 	case 1:
 		do_open_prefs();
@@ -390,15 +399,12 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  */
 static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
-		G_GNUC_UNUSED TrayIcon *icon)
+		TrayIcon *icon)
 {
-	if (event->direction == GDK_SCROLL_UP) {
-		audio_raise_volume();
-		notif_inform(NOTIF_TRAY);
-	} else if (event->direction == GDK_SCROLL_DOWN) {
-		audio_lower_volume();
-		notif_inform(NOTIF_TRAY);
-	}
+	if (event->direction == GDK_SCROLL_UP)
+		audio_raise_volume(icon->audio, AUDIO_USER_TRAY_ICON);
+	else if (event->direction == GDK_SCROLL_DOWN)
+		audio_lower_volume(icon->audio, AUDIO_USER_TRAY_ICON);
 
 	return FALSE;
 }
@@ -431,29 +437,22 @@ on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size, TrayIcon *i
 	icon->status_icon_size = size;
 
 	/* Rebuild everything */
-	rebuild_icon(icon);
-	tray_icon_update(icon);
+	rebuild_tray_icon(icon);
 
 	return FALSE;
 }
 
-/* Public functions */
-
-/**
- * Updates the tray icon according to the audio status.
- * This has to be called after volume has been changed or muted.
- *
- * @param icon a TrayIcon instance.
- */
-void
-tray_icon_update(TrayIcon *icon)
+static void
+on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
-	int volume = audio_get_volume();
-	gboolean muted = audio_is_muted();
-
-	update_icon(icon, volume, muted);
-	update_tooltip(icon, volume, muted);
+	TrayIcon *icon = (TrayIcon *) data;
+	update_status_icon_pixbuf(icon->status_icon, icon->pixbufs, icon->vol_meter,
+	                          event->volume, event->muted);
+	update_status_icon_tooltip(icon->status_icon, event->card, event->channel,
+	                           event->volume, event->muted);
 }
+
+/* Public functions */
 
 /**
  * Update the tray icon according to the current preferences.
@@ -464,8 +463,7 @@ tray_icon_update(TrayIcon *icon)
 void
 tray_icon_reload_prefs(TrayIcon *icon)
 {
-	rebuild_icon(icon);
-	tray_icon_update(icon);
+	rebuild_tray_icon(icon);
 }
 
 /**
@@ -476,6 +474,7 @@ tray_icon_reload_prefs(TrayIcon *icon)
 void
 tray_icon_destroy(TrayIcon *icon)
 {
+	audio_signals_disconnect(icon->audio, on_audio_changed, icon);
 	g_object_unref(icon->status_icon);
 	pixbuf_array_free(icon->pixbufs);
 	vol_meter_free(icon->vol_meter);
@@ -488,7 +487,7 @@ tray_icon_destroy(TrayIcon *icon)
  * @return the newly created TrayIcon instance.
  */
 TrayIcon *
-tray_icon_create(void)
+tray_icon_create(Audio *audio)
 {
 	TrayIcon *icon;
 
@@ -501,7 +500,7 @@ tray_icon_create(void)
 	icon->status_icon = gtk_status_icon_new();
 	icon->status_icon_size = ICON_MIN_SIZE;
 
-	/* Connect signal handlers */
+	/* Connect ui signal handlers */
 	// Left-click
 	g_signal_connect(icon->status_icon, "activate",
 			 G_CALLBACK(on_activate), icon);
@@ -518,6 +517,11 @@ tray_icon_create(void)
 	g_signal_connect(icon->status_icon, "size-changed",
 			 G_CALLBACK(on_size_changed), icon);
 
+	/* Connect audio signals handlers */
+	icon->audio = audio;
+	audio_signals_connect(audio, on_audio_changed, icon);
+
+	/* Display icon */
 	gtk_status_icon_set_visible(icon->status_icon, TRUE);
 
 	/* Load preferences */

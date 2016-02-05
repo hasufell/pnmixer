@@ -38,40 +38,74 @@
 
 GtkWindow *main_window = NULL;
 
+static Audio *audio;
 static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
 static TrayIcon *tray_icon;
-
+static Hotkeys *hotkeys;
+static Notif *notif;
 
 /**
- * Applies the preferences, usually triggered by on_ok_button_clicked()
- * in callbacks.c, but also initially called from main().
+ * Reports an error, usually via a dialog window or on stderr.
  *
- * @param alsa_change whether we want to trigger alsa-reinitalization
+ * @param err the error
+ * @param ... more string segments in the format of printf
  */
 void
-apply_prefs(void)
+do_report_error(char *fmt, ...)
 {
-	/* Notifications preferences */
-	notif_reload_prefs();
+	va_list ap;
+	char err_buf[512];
 
-	/* Hotkeys preferences */
-	hotkeys_reload_prefs();
+	va_start(ap, fmt);
+	vsnprintf(err_buf, sizeof err_buf, fmt, ap);
+	va_end(ap);
 
-	/* Popup window, rebuild it from scratch. This is needed in case
-	 * the slider orientation was modified.
-	 */
-	popup_window_destroy(popup_window);
-	popup_window = popup_window_create();
+	ERROR("%s", err_buf);
 
-	/* Tray icon, reload */
-	tray_icon_reload_prefs(tray_icon);
+	if (main_window) {
+		GtkWidget *dialog = gtk_message_dialog_new(main_window,
+				    GTK_DIALOG_DESTROY_WITH_PARENT,
+				    GTK_MESSAGE_ERROR,
+				    GTK_BUTTONS_CLOSE,
+				    NULL);
+		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+		g_object_set(dialog, "text", err_buf, NULL);
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	}
+}
 
-	/* Update the whole ui */
-	do_update_ui();
+/**
+ * Emits a warning if the sound connection is lost, usually
+ * via a dialog window (with option to reinitialize alsa) or stderr.
+ * Also reload alsa.
+ * TODO: move that alsa reloading outisde of here
+ */
+void
+do_warn_sound_conn_lost(void)
+{
+	WARN("Warning: Connection to sound system failed, "
+	     "you probably need to restart pnmixer");
 
-	/* Reload alsa */
-	audio_reinit();
+	if (main_window) {
+		gint resp;
+		GtkWidget *dialog = gtk_message_dialog_new(main_window,
+				    GTK_DIALOG_DESTROY_WITH_PARENT,
+				    GTK_MESSAGE_ERROR,
+				    GTK_BUTTONS_YES_NO,
+				    _("Warning: Connection to sound system failed."));
+		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
+				_("Do you want to re-initialize the connection to alsa?\n\n"
+				  "If you do not, you will either need to restart PNMixer "
+				  "or select the 'Reload Alsa' option in the right click "
+				  "menu in order for PNMixer to function."));
+		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+		resp = gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+		if (resp == GTK_RESPONSE_YES)
+			do_reload_audio();
+	}
 }
 
 /**
@@ -87,7 +121,7 @@ run_command(const gchar *cmd)
 	g_assert(cmd != NULL);
 
 	if (g_spawn_command_line_async(cmd, &error) == FALSE) {
-		report_error(_("Unable to run command: %s"), error->message);
+		do_report_error(_("Unable to run command: %s"), error->message);
 		g_error_free(error);
 		error = NULL;
 	}
@@ -102,7 +136,7 @@ run_command(const gchar *cmd)
 void
 do_open_prefs(void)
 {
-	prefs_window_open();
+	prefs_window_open(audio);
 }
 
 void
@@ -136,10 +170,9 @@ do_mixer(void)
 		run_command(cmd);
 		g_free(cmd);
 	} else
-		report_error(_
-			     ("No mixer application was found on your system. "
-			      "Please open preferences and set the command you want "
-			      "to run for volume control."));
+		do_report_error(_("No mixer application was found on your system. "
+		                  "Please open preferences and set the command you want "
+		                  "to run for volume control."));
 }
 
 void
@@ -153,20 +186,63 @@ do_custom_command(void)
 		run_command(cmd);
 		g_free(cmd);
 	} else
-		report_error(_("You have not specified a custom command to run, "
-			       "please specify one in preferences."));
+		do_report_error(_("You have not specified a custom command to run, "
+		                  "please specify one in preferences."));
 }
 
+void
+do_reload_audio(void)
+{
+	audio_unhook_soundcard(audio);
+	audio_hook_soundcard(audio);
+}
+
+
 /**
- * Updates the states that always needs to be updated on volume changes.
- * This is currently the tray icon and the mute checkboxes.
+ * Applies the preferences, usually triggered by on_ok_button_clicked()
+ * in callbacks.c, but also initially called from main().
+ *
+ * @param alsa_change whether we want to trigger alsa-reinitalization
  */
 void
-do_update_ui(void)
+apply_prefs(void)
 {
-	tray_icon_update(tray_icon);
-	popup_window_update(popup_window);
-	popup_menu_update(popup_menu);
+	/* Audio */
+	audio_reload_prefs(audio);
+
+	/* Notifications preferences */
+	notif_reload_prefs(notif);
+
+	/* Hotkeys preferences */
+	hotkeys_reload_prefs(hotkeys);
+
+	/* Popup window, rebuild it from scratch. This is needed in case
+	 * the slider orientation was modified.
+	 */
+	popup_window_destroy(popup_window);
+	popup_window = popup_window_create(audio);
+
+	/* Tray icon, reload */
+	tray_icon_reload_prefs(tray_icon);
+
+	/* Reload audio */
+	do_reload_audio();
+}
+
+static void
+on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, G_GNUC_UNUSED gpointer data)
+{
+	switch (event->signal) {
+	case AUDIO_CARD_DISCONNECTED:
+		do_reload_audio();
+		break;
+	case AUDIO_CARD_ERROR:
+		do_warn_sound_conn_lost();
+		break;
+	default:
+		break;
+	}
+
 }
 
 static gboolean version = FALSE;
@@ -231,18 +307,31 @@ main(int argc, char *argv[])
 	prefs_ensure_save_dir();
 	prefs_load();
 
-	/* Init the low-level */
-	audio_init();
-	notif_init();
-	hotkeys_init();
+	/* Init the low-level (aka the audio system) at first */
+	audio = audio_new();
 
 	/* Init the high-level (aka the ui) */
-	popup_menu = popup_menu_create();
-	popup_window = popup_window_create();
-	tray_icon = tray_icon_create();
+	popup_menu = popup_menu_create(audio);
+	popup_window = popup_window_create(audio);
+	tray_icon = tray_icon_create(audio);
+
+	/* Init the hotkeys control */
+	hotkeys = hotkeys_new(audio);
+
+	/* Init the notifications system */
+	notif = notif_new(audio);
+	if (!notif)
+		do_report_error("Unable to initialize libnotify. "
+		                "Notifications won't be sent.");
 
 	// We make the main window public, it's needed as a transient parent
 	main_window = popup_window_get_gtk_window(popup_window);
+
+	/* Connect audio signals handlers */
+	audio_signals_connect(audio, on_audio_changed, NULL);
+
+	/* Hook the soundcard */
+	audio_hook_soundcard(audio);
 
 	/* Run */
 	DEBUG("Running main loop...");
@@ -252,13 +341,14 @@ main(int argc, char *argv[])
 
 	main_window = NULL;
 
+	audio_signals_disconnect(audio, on_audio_changed, NULL);
+
+	notif_free(notif);
+	hotkeys_free(hotkeys);
 	tray_icon_destroy(tray_icon);
 	popup_window_destroy(popup_window);
 	popup_menu_destroy(popup_menu);
-
-	hotkeys_cleanup();
-	notif_cleanup();
-	audio_cleanup();
+	audio_free(audio);
 
 	return EXIT_SUCCESS;
 }

@@ -17,9 +17,11 @@
 #ifndef UI_TRAY_ICON_H_
 #define UI_TRAY_ICON_H_
 
+#include "audio.h"
+
 typedef struct tray_icon TrayIcon;
 
-TrayIcon *tray_icon_create(void);
+TrayIcon *tray_icon_create(Audio *audio);
 void tray_icon_destroy(TrayIcon *tray_icon);
 void tray_icon_reload_prefs(TrayIcon *tray_icon);
 void tray_icon_update(TrayIcon *tray_icon);

@@ -27,7 +27,6 @@
 #endif
 
 #include "audio.h"
-#include "notif.h"
 #include "prefs.h"
 #include "support.h"
 #include "ui-popup-window.h"
@@ -43,6 +42,7 @@
 #endif
 
 struct popup_window {
+	Audio *audio;
 	GtkWidget *popup_window;
 	GtkWidget *vol_scale;
 	GtkAdjustment *vol_scale_adj;
@@ -117,9 +117,9 @@ update_mute_check(PopupWindow *window, gboolean muted)
 
 /* Update the volume slider according to the current audio state. */
 static void
-update_volume_slider(PopupWindow *window, int volume)
+update_volume_slider(PopupWindow *window, gdouble volume)
 {
-	gtk_adjustment_set_value(window->vol_scale_adj, (double) volume);
+	gtk_adjustment_set_value(window->vol_scale_adj, volume);
 }
 
 /* Signal handlers */
@@ -186,7 +186,7 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  */
 gboolean
 on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
-			  gdouble value, G_GNUC_UNUSED PopupWindow *window)
+			  gdouble value, PopupWindow *window)
 {
 	GtkAdjustment *gtk_adj;
 
@@ -204,9 +204,7 @@ on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
 	if (value > gtk_adjustment_get_upper(gtk_adj))
 		value = gtk_adjustment_get_upper(gtk_adj);
 
-	// TODO: remove this cast
-	audio_set_volume((int) value);
-	notif_inform(NOTIF_POPUP);
+	audio_set_volume(window->audio, AUDIO_USER_POPUP, value);
 
 	return FALSE;
 }
@@ -219,11 +217,9 @@ on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
  * @param window user data set when the signal handler was connected.
  */
 void
-on_mute_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
-		      G_GNUC_UNUSED PopupWindow *window)
+on_mute_check_toggled(G_GNUC_UNUSED GtkToggleButton *button, PopupWindow *window)
 {
-	audio_toggle_mute();
-	notif_inform(NOTIF_POPUP);
+	audio_toggle_mute(window->audio, AUDIO_USER_POPUP);
 }
 
 /**
@@ -238,6 +234,14 @@ on_mixer_button_clicked(G_GNUC_UNUSED GtkButton *button, PopupWindow *window)
 {
 	popup_window_hide(window);
 	do_mixer();
+}
+
+static void
+on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
+{
+	PopupWindow *window = (PopupWindow *) data;
+	update_mute_check(window, event->muted);
+	update_volume_slider(window, event->volume);
 }
 
 /* Public functions */
@@ -264,9 +268,6 @@ popup_window_show(PopupWindow *window)
 {
 	GtkWidget *popup_window = window->popup_window;
 	GtkWidget *vol_scale = window->vol_scale;
-
-	/* Ensure the window is up to date */
-	popup_window_update(window);
 
 	/* Show the window */
 	gtk_widget_show_now(popup_window);
@@ -339,6 +340,7 @@ popup_window_toggle(PopupWindow *window)
 		popup_window_show(window);
 }
 
+#if 0
 /**
  * Updates the popup window according to the audio status.
  * This has to be called after volume has been changed or muted.
@@ -348,12 +350,14 @@ popup_window_toggle(PopupWindow *window)
 void
 popup_window_update(PopupWindow *window)
 {
-	int volume = audio_get_volume();
-	gboolean muted = audio_is_muted();
+	gdouble volume = audio_get_volume(window->audio);
+	gboolean muted = audio_is_muted(window->audio);
 
 	update_mute_check(window, muted);
 	update_volume_slider(window, volume);
 }
+#endif
+
 
 /**
  * Destroys the popup window, freeing any resources.
@@ -363,6 +367,7 @@ popup_window_update(PopupWindow *window)
 void
 popup_window_destroy(PopupWindow *window)
 {
+	audio_signals_disconnect(window->audio, on_audio_changed, window);
 	gtk_widget_destroy(window->popup_window);
 	g_free(window);
 }
@@ -373,7 +378,7 @@ popup_window_destroy(PopupWindow *window)
  * @return the newly created PopupWindow instance.
  */
 PopupWindow *
-popup_window_create(void)
+popup_window_create(Audio *audio)
 {
 	gchar *uifile;
 	GtkBuilder *builder;
@@ -403,8 +408,12 @@ popup_window_create(void)
 	configure_vol_text(GTK_SCALE(window->vol_scale));
 	configure_vol_increment(GTK_ADJUSTMENT(window->vol_scale_adj));
 
-	/* Connect signal handlers */
+	/* Connect ui signal handlers */
 	gtk_builder_connect_signals(builder, window);
+
+	/* Connect audio signal handlers */
+	window->audio = audio;
+	audio_signals_connect(audio, on_audio_changed, window);
 
 	/* Cleanup */
 	g_object_unref(builder);

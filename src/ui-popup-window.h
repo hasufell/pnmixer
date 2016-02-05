@@ -17,9 +17,11 @@
 #ifndef UI_POPUP_WINDOW_H_
 #define UI_POPUP_WINDOW_H_
 
+#include "audio.h"
+
 typedef struct popup_window PopupWindow;
 
-PopupWindow *popup_window_create(void);
+PopupWindow *popup_window_create(Audio *audio);
 void popup_window_destroy(PopupWindow *window);
 void popup_window_update(PopupWindow *window);
 void popup_window_show(PopupWindow *window);

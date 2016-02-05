@@ -19,45 +19,80 @@
 
 #include <glib.h>
 
+/* High-level audio functions, no need to have
+ * a soundcard initialized to call that.
+ */
+
+GSList *audio_get_card_list(void);
+GSList *audio_get_channel_list(const char *card);
+
+typedef struct audio Audio;
+
+/* Soundcard management.
+ */
+
+Audio *audio_new(void);
+void audio_free(Audio *audio);
+void audio_reload_prefs(Audio *audio);
+void audio_unhook_soundcard(Audio *audio);
+void audio_hook_soundcard(Audio *audio);
+const char *audio_get_card(Audio *audio);
+const char *audio_get_channel(Audio *audio);
+
+/* Mute and volume handling.
+ * Everyone who changes the volume must declare who he is.
+ */
+
+enum audio_user {
+	AUDIO_USER_UNKNOWN,
+	AUDIO_USER_POPUP,
+	AUDIO_USER_TRAY_ICON,
+	AUDIO_USER_HOTKEYS,
+};
+
+typedef enum audio_user AudioUser;
+
+gboolean audio_is_muted(Audio *audio);
+void audio_toggle_mute(Audio *audio, AudioUser user);
+gdouble audio_get_volume(Audio *audio);
+void audio_set_volume(Audio *audio, AudioUser user, gdouble volume);
+void audio_lower_volume(Audio *audio, AudioUser user);
+void audio_raise_volume(Audio *audio, AudioUser user);
+
+/* Signals handling.
+ * The audio system sends signals out there when something happens.
+ */
+
 enum audio_signal {
+	AUDIO_NO_CARD,
 	AUDIO_CARD_INITIALIZED,
 	AUDIO_CARD_CLEANED_UP,
+	AUDIO_CARD_DISCONNECTED,
+	AUDIO_CARD_ERROR,
 	AUDIO_VALUES_CHANGED,
-	AUDIO_N_SIGNALS
 };
 
 typedef enum audio_signal AudioSignal;
 
-typedef void (*AudioCallback) (gpointer);
-typedef void (*AudioCardChangedCallback) (gpointer);
-typedef void (*AudioValuesChangedCallback) (gpointer, gboolean, gdouble);
+struct audio_event {
+	AudioSignal signal;
+	AudioUser user;
+	gchar *card;
+	gchar *channel;
+	gboolean muted;
+	gdouble volume;
+};
 
-#define AUDIO_CALLBACK(func) ((AudioCallback) func)
+typedef struct audio_event AudioEvent;
 
-	
+typedef void (*AudioCallback) (Audio *audio, AudioEvent *event, gpointer data);
 
-
-
-
-
-
-
-void audio_init(void);
-void audio_cleanup(void);
-void audio_reinit(void);
-
-gdouble audio_get_volume(void);
-void audio_set_volume(gdouble volume);
-void audio_lower_volume(void);
-void audio_raise_volume(void);
-
-gboolean audio_is_muted(void);
-void audio_toggle_mute(void);
-
-const char *audio_get_card(void);
-const char *audio_get_channel(void);
-
-GSList *audio_get_card_list(void);
-GSList *audio_get_channel_list(const char *card);
+void audio_signals_connect(Audio *audio, AudioCallback callback, gpointer data);
+ /* Never forget to call that, otherwise it will segfault.
+  * This is unlike Glib signal handling, where disconnecting
+  * can be omitted. This works thanks to ref counting.
+  * //TODO: make a better comment.
+  */
+void audio_signals_disconnect(Audio *audio, AudioCallback callback, gpointer data);
 
 #endif				// AUDIO_H

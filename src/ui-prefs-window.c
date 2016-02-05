@@ -47,6 +47,8 @@
  * Defines the whole preferences entity.
  */
 struct prefs_window {
+	/* Audio system */
+	Audio *audio;
 	/* Top-level widgets */
 	GtkWidget *prefs_window;
 	GtkWidget *notebook;
@@ -161,7 +163,7 @@ fill_chan_combo(GtkComboBoxText *combo, const gchar *card_name)
 	GSList *channel_list, *item;
 
 	DEBUG("Filling channels ComboBox for card '%s'", card_name);
- 
+
 	selected_channel = prefs_get_channel(card_name);
 	channel_list = audio_get_channel_list(card_name);
 
@@ -193,7 +195,7 @@ fill_chan_combo(GtkComboBoxText *combo, const gchar *card_name)
  * @param combo the GtkComboBoxText widget for the cards.
  */
 static void
-fill_card_combo(GtkComboBoxText *combo)
+fill_card_combo(GtkComboBoxText *combo, Audio *audio)
 {
 	int idx, sidx;
 	const gchar *active_card;
@@ -201,8 +203,12 @@ fill_card_combo(GtkComboBoxText *combo)
 
 	DEBUG("Filling cards ComboBox");
 
-	active_card = audio_get_card();
+	active_card = audio_get_card(audio);
+
+ 	DEBUG("card name: %s", active_card);
+
 	card_list = audio_get_card_list();
+
 
 	/* Empty the combo box */
 	gtk_combo_box_text_remove_all(combo);
@@ -394,6 +400,24 @@ on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
 }
 #endif
 
+static void
+on_audio_changed(Audio *audio, AudioEvent *event, gpointer data)
+{
+	PrefsWindow *window = (PrefsWindow *) data;
+	GtkComboBoxText *card_combo = GTK_COMBO_BOX_TEXT(window->card_combo);
+	GtkComboBoxText *chan_combo = GTK_COMBO_BOX_TEXT(window->chan_combo);
+
+	switch (event->signal) {
+	case AUDIO_CARD_INITIALIZED:
+	case AUDIO_CARD_CLEANED_UP:
+		/* A card may have appeared or disappeared */
+		fill_card_combo(card_combo, audio);
+		fill_chan_combo(chan_combo, audio_get_card(audio));
+		break;
+	default:
+		break;
+	}
+}
 
 /**
  * Callback function when the ok_button (GtkButton) of the
@@ -642,8 +666,9 @@ populate_window_values(PrefsWindow *window)
 	 prefs_get_boolean("SystemTheme", FALSE));
 
 	// fill in card & channel combo boxes
-	fill_card_combo(GTK_COMBO_BOX_TEXT(window->card_combo));
-	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo), audio_get_card());
+	fill_card_combo(GTK_COMBO_BOX_TEXT(window->card_combo), window->audio);
+	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo),
+	                audio_get_card(window->audio));
 
 	// normalize volume
 	gtk_toggle_button_set_active
@@ -754,13 +779,16 @@ prefs_window_destroy(PrefsWindow *window)
 }
 
 static PrefsWindow *
-prefs_window_create(void)
+prefs_window_create(Audio *audio)
 {
 	gchar *uifile = NULL;
 	GtkBuilder *builder = NULL;
 	PrefsWindow *window;
 
 	window = g_new0(PrefsWindow, 1);
+
+	/* Save that at first (it's used when populating widgets) */
+	window->audio = audio;
 
 	/* Build UI file */
 	uifile = get_ui_file(PREFS_UI_FILE);
@@ -838,8 +866,11 @@ prefs_window_create(void)
 	/* Configure some widgets */
 	populate_window_values(window);
 
-	/* Connect signals */
+	/* Connect ui signal handlers */
 	gtk_builder_connect_signals(builder, window);
+
+	/* Connect audio signal handlers */
+	audio_signals_connect(audio, on_audio_changed, window);
 
 	/* Cleanup */
 	g_object_unref(G_OBJECT(builder));
@@ -868,12 +899,15 @@ on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
 	/* Save preferences to file */
 	prefs_save();
 
-	/* Make it effective */
-	apply_prefs();
+	/* Disconnect audio signals */
+	audio_signals_disconnect(window->audio, on_audio_changed, window);
 
 	/* Destroy the window */
 	prefs_window_destroy(instance);
 	instance = NULL;
+
+	/* Make it effective */
+	apply_prefs();
 }
 
 /**
@@ -926,13 +960,13 @@ on_prefs_window_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
  * Creates the preferences window and display it.
  */
 void
-prefs_window_open(void)
+prefs_window_open(Audio *audio)
 {
 	/* Only one instance at a time */
 	if (instance)
 		return;
 
-	instance = prefs_window_create();
+	instance = prefs_window_create(audio);
 	prefs_window_show(instance);
 }
 

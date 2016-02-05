@@ -17,8 +17,12 @@
 #ifndef HOTKEYS_H_
 #define HOTKEYS_H_
 
-void hotkeys_init(void);
-void hotkeys_cleanup(void);
-void hotkeys_reload_prefs(void);
+#include "audio.h"
+
+typedef struct hotkeys Hotkeys;
+
+Hotkeys *hotkeys_new(Audio *audio);
+void hotkeys_free(Hotkeys *hotkeys);
+void hotkeys_reload_prefs(Hotkeys *hotkeys);
 
 #endif				// HOTKEYS_H

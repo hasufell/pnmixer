@@ -28,8 +28,14 @@ AlsaCard *alsa_card_new_from_name(gboolean normalize, const char *card);
 AlsaCard *alsa_card_new_from_list(gboolean normalize, GSList *card_list);
 void alsa_card_free(AlsaCard *card);
 
-typedef void (*AlsaValuesChangedCb)(gboolean muted, gdouble volume);
-void alsa_card_set_values_changed_callback(AlsaCard *card, AlsaValuesChangedCb cb);
+enum alsa_event {
+	ALSA_CARD_ERROR,
+	ALSA_CARD_DISCONNECTED,
+	ALSA_CARD_VALUES_CHANGED
+};
+
+typedef void (*AlsaCb) (enum alsa_event event, gpointer data);
+void alsa_card_install_callback(AlsaCard *card, AlsaCb callback, gpointer data);
 
 const char *alsa_card_get_name(AlsaCard *card);
 const char *alsa_card_get_channel(AlsaCard *card);
