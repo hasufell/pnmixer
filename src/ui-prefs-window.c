@@ -144,11 +144,7 @@ fill_card_combo(GtkComboBoxText *combo, Audio *audio)
 	DEBUG("Filling cards ComboBox");
 
 	active_card = audio_get_card(audio);
-
- 	DEBUG("card name: %s", active_card);
-
 	card_list = audio_get_card_list();
-
 
 	/* Empty the combo box */
 	gtk_combo_box_text_remove_all(combo);
@@ -228,10 +224,6 @@ struct prefs_window {
 	GtkWidget *noti_vbox_disabled;
 #endif
 };
-
-typedef struct prefs_window PrefsWindow;
-
-static PrefsWindow *instance;
 
 /**
  * Handles the 'toggled' signal on the GtkCheckButton 'vol_text_check'.
@@ -435,8 +427,8 @@ on_audio_changed(Audio *audio, AudioEvent *event, gpointer data)
  * @param button the object that received the signal
  * @param window struct holding the GtkWidgets of the preferences windows
  */
-static void
-retrieve_window_values(PrefsWindow *window)
+void
+prefs_dialog_retrieve(PrefsWindow *window)
 {
 	DEBUG("Retrieving prefs window values");
 
@@ -597,8 +589,8 @@ retrieve_window_values(PrefsWindow *window)
 #endif
 }
 
-static void
-populate_window_values(PrefsWindow *window)
+void
+prefs_dialog_populate(PrefsWindow *window)
 {
 	gdouble *vol_meter_clrs;
 	gchar *slider_orientation, *vol_cmd, *custcmd;
@@ -676,8 +668,13 @@ populate_window_values(PrefsWindow *window)
 
 	// fill in card & channel combo boxes
 	fill_card_combo(GTK_COMBO_BOX_TEXT(window->card_combo), window->audio);
+#ifdef GTK3
+	/* On Gtk3, refilling the card combo doesn't emit a 'changed' signal,
+	 * therefore we must refill channel combo explicitely.
+	 */
 	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo),
 	                audio_get_card(window->audio));
+#endif
 
 	// normalize volume
 	gtk_toggle_button_set_active
@@ -772,25 +769,32 @@ populate_window_values(PrefsWindow *window)
 #endif
 }
 
-/* Private functions */
+/* Public functions */
 
-static void
-prefs_window_show(PrefsWindow *window)
+gint
+prefs_dialog_run(PrefsWindow *window)
 {
-	gtk_widget_show(window->prefs_window);
+	GtkDialog *prefs_dialog = GTK_DIALOG(window->prefs_window);
+	gint resp;
+
+	resp = gtk_dialog_run(prefs_dialog);
+
+	return resp;
 }
 
-static void
-prefs_window_destroy(PrefsWindow *window)
+void
+prefs_dialog_destroy(PrefsWindow *window)
 {
+	audio_signals_disconnect(window->audio, on_audio_changed, window);
+
 	if (window->hotkey_dialog)
 		hotkey_dialog_destroy(window->hotkey_dialog);
 	gtk_widget_destroy(window->prefs_window);
 	g_free(window);
 }
 
-static PrefsWindow *
-prefs_window_create(Audio *audio)
+PrefsWindow *
+prefs_dialog_create(GtkWindow *parent, Audio *audio)
 {
 	gchar *uifile = NULL;
 	GtkBuilder *builder = NULL;
@@ -798,14 +802,11 @@ prefs_window_create(Audio *audio)
 
 	window = g_new0(PrefsWindow, 1);
 
-	/* Save that at first (it's used when populating widgets) */
-	window->audio = audio;
-
 	/* Build UI file */
 	uifile = ui_get_builder_file(PREFS_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG("Building prefs window from ui file '%s'", uifile);
+	DEBUG("Building from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Append the notification page.
@@ -874,13 +875,14 @@ prefs_window_create(Audio *audio)
 	assign_gtk_widget(builder, window, noti_vbox_disabled);
 #endif
 
-	/* Configure some widgets */
-	populate_window_values(window);
+	/* Set transient parent */
+	gtk_window_set_transient_for(GTK_WINDOW(window->prefs_window), parent);
 
 	/* Connect ui signal handlers */
 	gtk_builder_connect_signals(builder, window);
 
 	/* Connect audio signal handlers */
+	window->audio = audio;
 	audio_signals_connect(audio, on_audio_changed, window);
 
 	/* Cleanup */
@@ -889,6 +891,8 @@ prefs_window_create(Audio *audio)
 
 	return window;
 }
+
+#if 0
 
 /* Ok & Cancel signal handlers */
 
@@ -965,19 +969,4 @@ on_prefs_window_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
 	return FALSE;
 }
 
-/* Public functions */
-
-/**
- * Creates the preferences window and display it.
- */
-void
-prefs_window_open(Audio *audio)
-{
-	/* Only one instance at a time */
-	if (instance)
-		return;
-
-	instance = prefs_window_create(audio);
-	prefs_window_show(instance);
-}
-
+#endif

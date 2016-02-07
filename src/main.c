@@ -32,12 +32,14 @@
 #include "prefs.h"
 #include "support-intl.h"
 #include "ui-support.h"
+#include "ui-about-dialog.h"
 #include "ui-prefs-window.h"
 #include "ui-popup-menu.h"
 #include "ui-popup-window.h"
 #include "ui-tray-icon.h"
 
-GtkWindow *main_window;
+/* Life-long instances */
+static GtkWindow *main_window;
 
 static Audio *audio;
 static PopupMenu *popup_menu;
@@ -46,7 +48,9 @@ static TrayIcon *tray_icon;
 static Hotkeys *hotkeys;
 static Notif *notif;
 
-
+/* Temporary instances */
+static PrefsWindow *prefs_dialog;
+static AboutDialog *about_dialog;
 
 /**
  * Runs a given command via g_spawn_command_line_async().
@@ -61,9 +65,49 @@ run_command(const gchar *cmd)
 	g_assert(cmd != NULL);
 
 	if (g_spawn_command_line_async(cmd, &error) == FALSE) {
-		ui_report_error(_("Unable to run command: %s"), error->message);
+		run_error_dialog(_("Unable to run command: %s"), error->message);
 		g_error_free(error);
 		error = NULL;
+	}
+}
+
+/**
+ * Opens the specified mixer application which can be triggered either
+ * by clicking the 'Volume Control' GtkImageMenuItem in the context
+ * menu, the GtkButton 'Mixer' in the left-click popup_window or
+ * by middle-click if the Middle Click Action in the preferences
+ * is set to 'Volume Control'.
+ */
+void
+run_mixer_command(void)
+{
+	gchar *cmd;
+
+	cmd = prefs_get_vol_command();
+
+	if (cmd) {
+		run_command(cmd);
+		g_free(cmd);
+	} else {
+		run_error_dialog(_("No mixer application was found on your system. "
+		                  "Please open preferences and set the command you want "
+		                  "to run for volume control."));
+	}
+}
+
+void
+run_custom_command(void)
+{
+	gchar *cmd;
+
+	cmd = prefs_get_string("CustomCommand", NULL);
+
+	if (cmd) {
+		run_command(cmd);
+		g_free(cmd);
+	} else {
+		run_error_dialog(_("You have not specified a custom command to run, "
+		                  "please specify one in preferences."));
 	}
 }
 
@@ -74,9 +118,141 @@ run_command(const gchar *cmd)
  * is set to 'Show Preferences'.
  */
 void
-do_open_prefs(void)
+run_prefs_dialog(void)
 {
-	prefs_window_open(audio);
+	gint resp;
+
+	/* Ensure there's no dialog already running */
+	if (prefs_dialog)
+		return;
+
+	/* Create the preferences dialog */
+	prefs_dialog = prefs_dialog_create(main_window, audio);
+	prefs_dialog_populate(prefs_dialog);
+
+	/* Run it */
+	resp = prefs_dialog_run(prefs_dialog);
+	if (resp == GTK_RESPONSE_OK)
+		prefs_dialog_retrieve(prefs_dialog);
+
+	/* Destroy it */
+	prefs_dialog_destroy(prefs_dialog);
+	prefs_dialog = NULL;
+
+	/* Now apply the new preferences.
+	 * It's safer to do that after destroying the preference dialog,
+	 * since it listens for some audio signals that will be emitted
+	 * while new prefs are applied.
+	 */
+	if (resp == GTK_RESPONSE_OK) {
+		/* Audio preferences */
+		audio_reload_prefs(audio);
+
+		/* Notifications preferences */
+		notif_reload_prefs(notif);
+
+		/* Hotkeys preferences */
+		hotkeys_reload_prefs(hotkeys);
+
+		/* Popup window, rebuild it from scratch. This is needed in case
+		 * the slider orientation was modified.
+		 */
+		popup_window_destroy(popup_window);
+		popup_window = popup_window_create(audio);
+
+		/* Tray icon preferences */
+		tray_icon_reload_prefs(tray_icon);
+
+		/* Reload audio */
+		do_reload_audio();
+
+		/* Save preferences to file */
+		prefs_save();
+	}
+}
+
+void
+run_about_dialog(void)
+{
+	/* Ensure there's no dialog already running */
+	if (about_dialog)
+		return;
+
+	/* Run the about dialog */
+	about_dialog = about_dialog_create(main_window);
+	about_dialog_run(about_dialog);
+	about_dialog_destroy(about_dialog);
+	about_dialog = NULL;
+}
+
+
+/**
+ * Reports an error, usually via a dialog window or on stderr.
+ *
+ * @param err the error
+ * @param ... more string segments in the format of printf
+ */
+void
+run_error_dialog(char *fmt, ...)
+{
+	va_list ap;
+	char err_buf[512];
+
+	va_start(ap, fmt);
+	vsnprintf(err_buf, sizeof err_buf, fmt, ap);
+	va_end(ap);
+
+	ERROR("%s", err_buf);
+
+	if (main_window) {
+		GtkWidget *dialog = gtk_message_dialog_new(main_window,
+				    GTK_DIALOG_DESTROY_WITH_PARENT,
+				    GTK_MESSAGE_ERROR,
+				    GTK_BUTTONS_CLOSE,
+				    NULL);
+		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+		g_object_set(dialog, "text", err_buf, NULL);
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(dialog);
+	}
+}
+
+/**
+ * Emits a warning if the sound connection is lost, usually
+ * via a dialog window (with option to reinitialize alsa) or stderr.
+ * Also reload alsa.
+ */
+gint
+run_audio_error_dialog(void)
+{
+	GtkWidget *dialog;
+	gint resp;
+
+	ERROR("Connection with audio failed, "
+	      "you probably need to restart pnmixer");
+
+	if (!main_window)
+		return GTK_RESPONSE_NO;
+
+	dialog = gtk_message_dialog_new
+		(main_window,
+		 GTK_DIALOG_DESTROY_WITH_PARENT,
+		 GTK_MESSAGE_ERROR,
+		 GTK_BUTTONS_YES_NO,
+		 _("Warning: Connection to sound system failed."));
+
+	gtk_message_dialog_format_secondary_text
+		(GTK_MESSAGE_DIALOG(dialog),
+		 _("Do you want to re-initialize the audio connection ?\n\n"
+		   "If you do not, you will either need to restart PNMixer "
+		   "or select the 'Reload Audio' option in the right-click "
+		   "menu in order for PNMixer to function."));
+
+	gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+	resp = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+
+	return resp;
 }
 
 void
@@ -92,81 +268,11 @@ do_show_popup_menu(GtkMenuPositionFunc func, gpointer data, guint button, guint 
 	popup_menu_show(popup_menu, func, data, button, activate_time);
 }
 
-/**
- * Opens the specified mixer application which can be triggered either
- * by clicking the 'Volume Control' GtkImageMenuItem in the context
- * menu, the GtkButton 'Mixer' in the left-click popup_window or
- * by middle-click if the Middle Click Action in the preferences
- * is set to 'Volume Control'.
- */
-void
-do_mixer(void)
-{
-	gchar *cmd;
-
-	cmd = prefs_get_vol_command();
-
-	if (cmd) {
-		run_command(cmd);
-		g_free(cmd);
-	} else
-		ui_report_error(_("No mixer application was found on your system. "
-		                  "Please open preferences and set the command you want "
-		                  "to run for volume control."));
-}
-
-void
-do_custom_command(void)
-{
-	gchar *cmd;
-
-	cmd = prefs_get_string("CustomCommand", NULL);
-
-	if (cmd) {
-		run_command(cmd);
-		g_free(cmd);
-	} else
-		ui_report_error(_("You have not specified a custom command to run, "
-		                  "please specify one in preferences."));
-}
-
 void
 do_reload_audio(void)
 {
 	audio_unhook_soundcard(audio);
 	audio_hook_soundcard(audio);
-}
-
-
-/**
- * Applies the preferences, usually triggered by on_ok_button_clicked()
- * in callbacks.c, but also initially called from main().
- *
- * @param alsa_change whether we want to trigger alsa-reinitalization
- */
-void
-apply_prefs(void)
-{
-	/* Audio */
-	audio_reload_prefs(audio);
-
-	/* Notifications preferences */
-	notif_reload_prefs(notif);
-
-	/* Hotkeys preferences */
-	hotkeys_reload_prefs(hotkeys);
-
-	/* Popup window, rebuild it from scratch. This is needed in case
-	 * the slider orientation was modified.
-	 */
-	popup_window_destroy(popup_window);
-	popup_window = popup_window_create(audio);
-
-	/* Tray icon, reload */
-	tray_icon_reload_prefs(tray_icon);
-
-	/* Reload audio */
-	do_reload_audio();
 }
 
 static void
@@ -177,7 +283,7 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, G_GNUC_UNUSED gp
 		do_reload_audio();
 		break;
 	case AUDIO_CARD_ERROR:
-		if (ui_run_audio_error_dialog() == GTK_RESPONSE_YES)
+		if (run_audio_error_dialog() == GTK_RESPONSE_YES)
 			do_reload_audio();
 		break;
 	default:
@@ -211,9 +317,7 @@ static GOptionEntry args[] = {
 int
 main(int argc, char *argv[])
 {
-	GError *error = NULL;
 	GOptionContext *context;
-	want_debug = FALSE;
 
 	/* Init internationalization stuff */
 	intl_init();
@@ -222,7 +326,7 @@ main(int argc, char *argv[])
 	context = g_option_context_new(_("- A mixer for the system tray."));
 	g_option_context_add_main_entries(context, args, GETTEXT_PACKAGE);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
-	g_option_context_parse(context, &argc, &argv, &error);
+	g_option_context_parse(context, &argc, &argv, NULL);
 	g_option_context_free(context);
 
 	/* Print version and exit */
@@ -257,7 +361,7 @@ main(int argc, char *argv[])
 	/* Init the notifications system */
 	notif = notif_new(audio);
 	if (!notif)
-		ui_report_error("Unable to initialize libnotify. "
+		run_error_dialog("Unable to initialize libnotify. "
 		                "Notifications won't be sent.");
 
 	/* Connect audio signals handlers */

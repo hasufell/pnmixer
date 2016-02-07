@@ -54,6 +54,7 @@
 
 #ifndef WITH_GTK3
 GtkBuilder *gtk_builder_new_from_file (const gchar *filename);
+void gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box);
 #endif
 
 /*
@@ -61,13 +62,5 @@ GtkBuilder *gtk_builder_new_from_file (const gchar *filename);
  */
 
 gchar *ui_get_builder_file(const char *filename);
-
-/*
- * UI create windows in one-call !
- */
-
-void ui_report_error(char *, ...);
-gint ui_run_audio_error_dialog(void);
-void ui_run_about_dialog(void);
 
 #endif				// _UI_SUPPORT_H_

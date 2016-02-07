@@ -116,7 +116,7 @@ create_pixbuf(const gchar *filename)
 
 	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
 	if (!pixbuf) {
-		ui_report_error(_("Failed to load pixbuf file: %s: %s"),
+		run_error_dialog(_("Failed to load pixbuf file: %s: %s"),
 		                pathname, error->message);
 		g_error_free(error);
 	}
@@ -486,13 +486,13 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
 		audio_toggle_mute(icon->audio, AUDIO_USER_TRAY_ICON);
 		break;
 	case 1:
-		do_open_prefs();
+		run_prefs_dialog();
 		break;
 	case 2:
-		do_mixer();
+		run_mixer_command();
 		break;
 	case 3:
-		do_custom_command();
+		run_custom_command();
 		break;
 	default: {
 	}	// nothing

@@ -230,7 +230,7 @@ void
 on_mixer_button_clicked(G_GNUC_UNUSED GtkButton *button, PopupWindow *window)
 {
 	popup_window_hide(window);
-	do_mixer();
+	run_mixer_command();
 }
 
 static void
@@ -373,7 +373,7 @@ popup_window_create(Audio *audio)
 		uifile = ui_get_builder_file(POPUP_WINDOW_VERTICAL_UI_FILE);
 	g_free(orientation);
 
-	DEBUG("Building popup window from ui file '%s'", uifile);
+	DEBUG("Building from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */

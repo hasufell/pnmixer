@@ -19,6 +19,13 @@
 
 #include "audio.h"
 
-void prefs_window_open(Audio *audio);
+typedef struct prefs_window PrefsWindow;
+
+PrefsWindow *prefs_dialog_create(GtkWindow *parent, Audio *audio);
+void prefs_dialog_destroy(PrefsWindow *dialog);
+gint prefs_dialog_run(PrefsWindow *dialog);
+
+void prefs_dialog_populate(PrefsWindow *dialog);
+void prefs_dialog_retrieve(PrefsWindow *dialog);
 
 #endif				// _UI_PREFS_WINDOW_H_

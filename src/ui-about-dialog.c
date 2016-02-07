@@ -64,7 +64,7 @@ about_dialog_create(GtkWindow *parent)
 	uifile = ui_get_builder_file(ABOUT_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG("Building about dialog from ui file '%s'", uifile);
+	DEBUG("Building from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */

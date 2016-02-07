@@ -117,7 +117,7 @@ void
 on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 		       G_GNUC_UNUSED PopupMenu *menu)
 {
-	do_mixer();
+	run_mixer_command();
 }
 
 /**
@@ -130,7 +130,7 @@ void
 on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 		       G_GNUC_UNUSED PopupMenu *menu)
 {
-	do_open_prefs();
+	run_prefs_dialog();
 }
 
 /**
@@ -156,7 +156,7 @@ void
 on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 		       G_GNUC_UNUSED PopupMenu *menu)
 {
-	ui_run_about_dialog();
+	run_about_dialog();
 }
 
 static void
@@ -222,7 +222,7 @@ popup_menu_create(Audio *audio)
 	uifile = ui_get_builder_file(POPUP_MENU_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG("Building popup menu from ui file '%s'", uifile);
+	DEBUG("Building from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */

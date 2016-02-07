@@ -15,12 +15,12 @@
     <signal name="key-press-event" handler="on_hotkey_dialog_key_press_event" swapped="no"/>
     <signal name="key-release-event" handler="on_hotkey_dialog_key_release_event" swapped="no"/>
     <child internal-child="vbox">
-      <object class="GtkBox" id="dialog-vbox3">
+      <object class="GtkBox" id="dialog-vbox1">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">2</property>
         <child internal-child="action_area">
-          <object class="GtkButtonBox" id="dialog-action_area3">
+          <object class="GtkButtonBox" id="dialog-action_area1">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="layout_style">end</property>
@@ -48,7 +48,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label30">
+                      <object class="GtkLabel" id="label2">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="margin_start">5</property>
@@ -98,12 +98,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkBox" id="vbox6">
+              <object class="GtkBox" id="vbox1">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkLabel" id="label22">
+                  <object class="GtkLabel" id="label1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="label" translatable="yes">Defining HotKey</property>

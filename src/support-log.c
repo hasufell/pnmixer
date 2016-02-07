@@ -25,4 +25,4 @@
  * '--debug'/'-d' command line argument.
  */
 
-gboolean want_debug;
+gboolean want_debug = FALSE;

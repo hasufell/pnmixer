@@ -27,6 +27,8 @@
 #include "ui-support.h"
 #include "ui-hotkey-dialog.h"
 
+#include "main.h"
+
 #ifdef WITH_GTK3
 #define HOTKEY_DIALOG_UI_FILE "hotkey-dialog-gtk3.glade"
 #else
@@ -141,7 +143,7 @@ hotkey_dialog_run(HotkeyDialog *dialog)
 #endif
 
 	if (grab_status != GDK_GRAB_SUCCESS) {
-		ui_report_error(_("Could not grab the keyboard."));
+		run_error_dialog(_("Could not grab the keyboard."));
 		return NULL;
 	}
 
@@ -185,7 +187,7 @@ hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 	uifile = ui_get_builder_file(HOTKEY_DIALOG_UI_FILE);
 	g_assert(uifile);
 
-	DEBUG("Building hotkey dialog from ui file '%s'", uifile);
+	DEBUG("Building from ui file '%s'", uifile);
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */

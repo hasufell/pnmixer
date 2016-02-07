@@ -24,7 +24,6 @@
 
 #include "main.h"
 
-static AboutDialog *about_dialog;
 
 
 #ifndef WITH_GTK3
@@ -39,6 +38,17 @@ gtk_builder_new_from_file (const gchar *filename)
 		g_error ("failed to add UI: %s", error->message);
 
 	return builder;
+}
+
+void
+gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box)
+{
+	GtkListStore *store;
+
+	g_return_if_fail(GTK_IS_COMBO_BOX_TEXT(combo_box));
+
+	store = GTK_LIST_STORE(gtk_combo_box_get_model(GTK_COMBO_BOX(combo_box)));
+	gtk_list_store_clear(store);
 }
 #endif
 
@@ -64,88 +74,5 @@ ui_get_builder_file(const char *filename)
 		return path;
 	g_free(path);
 	return NULL;
-}
-
-/**
- * Reports an error, usually via a dialog window or on stderr.
- *
- * @param err the error
- * @param ... more string segments in the format of printf
- */
-void
-ui_report_error(char *fmt, ...)
-{
-	va_list ap;
-	char err_buf[512];
-
-	va_start(ap, fmt);
-	vsnprintf(err_buf, sizeof err_buf, fmt, ap);
-	va_end(ap);
-
-	ERROR("%s", err_buf);
-
-	if (main_window) {
-		GtkWidget *dialog = gtk_message_dialog_new(main_window,
-				    GTK_DIALOG_DESTROY_WITH_PARENT,
-				    GTK_MESSAGE_ERROR,
-				    GTK_BUTTONS_CLOSE,
-				    NULL);
-		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-		g_object_set(dialog, "text", err_buf, NULL);
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-	}
-}
-
-/**
- * Emits a warning if the sound connection is lost, usually
- * via a dialog window (with option to reinitialize alsa) or stderr.
- * Also reload alsa.
- */
-gint
-ui_run_audio_error_dialog(void)
-{
-	GtkWidget *dialog;
-	gint resp;
-
-	ERROR("Connection with audio failed, "
-	      "you probably need to restart pnmixer");
-
-	if (!main_window)
-		return GTK_RESPONSE_NO;
-
-	dialog = gtk_message_dialog_new
-		(main_window,
-		 GTK_DIALOG_DESTROY_WITH_PARENT,
-		 GTK_MESSAGE_ERROR,
-		 GTK_BUTTONS_YES_NO,
-		 _("Warning: Connection to sound system failed."));
-
-	gtk_message_dialog_format_secondary_text
-		(GTK_MESSAGE_DIALOG(dialog),
-		 _("Do you want to re-initialize the audio connection ?\n\n"
-		   "If you do not, you will either need to restart PNMixer "
-		   "or select the 'Reload Audio' option in the right-click "
-		   "menu in order for PNMixer to function."));
-
-	gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-	resp = gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-
-	return resp;
-}
-
-void
-ui_run_about_dialog(void)
-{
-	/* Ensure there's no dialog already running */
-	if (about_dialog)
-		return;
-
-	/* Run the abut dialog */
-	about_dialog = about_dialog_create(main_window);
-	about_dialog_run(about_dialog);
-	about_dialog_destroy(about_dialog);
-	about_dialog = NULL;
 }
 
