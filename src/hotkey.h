@@ -14,8 +14,8 @@
  * @brief header for hotkey.c
  */
 
-#ifndef HOTKEY_H_
-#define HOTKEY_H_
+#ifndef _HOTKEY_H_
+#define _HOTKEY_H_
 
 #include <gdk/gdkx.h>
 
@@ -38,4 +38,4 @@ gboolean hotkey_matches(Hotkey *hotkey, guint code, GdkModifierType mods);
 gchar *hotkey_code_to_accel(guint code, GdkModifierType mods);
 void hotkey_accel_to_code(const gchar *accel, gint *code, GdkModifierType *mods);
 
-#endif				// HOTKEY_H
+#endif				// _HOTKEY_H

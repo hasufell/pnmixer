@@ -14,8 +14,8 @@
  * @brief header for ui-popup-menu.c
  */
 
-#ifndef UI_POPUP_MENU_H_
-#define UI_POPUP_MENU_H_
+#ifndef _UI_POPUP_MENU_H_
+#define _UI_POPUP_MENU_H_
 
 #include "audio.h"
 
@@ -23,8 +23,7 @@ typedef struct popup_menu PopupMenu;
 
 PopupMenu *popup_menu_create(Audio *audio);
 void popup_menu_destroy(PopupMenu *menu);
-void popup_menu_update(PopupMenu *menu);
 void popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
 		     guint button, guint activate_time);
 
-#endif				// UI_POPUP_MENU_H_
+#endif				// _UI_POPUP_MENU_H_

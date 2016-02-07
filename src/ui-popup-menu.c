@@ -23,7 +23,9 @@
 #include <gtk/gtk.h>
 
 #include "audio.h"
-#include "support.h"
+#include "support-log.h"
+#include "support-intl.h"
+#include "ui-support.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
 
@@ -35,7 +37,50 @@
 #define POPUP_MENU_UI_FILE "popup-menu-gtk2.glade"
 #endif
 
+/* Helpers */
+
+#ifdef WITH_GTK3
+
+/* Updates the mute checkbox according to the current audio state. */
+static void
+update_mute_check(GtkToggleButton *mute_check, gboolean active)
+{
+	/* On Gtk3 version, we listen for the signal sent by the GtkMenuItem.
+	 * So, when we change the value of the GtkToggleButton, we don't have
+	 * to block the signal handlers, since there's nobody listening to the
+	 * GtkToggleButton anyway.
+	 */
+	gtk_toggle_button_set_active(mute_check, active);
+}
+
+#else
+
+/* Updates the mute item according to the current audio state. */
+static void
+update_mute_item(GtkCheckMenuItem *mute_item, GCallback handler_func,
+                 gpointer handler_data, gboolean active)
+{
+	/* On Gtk2 version, we must block the signals sent by the GtkCheckMenuItem
+	 * before we update it manually.
+	 */
+	gint n_handlers_blocked;
+
+	n_handlers_blocked = g_signal_handlers_block_by_func
+			     (G_OBJECT(mute_item), handler_func, handler_data);
+	g_assert(n_handlers_blocked == 1);
+
+	gtk_check_menu_item_set_active(mute_item, active);
+
+	g_signal_handlers_unblock_by_func
+	(G_OBJECT(mute_item), handler_func, handler_data);
+}
+
+#endif
+
+/* Public functions & signal handlers */
+
 struct popup_menu {
+	/* Audio system */
 	Audio *audio;
 	GtkWidget *menu;
 #ifdef WITH_GTK3
@@ -44,48 +89,6 @@ struct popup_menu {
 	GtkWidget *mute_item;
 #endif
 };
-
-#ifndef WITH_GTK3
-void on_mute_item_activate(GtkCheckMenuItem *menuitem, PopupMenu *menu);
-#endif
-
-/* Helpers */
-
-/* Updates the mute checkbox according to the current audio state. */
-static void
-update_mute_check(PopupMenu *menu, gboolean active)
-{
-#ifdef WITH_GTK3
-	/* On Gtk3 version, we listen for the signal sent by the GtkMenuItem.
-	 * So, when we change the value of the GtkToggleButton, we don't have
-	 * to block the signal handler, since there's no signal handler anyway
-	 * on the GtkToggleButton.
-	 */
-	GtkToggleButton *mute_check;
-
-	mute_check = GTK_TOGGLE_BUTTON(menu->mute_check);
-	gtk_toggle_button_set_active(mute_check, active);
-#else
-	/* On Gtk2 version, we must block the signal sent by the GtkCheckMenuItem
-	 * before we update it manually.
-	 */
-	GtkCheckMenuItem *mute_item;
-	gint n_handlers_blocked;
-
-	mute_item = GTK_CHECK_MENU_ITEM(menu->mute_item);
-
-	n_handlers_blocked = g_signal_handlers_block_by_func
-			     (G_OBJECT(mute_item), on_mute_item_activate, menu);
-	g_assert(n_handlers_blocked == 1);
-
-	gtk_check_menu_item_set_active(mute_item, active);
-
-	g_signal_handlers_unblock_by_func
-	(G_OBJECT(mute_item), on_mute_item_activate, menu);
-#endif
-}
-
-/* Signal handlers */
 
 /**
  * Handles a click on 'mute_item', toggling the mute audio state.
@@ -153,17 +156,21 @@ void
 on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 		       G_GNUC_UNUSED PopupMenu *menu)
 {
-	about_dialog_do(main_window);
+	ui_run_about_dialog();
 }
 
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
 	PopupMenu *menu = (PopupMenu *) data;
-	update_mute_check(menu, event->muted);
-}
 
-/* Public functions */
+#ifdef WITH_GTK3
+	update_mute_check(GTK_TOGGLE_BUTTON(menu->mute_check), event->muted);
+#else
+	update_mute_item(GTK_CHECK_MENU_ITEM(menu->mute_item), 
+	                 (GCallback) on_mute_item_activate, menu, event->muted);
+#endif
+}
 
 /**
  * Shows the popup menu.
@@ -183,21 +190,6 @@ popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
 	gtk_menu_popup(GTK_MENU(menu->menu), NULL, NULL,
 		       func, data, button, activate_time);
 }
-
-#if 0
-/**
- * Updates the popup menu according to the audio status.
- * This has to be called after volume has been changed or muted.
- *
- * @param menu a PopupMenu instance.
- */
-void
-popup_menu_update(PopupMenu *menu)
-{
-	gboolean active = audio_is_muted(menu->audio);
-	update_mute_check(menu, active);
-}
-#endif
 
 /**
  * Destroys the popup menu, freeing any resources.
@@ -227,7 +219,7 @@ popup_menu_create(Audio *audio)
 	menu = g_new0(PopupMenu, 1);
 
 	/* Build UI file */
-	uifile = get_ui_file(POPUP_MENU_UI_FILE);
+	uifile = ui_get_builder_file(POPUP_MENU_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building popup menu from ui file '%s'", uifile);

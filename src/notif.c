@@ -24,7 +24,9 @@
 
 #include "audio.h"
 #include "prefs.h"
-#include "support.h"
+#include "support-log.h"
+#include "support-intl.h"
+#include "support-log.h"
 #include "notif.h"
 
 #ifdef HAVE_LIBN

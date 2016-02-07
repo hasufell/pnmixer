@@ -14,11 +14,15 @@
  * @brief header for ui-hotkey-dialog.c
  */
 
-#ifndef UI_HOTKEY_DIALOG_H_
-#define UI_HOTKEY_DIALOG_H_
+#ifndef _UI_HOTKEY_DIALOG_H_
+#define _UI_HOTKEY_DIALOG_H_
 
 #include <gtk/gtk.h>
 
-gchar *hotkey_dialog_do(GtkWindow *parent, const gchar *hotkey);
+typedef struct hotkey_dialog HotkeyDialog;
 
-#endif				// UI_HOTKEY_DIALOG_H_
+HotkeyDialog *hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey);
+void hotkey_dialog_destroy(HotkeyDialog *dialog);
+gchar *hotkey_dialog_run(HotkeyDialog *dialog);
+
+#endif				// _UI_HOTKEY_DIALOG_H_

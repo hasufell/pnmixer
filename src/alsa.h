@@ -14,8 +14,8 @@
  * @brief header for alsa.c
  */
 
-#ifndef ALSA_H_
-#define ALSA_H_
+#ifndef _ALSA_H_
+#define _ALSA_H_
 
 #include <glib.h>
 
@@ -44,4 +44,4 @@ void alsa_card_set_volume(AlsaCard *card, gdouble value, int dir);
 gboolean alsa_card_is_muted(AlsaCard *card);
 void alsa_card_toggle_mute(AlsaCard *card);
 
-#endif				// ALSA_H_
+#endif				// _ALSA_H_

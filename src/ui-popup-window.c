@@ -28,7 +28,8 @@
 
 #include "audio.h"
 #include "prefs.h"
-#include "support.h"
+#include "support-log.h"
+#include "ui-support.h"
 #include "ui-popup-window.h"
 
 #include "main.h"
@@ -40,16 +41,6 @@
 #define POPUP_WINDOW_HORIZONTAL_UI_FILE "popup-window-horizontal-gtk2.glade"
 #define POPUP_WINDOW_VERTICAL_UI_FILE   "popup-window-vertical-gtk2.glade"
 #endif
-
-struct popup_window {
-	Audio *audio;
-	GtkWidget *popup_window;
-	GtkWidget *vol_scale;
-	GtkAdjustment *vol_scale_adj;
-	GtkWidget *mute_check;
-};
-
-void on_mute_check_toggled(GtkToggleButton *button, PopupWindow *window);
 
 /* Helpers */
 
@@ -98,31 +89,37 @@ configure_vol_increment(GtkAdjustment *vol_scale_adj)
 
 /* Update the mute checkbox according to the current audio state. */
 static void
-update_mute_check(PopupWindow *window, gboolean muted)
+update_mute_check(GtkToggleButton *mute_check, GCallback handler_func,
+                  gpointer handler_data, gboolean muted)
 {
-	GtkToggleButton *mute_check;
 	gint n_handlers_blocked;
 
-	mute_check = GTK_TOGGLE_BUTTON(window->mute_check);
-
 	n_handlers_blocked = g_signal_handlers_block_by_func
-			     (G_OBJECT(mute_check), on_mute_check_toggled, window);
+			     (G_OBJECT(mute_check), handler_func, handler_data);
 	g_assert(n_handlers_blocked == 1);
 
 	gtk_toggle_button_set_active(mute_check, muted);
 
 	g_signal_handlers_unblock_by_func
-	(G_OBJECT(mute_check), on_mute_check_toggled, window);
+	(G_OBJECT(mute_check), handler_func, handler_data);
 }
 
 /* Update the volume slider according to the current audio state. */
 static void
-update_volume_slider(PopupWindow *window, gdouble volume)
+update_volume_slider(GtkAdjustment *vol_scale_adj, gdouble volume)
 {
-	gtk_adjustment_set_value(window->vol_scale_adj, volume);
+	gtk_adjustment_set_value(vol_scale_adj, volume);
 }
 
-/* Signal handlers */
+/* Public functions & signal handlers */
+
+struct popup_window {
+	Audio *audio;
+	GtkWidget *popup_window;
+	GtkWidget *vol_scale;
+	GtkAdjustment *vol_scale_adj;
+	GtkWidget *mute_check;
+};
 
 /**
  * Handles 'button-press-event', 'key-press-event' and 'grab-broken-event' signals,
@@ -240,8 +237,10 @@ static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
 	PopupWindow *window = (PopupWindow *) data;
-	update_mute_check(window, event->muted);
-	update_volume_slider(window, event->volume);
+
+	update_mute_check(GTK_TOGGLE_BUTTON(window->mute_check),
+	                  (GCallback) on_mute_check_toggled, window, event->muted);
+	update_volume_slider(window->vol_scale_adj, event->volume);
 }
 
 /* Public functions */
@@ -289,8 +288,7 @@ popup_window_show(PopupWindow *window)
 			    GDK_BUTTON_PRESS_MASK,
 			    NULL,
 			    GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
-		g_warning("Could not grab %s\n",
-			  gdk_device_get_name(pointer_dev));
+		WARN("Could not grab %s\n", gdk_device_get_name(pointer_dev));
 
 	GdkDevice *keyboard_dev = gdk_device_get_associated_device(pointer_dev);
 
@@ -303,8 +301,7 @@ popup_window_show(PopupWindow *window)
 			    TRUE,
 			    GDK_KEY_PRESS_MASK,
 			    NULL, GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
-		g_warning("Could not grab %s\n",
-			  gdk_device_get_name(keyboard_dev));
+		WARN("Could not grab %s\n", gdk_device_get_name(keyboard_dev));
 #else
 	gdk_pointer_grab(gtk_widget_get_window(popup_window), TRUE,
 			 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);
@@ -340,25 +337,6 @@ popup_window_toggle(PopupWindow *window)
 		popup_window_show(window);
 }
 
-#if 0
-/**
- * Updates the popup window according to the audio status.
- * This has to be called after volume has been changed or muted.
- *
- * @param menu a PopupWindow instance.
- */
-void
-popup_window_update(PopupWindow *window)
-{
-	gdouble volume = audio_get_volume(window->audio);
-	gboolean muted = audio_is_muted(window->audio);
-
-	update_mute_check(window, muted);
-	update_volume_slider(window, volume);
-}
-#endif
-
-
 /**
  * Destroys the popup window, freeing any resources.
  *
@@ -390,9 +368,9 @@ popup_window_create(Audio *audio)
 	gchar *orientation;
 	orientation = prefs_get_string("SliderOrientation", "vertical");
 	if (!g_strcmp0(orientation, "horizontal"))
-		uifile = get_ui_file(POPUP_WINDOW_HORIZONTAL_UI_FILE);
+		uifile = ui_get_builder_file(POPUP_WINDOW_HORIZONTAL_UI_FILE);
 	else
-		uifile = get_ui_file(POPUP_WINDOW_VERTICAL_UI_FILE);
+		uifile = ui_get_builder_file(POPUP_WINDOW_VERTICAL_UI_FILE);
 	g_free(orientation);
 
 	DEBUG("Building popup window from ui file '%s'", uifile);

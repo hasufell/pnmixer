@@ -20,28 +20,23 @@
 
 #include <gtk/gtk.h>
 
-#include "support.h"
+#include "support-log.h"
+#include "ui-support.h"
 #include "ui-about-dialog.h"
 
-#include "main.h"
-
 #ifdef WITH_GTK3
-#define ABOUT_UI_FILE      "about-dialog-gtk3.glade"
+#define ABOUT_UI_FILE "about-dialog-gtk3.glade"
 #else
-#define ABOUT_UI_FILE      "about-dialog-gtk2.glade"
+#define ABOUT_UI_FILE "about-dialog-gtk2.glade"
 #endif
+
+/* Public functions */
 
 struct about_dialog {
 	GtkWidget *about_dialog;
 };
 
-typedef struct about_dialog AboutDialog;
-
-static AboutDialog *instance;
-
-/* Helpers */
-
-static void
+void
 about_dialog_run(AboutDialog *dialog)
 {
 	GtkDialog *about_dialog = GTK_DIALOG(dialog->about_dialog);
@@ -49,14 +44,14 @@ about_dialog_run(AboutDialog *dialog)
 	gtk_dialog_run(about_dialog);
 }
 
-static void
+void
 about_dialog_destroy(AboutDialog *dialog)
 {
 	gtk_widget_destroy(dialog->about_dialog);
 	g_free(dialog);
 }
 
-static AboutDialog *
+AboutDialog *
 about_dialog_create(GtkWindow *parent)
 {
 	gchar *uifile;
@@ -66,7 +61,7 @@ about_dialog_create(GtkWindow *parent)
 	dialog = g_new0(AboutDialog, 1);
 
 	/* Build UI file */
-	uifile = get_ui_file(ABOUT_UI_FILE);
+	uifile = ui_get_builder_file(ABOUT_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building about dialog from ui file '%s'", uifile);
@@ -86,24 +81,4 @@ about_dialog_create(GtkWindow *parent)
 	g_free(uifile);
 
 	return dialog;
-}
-
-/* Public functions */
-
-/**
- * Creates the about dialog, run it and destroy it.
- * Only one instance at a time is allowed.
- *
- * @param parent the parent window for this dialog.
- */
-void
-about_dialog_do(GtkWindow *parent)
-{
-	if (instance)
-		return;
-
-	instance = about_dialog_create(parent);
-	about_dialog_run(instance);
-	about_dialog_destroy(instance);
-	instance = NULL;
 }

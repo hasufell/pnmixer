@@ -14,8 +14,8 @@
  * @brief header for ui-tray-icon.c
  */
 
-#ifndef UI_TRAY_ICON_H_
-#define UI_TRAY_ICON_H_
+#ifndef _UI_TRAY_ICON_H_
+#define _UI_TRAY_ICON_H_
 
 #include "audio.h"
 
@@ -26,4 +26,4 @@ void tray_icon_destroy(TrayIcon *tray_icon);
 void tray_icon_reload_prefs(TrayIcon *tray_icon);
 void tray_icon_update(TrayIcon *tray_icon);
 
-#endif				// UI_TRAY_ICON_H_
+#endif				// _UI_TRAY_ICON_H_

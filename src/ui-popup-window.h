@@ -14,8 +14,8 @@
  * @brief header for ui-popup-window.c
  */
 
-#ifndef UI_POPUP_WINDOW_H_
-#define UI_POPUP_WINDOW_H_
+#ifndef _UI_POPUP_WINDOW_H_
+#define _UI_POPUP_WINDOW_H_
 
 #include "audio.h"
 
@@ -23,7 +23,6 @@ typedef struct popup_window PopupWindow;
 
 PopupWindow *popup_window_create(Audio *audio);
 void popup_window_destroy(PopupWindow *window);
-void popup_window_update(PopupWindow *window);
 void popup_window_show(PopupWindow *window);
 void popup_window_hide(PopupWindow *window);
 void popup_window_toggle(PopupWindow *window);
@@ -31,4 +30,4 @@ void popup_window_toggle(PopupWindow *window);
 #include <gtk/gtk.h>
 GtkWindow *popup_window_get_gtk_window(PopupWindow *window);
 
-#endif				// UI_POPUP_WINDOW_H_
+#endif				// _UI_POPUP_WINDOW_H_

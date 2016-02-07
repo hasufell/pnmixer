@@ -14,11 +14,15 @@
  * @brief header for ui-about-dialog.c
  */
 
-#ifndef UI_ABOUT_DIALOG_H_
-#define UI_ABOUT_DIALOG_H_
+#ifndef _UI_ABOUT_DIALOG_H_
+#define _UI_ABOUT_DIALOG_H_
 
 #include <gtk/gtk.h>
 
-void about_dialog_do(GtkWindow *parent);
+typedef struct about_dialog AboutDialog;
 
-#endif				// UI_ABOUT_DIALOG_H_
+AboutDialog *about_dialog_create(GtkWindow *parent);
+void about_dialog_destroy(AboutDialog *dialog);
+void about_dialog_run(AboutDialog *dialog);
+
+#endif				// _UI_ABOUT_DIALOG_H_

@@ -23,7 +23,8 @@
 #include <gdk/gdkx.h>
 #include <X11/XKBlib.h>
 
-#include "support.h"
+#include "support-log.h"
+#include "support-log.h"
 #include "hotkey.h"
 
 // `xmodmap -pm`

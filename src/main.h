@@ -14,8 +14,8 @@
  * @brief header for main.c
  */
 
-#ifndef MAIN_H_
-#define MAIN_H_
+#ifndef _MAIN_H_
+#define _MAIN_H_
 
 #include <gtk/gtk.h>
 
@@ -29,10 +29,6 @@ void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
 			guint button, guint activate_time);
 void do_reload_audio(void);
 
-
-void do_report_error(char *, ...);
-void do_warn_sound_conn_lost(void);
-
 void apply_prefs(void);
 
-#endif				// MAIN_H
+#endif				// _MAIN_H

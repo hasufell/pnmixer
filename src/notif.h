@@ -18,8 +18,8 @@
 #include <config.h>
 #endif
 
-#ifndef NOTIF_H_
-#define NOTIF_H_
+#ifndef _NOTIF_H_
+#define _NOTIF_H_
 
 typedef struct notif Notif;
 
@@ -27,4 +27,4 @@ Notif* notif_new(Audio *audio);
 void notif_free(Notif *notif);
 void notif_reload_prefs(Notif *notif);
 
-#endif				// NOTIF_H_
+#endif				// _NOTIF_H_

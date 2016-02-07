@@ -19,7 +19,7 @@
 #include "audio.h"
 #include "alsa.h"
 #include "prefs.h"
-#include "support.h"
+#include "support-log.h"
 
 /*
  * Audio Closures.

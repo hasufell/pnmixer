@@ -1,4 +1,4 @@
-/* ui-prefs-window.h
+/* support-log.c
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,16 +9,20 @@
  */
 
 /**
- * @file ui-prefs-window.h
- * Header for ui-prefs-window.c, holding public functions and globals.
- * @brief header for ui-prefs-window.c
+ * @file support-log.c
+ * @brief Logging support, should be included by every file.
  */
 
-#ifndef _UI_PREFS_WINDOW_H_
-#define _UI_PREFS_WINDOW_H_
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include "audio.h"
+#include <glib.h>
 
-void prefs_window_open(Audio *audio);
+/**
+ * Global variable to control whether we want debugging.
+ * This variable is initialized in main() and depends on the
+ * '--debug'/'-d' command line argument.
+ */
 
-#endif				// _UI_PREFS_WINDOW_H_
+gboolean want_debug;

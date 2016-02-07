@@ -22,28 +22,43 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "support.h"
+#include "support-log.h"
+#include "support-intl.h"
+#include "ui-support.h"
 #include "ui-hotkey-dialog.h"
 
-#include "main.h"
-
 #ifdef WITH_GTK3
-#define HOTKEY_DIALOG_UI_FILE      "hotkey-dialog-gtk3.glade"
+#define HOTKEY_DIALOG_UI_FILE "hotkey-dialog-gtk3.glade"
 #else
-#define HOTKEY_DIALOG_UI_FILE      "hotkey-dialog-gtk2.glade"
+#define HOTKEY_DIALOG_UI_FILE "hotkey-dialog-gtk2.glade"
 #endif
+
+/* Helpers */
+
+/* Configure the appearance of the hotkey dialog window. */
+static void
+configure_hotkey_dialog(GtkWindow *window, GtkLabel *instruction_label,
+                        const gchar *hotkey)
+{
+	gchar *title;
+	gchar *instruction;
+
+	title = g_strdup_printf(_("Set %s HotKey"), hotkey);
+	gtk_window_set_title(window, title);
+	g_free(title);
+
+	instruction = g_strdup_printf(_("Press new HotKey for <b>%s</b>"), hotkey);
+	gtk_label_set_markup(instruction_label, instruction);
+	g_free(instruction);
+}
+
+/* Public functions & signal handlers */
 
 struct hotkey_dialog {
 	GtkWidget *hotkey_dialog;
 	GtkWidget *instruction_label;
 	GtkWidget *key_pressed_label;
 };
-
-typedef struct hotkey_dialog HotkeyDialog;
-
-static HotkeyDialog *instance;
-
-/* Signal handlers */
 
 /**
  * Handles the 'key-press-event' signal on the GtkDialog 'hotkey_dialog'.
@@ -102,30 +117,10 @@ on_hotkey_dialog_key_release_event(GtkWidget *widget,
 	return FALSE;
 }
 
-/* Helpers */
-
-/* Configure the appearance of the hotkey dialog window. */
-static void
-configure_hotkey_dialog(HotkeyDialog *dialog, const gchar *hotkey)
-{
-	GtkWindow *hotkey_window = GTK_WINDOW(dialog->hotkey_dialog);
-	GtkLabel *instruction_label = GTK_LABEL(dialog->instruction_label);
-	gchar *title;
-	gchar *instruction;
-
-	title = g_strdup_printf(_("Set %s HotKey"), hotkey);
-	gtk_window_set_title(hotkey_window, title);
-	g_free(title);
-
-	instruction = g_strdup_printf(_("Press new HotKey for <b>%s</b>"), hotkey);
-	gtk_label_set_markup(instruction_label, instruction);
-	g_free(instruction);
-}
-
 /* Runs the hotkey dialog, and returns a string representing the hotkey
- * that has been pressed. String is internal and must not be changed.
+ * that has been pressed. String must be freed.
  */
-static const gchar *
+gchar *
 hotkey_dialog_run(HotkeyDialog *dialog)
 {
 	GtkDialog *hotkey_dialog = GTK_DIALOG(dialog->hotkey_dialog);
@@ -146,7 +141,7 @@ hotkey_dialog_run(HotkeyDialog *dialog)
 #endif
 
 	if (grab_status != GDK_GRAB_SUCCESS) {
-		do_report_error(_("Could not grab the keyboard."));
+		ui_report_error(_("Could not grab the keyboard."));
 		return NULL;
 	}
 
@@ -165,11 +160,11 @@ hotkey_dialog_run(HotkeyDialog *dialog)
 		return NULL;
 
 	/* Return the key entered */
-	return gtk_label_get_text(key_pressed_label);
+	return g_strdup(gtk_label_get_text(key_pressed_label));
 }
 
 /* Destroys a hotkey dialog, freeing any resources. */
-static void
+void
 hotkey_dialog_destroy(HotkeyDialog *dialog)
 {
 	gtk_widget_destroy(dialog->hotkey_dialog);
@@ -177,7 +172,7 @@ hotkey_dialog_destroy(HotkeyDialog *dialog)
 }
 
 /* Creates a new hotkey dialog and connects all the signals. */
-static HotkeyDialog *
+HotkeyDialog *
 hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 {
 	gchar *uifile;
@@ -187,7 +182,7 @@ hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 	dialog = g_new0(HotkeyDialog, 1);
 
 	/* Build UI file */
-	uifile = get_ui_file(HOTKEY_DIALOG_UI_FILE);
+	uifile = ui_get_builder_file(HOTKEY_DIALOG_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building hotkey dialog from ui file '%s'", uifile);
@@ -199,7 +194,9 @@ hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 	assign_gtk_widget(builder, dialog, key_pressed_label);
 
 	/* Configure some widgets */
-	configure_hotkey_dialog(dialog, hotkey);
+	configure_hotkey_dialog(GTK_WINDOW(dialog->hotkey_dialog),
+	                        GTK_LABEL(dialog->instruction_label),
+	                        hotkey);
 
 	/* Set transient parent */
 	gtk_window_set_transient_for(GTK_WINDOW(dialog->hotkey_dialog), parent);
@@ -212,33 +209,4 @@ hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 	g_free(uifile);
 
 	return dialog;
-}
-
-/* Public function */
-
-/**
- * Creates the about dialog, run it and destroy it.
- * Only one instance at a time is allowed.
- *
- * @param parent the parent window for this dialog.
- * @param hotkey a string representing the hotkey being modified.
- * @return a string representing the hotkay that has been pressed,
- * or NULL on error/cancel. The string must be freed.
- */
-gchar *
-hotkey_dialog_do(GtkWindow *parent, const gchar *hotkey)
-{
-	const gchar *key_pressed;
-	gchar *ret;
-
-	if (instance)
-		return NULL;
-
-	instance = hotkey_dialog_create(parent, hotkey);
-	key_pressed = hotkey_dialog_run(instance);
-	ret = g_strdup(key_pressed);
-	hotkey_dialog_destroy(instance);
-	instance = NULL;
-
-	return ret;
 }

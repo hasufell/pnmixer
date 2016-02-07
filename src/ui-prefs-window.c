@@ -31,7 +31,9 @@
 #include "audio.h"
 #include "prefs.h"
 #include "hotkey.h"
-#include "support.h"
+#include "support-log.h"
+#include "support-intl.h"
+#include "ui-support.h"
 #include "ui-prefs-window.h"
 #include "ui-hotkey-dialog.h"
 
@@ -42,69 +44,6 @@
 #else
 #define PREFS_UI_FILE "prefs-window-gtk2.glade"
 #endif
-
-/**
- * Defines the whole preferences entity.
- */
-struct prefs_window {
-	/* Audio system */
-	Audio *audio;
-	/* Top-level widgets */
-	GtkWidget *prefs_window;
-	GtkWidget *notebook;
-	GtkWidget *ok_button;
-	GtkWidget *cancel_button;
-	/* View panel */
-	GtkWidget *vol_orientation_combo;
-	GtkWidget *vol_text_check;
-	GtkWidget *vol_pos_label;
-	GtkWidget *vol_pos_combo;
-	GtkWidget *vol_meter_draw_check;
-	GtkWidget *vol_meter_pos_label;
-	GtkWidget *vol_meter_pos_spin;
-	GtkAdjustment *vol_meter_pos_adjustment;
-	GtkWidget *vol_meter_color_label;
-	GtkWidget *vol_meter_color_button;
-	GtkWidget *system_theme;
-	/* Device panel */
-	GtkWidget *card_combo;
-	GtkWidget *chan_combo;
-	GtkWidget *normalize_vol_check;
-	/* Behavior panel */
-	GtkWidget *vol_control_entry;
-	GtkWidget *scroll_step_spin;
-	GtkWidget *fine_scroll_step_spin;
-	GtkWidget *middle_click_combo;
-	GtkWidget *custom_label;
-	GtkWidget *custom_entry;
-	/* Hotkeys panel */
-	GtkWidget *hotkeys_enable_check;
-	GtkWidget *hotkeys_vol_label;
-	GtkWidget *hotkeys_vol_spin;
-	GtkWidget *hotkeys_mute_eventbox;
-	GtkWidget *hotkeys_mute_label;
-	GtkWidget *hotkeys_up_eventbox;
-	GtkWidget *hotkeys_up_label;
-	GtkWidget *hotkeys_down_eventbox;
-	GtkWidget *hotkeys_down_label;
-	/* Notifications panel */
-#ifdef HAVE_LIBN
-	GtkWidget *noti_vbox_enabled;
-	GtkWidget *noti_enable_check;
-	GtkWidget *noti_timeout_label;
-	GtkWidget *noti_timeout_spin;
-	GtkWidget *noti_hotkey_check;
-	GtkWidget *noti_mouse_check;
-	GtkWidget *noti_popup_check;
-	GtkWidget *noti_ext_check;
-#else
-	GtkWidget *noti_vbox_disabled;
-#endif
-};
-
-typedef struct prefs_window PrefsWindow;
-
-static PrefsWindow *instance;
 
 /* Helpers */
 
@@ -168,6 +107,7 @@ fill_chan_combo(GtkComboBoxText *combo, const gchar *card_name)
 	channel_list = audio_get_channel_list(card_name);
 
 	/* Empty the combo box */
+	// TODO: define for Gtk2 (look to Gtk3 code)
 	gtk_combo_box_text_remove_all(combo);
 
 	/* Fill the combo box with the channels, save the selected channel index */
@@ -229,7 +169,69 @@ fill_card_combo(GtkComboBoxText *combo, Audio *audio)
 	g_slist_free_full(card_list, g_free);
 }
 
-/* Signals handlers */
+/* Public functions & signals handlers */
+
+struct prefs_window {
+	/* Audio system */
+	Audio *audio;
+	/* Hotkey dialog - to ensure there's only one dialog at a time */
+	HotkeyDialog *hotkey_dialog;
+	/* Top-level widgets */
+	GtkWidget *prefs_window;
+	GtkWidget *notebook;
+	GtkWidget *ok_button;
+	GtkWidget *cancel_button;
+	/* View panel */
+	GtkWidget *vol_orientation_combo;
+	GtkWidget *vol_text_check;
+	GtkWidget *vol_pos_label;
+	GtkWidget *vol_pos_combo;
+	GtkWidget *vol_meter_draw_check;
+	GtkWidget *vol_meter_pos_label;
+	GtkWidget *vol_meter_pos_spin;
+	GtkAdjustment *vol_meter_pos_adjustment;
+	GtkWidget *vol_meter_color_label;
+	GtkWidget *vol_meter_color_button;
+	GtkWidget *system_theme;
+	/* Device panel */
+	GtkWidget *card_combo;
+	GtkWidget *chan_combo;
+	GtkWidget *normalize_vol_check;
+	/* Behavior panel */
+	GtkWidget *vol_control_entry;
+	GtkWidget *scroll_step_spin;
+	GtkWidget *fine_scroll_step_spin;
+	GtkWidget *middle_click_combo;
+	GtkWidget *custom_label;
+	GtkWidget *custom_entry;
+	/* Hotkeys panel */
+	GtkWidget *hotkeys_enable_check;
+	GtkWidget *hotkeys_vol_label;
+	GtkWidget *hotkeys_vol_spin;
+	GtkWidget *hotkeys_mute_eventbox;
+	GtkWidget *hotkeys_mute_label;
+	GtkWidget *hotkeys_up_eventbox;
+	GtkWidget *hotkeys_up_label;
+	GtkWidget *hotkeys_down_eventbox;
+	GtkWidget *hotkeys_down_label;
+	/* Notifications panel */
+#ifdef HAVE_LIBN
+	GtkWidget *noti_vbox_enabled;
+	GtkWidget *noti_enable_check;
+	GtkWidget *noti_timeout_label;
+	GtkWidget *noti_timeout_spin;
+	GtkWidget *noti_hotkey_check;
+	GtkWidget *noti_mouse_check;
+	GtkWidget *noti_popup_check;
+	GtkWidget *noti_ext_check;
+#else
+	GtkWidget *noti_vbox_disabled;
+#endif
+};
+
+typedef struct prefs_window PrefsWindow;
+
+static PrefsWindow *instance;
 
 /**
  * Handles the 'toggled' signal on the GtkCheckButton 'vol_text_check'.
@@ -328,8 +330,7 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 {
 	const gchar *hotkey;
 	GtkLabel *hotkey_label;
-
-	gchar *resp;
+	gchar *key_pressed;
 
 	/* We want a left-click */
 	if (event->button != 1)
@@ -353,22 +354,30 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 	}
 	g_assert(hotkey);
 
-	/* Run the hotkey dialog */
-	resp = hotkey_dialog_do(GTK_WINDOW(window->prefs_window), hotkey);
+	/* Ensure there's no dialog already running */
+	if (window->hotkey_dialog)
+		return FALSE;
 
-	/* Handle the response */
-	if (resp == NULL)
+	/* Run the hotkey dialog */
+	window->hotkey_dialog = hotkey_dialog_create
+		(GTK_WINDOW(window->prefs_window), hotkey);
+	key_pressed = hotkey_dialog_run(window->hotkey_dialog);
+	hotkey_dialog_destroy(window->hotkey_dialog);
+	window->hotkey_dialog = NULL;
+
+	/* Check the response */
+	if (key_pressed == NULL)
 		return FALSE;
 
 	/* <Primary>c is used to disable the hotkey */
-	if (!g_ascii_strcasecmp(resp, "<Primary>c")) {
-		g_free(resp);
-		resp = g_strdup_printf("(%s)", _("None"));
+	if (!g_ascii_strcasecmp(key_pressed, "<Primary>c")) {
+		g_free(key_pressed);
+		key_pressed = g_strdup_printf("(%s)", _("None"));
 	}
 
 	/* Set */
-	gtk_label_set_text(hotkey_label, resp);
-	g_free(resp);
+	gtk_label_set_text(hotkey_label, key_pressed);
+	g_free(key_pressed);
 
 	return FALSE;
 }
@@ -774,6 +783,8 @@ prefs_window_show(PrefsWindow *window)
 static void
 prefs_window_destroy(PrefsWindow *window)
 {
+	if (window->hotkey_dialog)
+		hotkey_dialog_destroy(window->hotkey_dialog);
 	gtk_widget_destroy(window->prefs_window);
 	g_free(window);
 }
@@ -791,7 +802,7 @@ prefs_window_create(Audio *audio)
 	window->audio = audio;
 
 	/* Build UI file */
-	uifile = get_ui_file(PREFS_UI_FILE);
+	uifile = ui_get_builder_file(PREFS_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building prefs window from ui file '%s'", uifile);

@@ -14,8 +14,8 @@
  * @brief header for audio.c
  */
 
-#ifndef AUDIO_H_
-#define AUDIO_H_
+#ifndef _AUDIO_H_
+#define _AUDIO_H_
 
 #include <glib.h>
 
@@ -95,4 +95,4 @@ void audio_signals_connect(Audio *audio, AudioCallback callback, gpointer data);
   */
 void audio_signals_disconnect(Audio *audio, AudioCallback callback, gpointer data);
 
-#endif				// AUDIO_H
+#endif				// _AUDIO_H

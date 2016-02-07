@@ -25,7 +25,9 @@
 
 #include "audio.h"
 #include "prefs.h"
-#include "support.h"
+#include "support-log.h"
+#include "support-intl.h"
+#include "ui-support.h"
 #include "ui-tray-icon.h"
 
 #include "main.h"
@@ -41,28 +43,115 @@ enum {
 	N_VOLUME_PIXBUFS
 };
 
-struct vol_meter {
-	/* Configuration */
-	guchar red;
-	guchar green;
-	guchar blue;
-	gint x_offset;
-	gint y_offset;
-	/* Dynamic stuff */
+/*
+ * Pixmaps directories
+ */
+
+/* List of available pixmap directories, populated the first time
+ * ui_tray_icon_new() is run.
+ */
+static GSList *pixmaps_directories = NULL;
+
+/* Use this function to set the directory containing installed pixmaps. */
+static void
+add_pixmap_directory(const gchar *directory)
+{
+	pixmaps_directories = g_slist_prepend(pixmaps_directories, g_strdup(directory));
+}
+
+/**
+ * This is an internally used function to find pixmap files.
+ * It searches through the GList pixmaps_directories.
+ *
+ * @param filename the pixmap file to find
+ * @return the path name where we found the pixmap file,
+ * newly allocated or NULL on failure
+ */
+static gchar *
+find_pixmap_file(const gchar *filename)
+{
+	GSList *elem;
+
+	/* We step through each of the pixmaps directory to find it. */
+	elem = pixmaps_directories;
+	while (elem) {
+		gchar *dir;
+		gchar *pathname;
+
+		dir = elem->data;
+		pathname = g_build_filename(dir, filename, NULL);
+
+		if (g_file_test(pathname, G_FILE_TEST_EXISTS))
+			return pathname;
+
+		g_free(pathname);
+		elem = elem->next;
+	}
+
+	return NULL;
+}
+
+/**
+ * This is an internally used function to create GdkPixbufs.
+ *
+ * @param filename filename to create the GtkPixbuf from
+ * @return the new GdkPixbuf, NULL on failure
+ */
+GdkPixbuf *
+create_pixbuf(const gchar *filename)
+{
+	gchar *pathname = NULL;
 	GdkPixbuf *pixbuf;
-	gint width;
-	guchar *row;
-};
+	GError *error = NULL;
 
-typedef struct vol_meter VolMeter;
+	if (!filename || !filename[0])
+		return NULL;
 
-struct tray_icon {
-	Audio *audio;
-	VolMeter *vol_meter;
-	GtkStatusIcon *status_icon;
-	gint status_icon_size;
-	GdkPixbuf **pixbufs;
-};
+	pathname = find_pixmap_file(filename);
+
+	if (!pathname) {
+		WARN("Couldn't find pixmap file: %s", filename);
+		return NULL;
+	}
+
+	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
+	if (!pixbuf) {
+		ui_report_error(_("Failed to load pixbuf file: %s: %s"),
+		                pathname, error->message);
+		g_error_free(error);
+	}
+	g_free(pathname);
+	return pixbuf;
+}
+
+/**
+ * Looks up icons based on the currently selected theme.
+ *
+ * @param filename icon name to look up
+ * @param size size of the icon
+ * @return the corresponding theme icon, NULL on failure,
+ * use g_object_unref() to release the reference to the icon
+ */
+GdkPixbuf *
+get_stock_pixbuf(const char *filename, gint size)
+{
+	GError *err = NULL;
+	GdkPixbuf *return_buf = NULL;
+	static GtkIconTheme *icon_theme = NULL;
+
+	if (icon_theme == NULL)
+		icon_theme = gtk_icon_theme_get_default();
+	return_buf = gtk_icon_theme_load_icon(icon_theme, filename,
+					      size, 0, &err);
+	if (err != NULL) {
+		DEBUG("Unable to load icon %s: %s", filename, err->message);
+		g_error_free(err);
+	}
+	return return_buf;
+}
+
+
+
 
 /*
  * Tray icon pixbuf array.
@@ -120,6 +209,21 @@ pixbuf_array_new(int size)
 }
 
 /* Tray icon volume meter */
+
+struct vol_meter {
+	/* Configuration */
+	guchar red;
+	guchar green;
+	guchar blue;
+	gint x_offset;
+	gint y_offset;
+	/* Dynamic stuff */
+	GdkPixbuf *pixbuf;
+	gint width;
+	guchar *row;
+};
+
+typedef struct vol_meter VolMeter;
 
 /* Frees a VolMeter instance. */
 static void
@@ -241,6 +345,16 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 }
 
 /* Helpers */
+
+// TODO: move that
+
+struct tray_icon {
+	Audio *audio;
+	VolMeter *vol_meter;
+	GtkStatusIcon *status_icon;
+	gint status_icon_size;
+	GdkPixbuf **pixbufs;
+};
 
 /* Update the tray icon pixbuf according to the current audio state. */
 static void
@@ -494,6 +608,12 @@ tray_icon_create(Audio *audio)
 	DEBUG("Creating tray icon");
 
 	icon = g_new0(TrayIcon, 1);
+
+	/* Init pixmaps directories */
+	if (!pixmaps_directories) {
+		add_pixmap_directory(PACKAGE_DATA_DIR "/" PACKAGE "/pixmaps");
+		add_pixmap_directory("./data/pixmaps");
+	}
 
 	/* Create everything */
 	icon->vol_meter = vol_meter_new();

@@ -25,11 +25,12 @@
 
 #include "audio.h"
 #include "prefs.h"
-#include "support.h"
+#include "support-log.h"
+#include "support-intl.h"
+#include "support-log.h"
+#include "ui-support.h"
 #include "hotkey.h"
 #include "hotkeys.h"
-
-#include "main.h"
 
 struct hotkeys {
 	/* Audio system */
@@ -168,7 +169,7 @@ hotkeys_reload_prefs(Hotkeys *hotkeys)
 	/* Display error message if needed */
 	if (mute_err || up_err || down_err) {
 		// TODO: check if idle report is needed
-		do_report_error("%s:\n%s%s%s%s%s%s",
+		ui_report_error("%s:\n%s%s%s%s%s%s",
 		                _("Could not bind the following hotkeys"),
 		                mute_err ? _("Mute/Unmute") : "",
 		                mute_err ? "\n" : "",

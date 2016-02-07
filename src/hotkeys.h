@@ -14,8 +14,8 @@
  * @brief header for hotkeys.c
  */
 
-#ifndef HOTKEYS_H_
-#define HOTKEYS_H_
+#ifndef _HOTKEYS_H_
+#define _HOTKEYS_H_
 
 #include "audio.h"
 
@@ -25,4 +25,4 @@ Hotkeys *hotkeys_new(Audio *audio);
 void hotkeys_free(Hotkeys *hotkeys);
 void hotkeys_reload_prefs(Hotkeys *hotkeys);
 
-#endif				// HOTKEYS_H
+#endif				// _HOTKEYS_H

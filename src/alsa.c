@@ -18,7 +18,7 @@
 #include <alsa/asoundlib.h>
 
 #include "prefs.h"
-#include "support.h"
+#include "support-log.h"
 #include "alsa.h"
 
 #define ALSA_DEFAULT_CARD "(default)"

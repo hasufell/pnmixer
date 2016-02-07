@@ -14,8 +14,8 @@
  * @brief header for prefs.c
  */
 
-#ifndef PREFS_H_
-#define PREFS_H_
+#ifndef _PREFS_H_
+#define _PREFS_H_
 
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -41,4 +41,4 @@ void prefs_load(void);
 void prefs_save(void);
 void prefs_ensure_save_dir(void);
 
-#endif				// PREFS_H_
+#endif				// _PREFS_H_
