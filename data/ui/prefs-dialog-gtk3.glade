@@ -222,7 +222,7 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkDialog" id="prefs_window">
+  <object class="GtkDialog" id="prefs_dialog">
     <property name="can_focus">False</property>
     <property name="type_hint">dialog</property>
     <property name="title" translatable="yes">PNMixer Preferences</property>

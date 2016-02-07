@@ -1,4 +1,4 @@
-/* ui-prefs-window.c
+/* ui-prefs-dialog.c
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,9 +9,9 @@
  */
 
 /**
- * @file ui-prefs-window.c
+ * @file ui-prefs-dialog.c
  * This file holds the ui-related code for the preferences window.
- * @brief preferences window ui subsystem
+ * @brief preferences dialog ui subsystem
  */
 
 #ifdef HAVE_CONFIG_H
@@ -33,16 +33,16 @@
 #include "hotkey.h"
 #include "support-log.h"
 #include "support-intl.h"
-#include "ui-support.h"
-#include "ui-prefs-window.h"
+#include "support-ui.h"
+#include "ui-prefs-dialog.h"
 #include "ui-hotkey-dialog.h"
 
 #include "main.h"
 
 #ifdef WITH_GTK3
-#define PREFS_UI_FILE "prefs-window-gtk3.glade"
+#define PREFS_UI_FILE "prefs-dialog-gtk3.glade"
 #else
-#define PREFS_UI_FILE "prefs-window-gtk2.glade"
+#define PREFS_UI_FILE "prefs-dialog-gtk2.glade"
 #endif
 
 /* Helpers */
@@ -167,13 +167,13 @@ fill_card_combo(GtkComboBoxText *combo, Audio *audio)
 
 /* Public functions & signals handlers */
 
-struct prefs_window {
+struct prefs_dialog {
 	/* Audio system */
 	Audio *audio;
 	/* Hotkey dialog - to ensure there's only one dialog at a time */
 	HotkeyDialog *hotkey_dialog;
 	/* Top-level widgets */
-	GtkWidget *prefs_window;
+	GtkWidget *prefs_dialog;
 	GtkWidget *notebook;
 	GtkWidget *ok_button;
 	GtkWidget *cancel_button;
@@ -227,34 +227,34 @@ struct prefs_window {
 
 /**
  * Handles the 'toggled' signal on the GtkCheckButton 'vol_text_check'.
- * Updates the preferences window.
+ * Updates the preferences dialog.
  *
  * @param button the button which received the signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  */
 void
-on_vol_text_check_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_vol_text_check_toggled(GtkToggleButton *button, PrefsDialog *dialog)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
-	gtk_widget_set_sensitive(window->vol_pos_label, active);
-	gtk_widget_set_sensitive(window->vol_pos_combo, active);
+	gtk_widget_set_sensitive(dialog->vol_pos_label, active);
+	gtk_widget_set_sensitive(dialog->vol_pos_combo, active);
 }
 
 /**
  * Handles the 'toggled' signal on the GtkCheckButton 'vol_meter_draw_check'.
- * Updates the preferences window.
+ * Updates the preferences dialog.
  *
  * @param button the button which received the signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  */
 void
-on_vol_meter_draw_check_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_vol_meter_draw_check_toggled(GtkToggleButton *button, PrefsDialog *dialog)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
-	gtk_widget_set_sensitive(window->vol_meter_pos_label, active);
-	gtk_widget_set_sensitive(window->vol_meter_pos_spin, active);
-	gtk_widget_set_sensitive(window->vol_meter_color_label, active);
-	gtk_widget_set_sensitive(window->vol_meter_color_button, active);
+	gtk_widget_set_sensitive(dialog->vol_meter_pos_label, active);
+	gtk_widget_set_sensitive(dialog->vol_meter_pos_spin, active);
+	gtk_widget_set_sensitive(dialog->vol_meter_color_label, active);
+	gtk_widget_set_sensitive(dialog->vol_meter_color_button, active);
 }
 
 /**
@@ -262,63 +262,63 @@ on_vol_meter_draw_check_toggled(GtkToggleButton *button, PrefsWindow *window)
  * This basically refills the channel list if the card changes.
  *
  * @param box the box which received the signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  */
 void
-on_card_combo_changed(GtkComboBoxText *box, PrefsWindow *window)
+on_card_combo_changed(GtkComboBoxText *box, PrefsDialog *dialog)
 {
 	gchar *card_name;
 
 	card_name = gtk_combo_box_text_get_active_text(box);
-	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo), card_name);
+	fill_chan_combo(GTK_COMBO_BOX_TEXT(dialog->chan_combo), card_name);
 	g_free(card_name);
 }
 
 /**
  * Handles the 'changed' signal on the GtkComboBoxText 'middle_click_combo'.
- * Updates the preferences window.
+ * Updates the preferences dialog.
  *
  * @param box the combobox which received the signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  */
 void
-on_middle_click_combo_changed(GtkComboBoxText *box, PrefsWindow *window)
+on_middle_click_combo_changed(GtkComboBoxText *box, PrefsDialog *dialog)
 {
 	gboolean cust = gtk_combo_box_get_active(GTK_COMBO_BOX(box)) == 3;
-	gtk_widget_set_sensitive(window->custom_label, cust);
-	gtk_widget_set_sensitive(window->custom_entry, cust);
+	gtk_widget_set_sensitive(dialog->custom_label, cust);
+	gtk_widget_set_sensitive(dialog->custom_entry, cust);
 }
 
 /**
  * Handles the 'toggled' signal on the GtkCheckButton 'hotkeys_enable_check'.
- * Updates the preferences window.
+ * Updates the preferences dialog.
  *
  * @param button the button which received the signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  */
 void
-on_hotkeys_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_hotkeys_enable_check_toggled(GtkToggleButton *button, PrefsDialog *dialog)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
-	gtk_widget_set_sensitive(window->hotkeys_vol_label, active);
-	gtk_widget_set_sensitive(window->hotkeys_vol_spin, active);
+	gtk_widget_set_sensitive(dialog->hotkeys_vol_label, active);
+	gtk_widget_set_sensitive(dialog->hotkeys_vol_spin, active);
 }
 
 /**
  * Handles 'button-press-event' signal on one of the GtkEventBoxes used to
  * define a hotkey: 'hotkeys_mute/up/down_eventbox'.
- * Runs a dialog window where user can define a new hotkey.
+ * Runs a dialog dialog where user can define a new hotkey.
  * User should double-click on the event box to define a new hotkey.
  *
  * @param widget the object which received the signal.
  * @param event the GdkEventButton which triggered this signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  * @return TRUE to stop other handlers from being invoked for the event.
  * FALSE to propagate the event further.
  */
 gboolean
 on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
-				       PrefsWindow *window)
+				       PrefsDialog *dialog)
 {
 	const gchar *hotkey;
 	GtkLabel *hotkey_label;
@@ -334,28 +334,28 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 
 	/* Let's check which eventbox was clicked */
 	hotkey = NULL;
-	if (widget == window->hotkeys_mute_eventbox) {
-		hotkey_label = GTK_LABEL(window->hotkeys_mute_label);
+	if (widget == dialog->hotkeys_mute_eventbox) {
+		hotkey_label = GTK_LABEL(dialog->hotkeys_mute_label);
 		hotkey = _("Mute/Unmute");
-	} else if (widget == window->hotkeys_up_eventbox) {
-		hotkey_label = GTK_LABEL(window->hotkeys_up_label);
+	} else if (widget == dialog->hotkeys_up_eventbox) {
+		hotkey_label = GTK_LABEL(dialog->hotkeys_up_label);
 		hotkey = _("Volume Up");
-	} else if (widget == window->hotkeys_down_eventbox) {
-		hotkey_label = GTK_LABEL(window->hotkeys_down_label);
+	} else if (widget == dialog->hotkeys_down_eventbox) {
+		hotkey_label = GTK_LABEL(dialog->hotkeys_down_label);
 		hotkey = _("Volume Down");
 	}
 	g_assert(hotkey);
 
 	/* Ensure there's no dialog already running */
-	if (window->hotkey_dialog)
+	if (dialog->hotkey_dialog)
 		return FALSE;
 
 	/* Run the hotkey dialog */
-	window->hotkey_dialog = hotkey_dialog_create
-		(GTK_WINDOW(window->prefs_window), hotkey);
-	key_pressed = hotkey_dialog_run(window->hotkey_dialog);
-	hotkey_dialog_destroy(window->hotkey_dialog);
-	window->hotkey_dialog = NULL;
+	dialog->hotkey_dialog = hotkey_dialog_create
+		(GTK_WINDOW(dialog->prefs_dialog), hotkey);
+	key_pressed = hotkey_dialog_run(dialog->hotkey_dialog);
+	hotkey_dialog_destroy(dialog->hotkey_dialog);
+	dialog->hotkey_dialog = NULL;
 
 	/* Check the response */
 	if (key_pressed == NULL)
@@ -376,27 +376,27 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 
 /**
  * Handles the 'toggled' signal on the GtkCheckButton 'noti_enable_check'.
- * Updates the preferences window.
+ * Updates the preferences dialog.
  *
  * @param button the button which received the signal.
- * @param window user data set when the signal handler was connected.
+ * @param dialog user data set when the signal handler was connected.
  */
 #ifdef HAVE_LIBN
 void
-on_noti_enable_check_toggled(GtkToggleButton *button, PrefsWindow *window)
+on_noti_enable_check_toggled(GtkToggleButton *button, PrefsDialog *dialog)
 {
 	gboolean active = gtk_toggle_button_get_active(button);
-	gtk_widget_set_sensitive(window->noti_timeout_label, active);
-	gtk_widget_set_sensitive(window->noti_timeout_spin, active);
-	gtk_widget_set_sensitive(window->noti_hotkey_check, active);
-	gtk_widget_set_sensitive(window->noti_mouse_check, active);
-	gtk_widget_set_sensitive(window->noti_popup_check, active);
-	gtk_widget_set_sensitive(window->noti_ext_check, active);
+	gtk_widget_set_sensitive(dialog->noti_timeout_label, active);
+	gtk_widget_set_sensitive(dialog->noti_timeout_spin, active);
+	gtk_widget_set_sensitive(dialog->noti_hotkey_check, active);
+	gtk_widget_set_sensitive(dialog->noti_mouse_check, active);
+	gtk_widget_set_sensitive(dialog->noti_popup_check, active);
+	gtk_widget_set_sensitive(dialog->noti_ext_check, active);
 }
 #else
 void
 on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
-			     G_GNUC_UNUSED PrefsWindow *window)
+			     G_GNUC_UNUSED PrefsDialog *dialog)
 {
 }
 #endif
@@ -404,9 +404,9 @@ on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
 static void
 on_audio_changed(Audio *audio, AudioEvent *event, gpointer data)
 {
-	PrefsWindow *window = (PrefsWindow *) data;
-	GtkComboBoxText *card_combo = GTK_COMBO_BOX_TEXT(window->card_combo);
-	GtkComboBoxText *chan_combo = GTK_COMBO_BOX_TEXT(window->chan_combo);
+	PrefsDialog *dialog = (PrefsDialog *) data;
+	GtkComboBoxText *card_combo = GTK_COMBO_BOX_TEXT(dialog->card_combo);
+	GtkComboBoxText *chan_combo = GTK_COMBO_BOX_TEXT(dialog->chan_combo);
 
 	switch (event->signal) {
 	case AUDIO_CARD_INITIALIZED:
@@ -421,19 +421,16 @@ on_audio_changed(Audio *audio, AudioEvent *event, gpointer data)
 }
 
 /**
- * Callback function when the ok_button (GtkButton) of the
- * preferences window received the clicked signal.
- *
- * @param button the object that received the signal
- * @param window struct holding the GtkWidgets of the preferences windows
+ * Retrieve the preferences dialog values and assign then to preferences.
+ * @param dialog struct holding the GtkWidgets of the preferences dialog.
  */
 void
-prefs_dialog_retrieve(PrefsWindow *window)
+prefs_dialog_retrieve(PrefsDialog *dialog)
 {
-	DEBUG("Retrieving prefs window values");
+	DEBUG("Retrieving prefs dialog values");
 
 	// volume slider orientation
-	GtkWidget *soc = window->vol_orientation_combo;
+	GtkWidget *soc = dialog->vol_orientation_combo;
 	const gchar *orientation;
 #ifdef WITH_GTK3
 	orientation = gtk_combo_box_get_active_id(GTK_COMBO_BOX(soc));
@@ -446,27 +443,27 @@ prefs_dialog_retrieve(PrefsWindow *window)
 	prefs_set_string("SliderOrientation", orientation);
 
 	// volume text display
-	GtkWidget *vtc = window->vol_text_check;
+	GtkWidget *vtc = dialog->vol_text_check;
 	gboolean active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(vtc));
 	prefs_set_boolean("DisplayTextVolume", active);
 
 	// volume text position
-	GtkWidget *vpc = window->vol_pos_combo;
+	GtkWidget *vpc = dialog->vol_pos_combo;
 	gint idx = gtk_combo_box_get_active(GTK_COMBO_BOX(vpc));
 	prefs_set_integer("TextVolumePosition", idx);
 
 	// volume meter display
-	GtkWidget *dvc = window->vol_meter_draw_check;
+	GtkWidget *dvc = dialog->vol_meter_draw_check;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dvc));
 	prefs_set_boolean("DrawVolMeter", active);
 
 	// volume meter positon
-	GtkWidget *vmps = window->vol_meter_pos_spin;
+	GtkWidget *vmps = dialog->vol_meter_pos_spin;
 	gint vmpos = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(vmps));
 	prefs_set_integer("VolMeterPos", vmpos);
 
 	// volume meter colors
-	GtkWidget *vcb = window->vol_meter_color_button;
+	GtkWidget *vcb = dialog->vol_meter_color_button;
 	gdouble colors[3];
 #ifdef WITH_GTK3
 	GdkRGBA color;
@@ -484,59 +481,59 @@ prefs_dialog_retrieve(PrefsWindow *window)
 	prefs_set_double_list("VolMeterColor", colors, 3);
 
 	// icon theme
-	GtkWidget *system_theme = window->system_theme;
+	GtkWidget *system_theme = dialog->system_theme;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(system_theme));
 	prefs_set_boolean("SystemTheme", active);
 
 	// alsa card
-	GtkWidget *acc = window->card_combo;
+	GtkWidget *acc = dialog->card_combo;
 	gchar *card = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(acc));
 	prefs_set_string("AlsaCard", card);
 
 	// alsa channel
-	GtkWidget *ccc = window->chan_combo;
+	GtkWidget *ccc = dialog->chan_combo;
 	gchar *chan = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ccc));
 	prefs_set_channel(card, chan);
 	g_free(card);
 	g_free(chan);
 
 	// normalize volume
-	GtkWidget *vnorm = window->normalize_vol_check;
+	GtkWidget *vnorm = dialog->normalize_vol_check;
 	gboolean is_pressed;
 	is_pressed = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(vnorm));
 	prefs_set_boolean("NormalizeVolume", is_pressed);
 
 	// volume control command
-	GtkWidget *ve = window->vol_control_entry;
+	GtkWidget *ve = dialog->vol_control_entry;
 	const gchar *vc = gtk_entry_get_text(GTK_ENTRY(ve));
 	prefs_set_string("VolumeControlCommand", vc);
 
 	// volume scroll steps
-	GtkWidget *sss = window->scroll_step_spin;
+	GtkWidget *sss = dialog->scroll_step_spin;
 	gdouble step = gtk_spin_button_get_value(GTK_SPIN_BUTTON(sss));
 	prefs_set_double("ScrollStep", step);
 
-	GtkWidget *fsss = window->fine_scroll_step_spin;
+	GtkWidget *fsss = dialog->fine_scroll_step_spin;
 	gdouble fine_step = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fsss));
 	prefs_set_double("FineScrollStep", fine_step);
 
 	// middle click
-	GtkWidget *mcc = window->middle_click_combo;
+	GtkWidget *mcc = dialog->middle_click_combo;
 	idx = gtk_combo_box_get_active(GTK_COMBO_BOX(mcc));
 	prefs_set_integer("MiddleClickAction", idx);
 
 	// custom command
-	GtkWidget *ce = window->custom_entry;
+	GtkWidget *ce = dialog->custom_entry;
 	const gchar *cc = gtk_entry_get_text(GTK_ENTRY(ce));
 	prefs_set_string("CustomCommand", cc);
 
 	// hotkeys enabled
-	GtkWidget *hkc = window->hotkeys_enable_check;
+	GtkWidget *hkc = dialog->hotkeys_enable_check;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hkc));
 	prefs_set_boolean("EnableHotKeys", active);
 
 	// hotkeys scroll step
-	GtkWidget *hs = window->hotkeys_vol_spin;
+	GtkWidget *hs = dialog->hotkeys_vol_spin;
 	gint hotstep = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(hs));
 	prefs_set_integer("HotkeyVolumeStep", hotstep);
 
@@ -545,63 +542,67 @@ prefs_dialog_retrieve(PrefsWindow *window)
 	gint keycode;
 	GdkModifierType mods;
 
-	kl = window->hotkeys_mute_label;
+	kl = dialog->hotkeys_mute_label;
 	get_keycode_for_label(GTK_LABEL(kl), &keycode, &mods);
 	prefs_set_integer("VolMuteKey", keycode);
 	prefs_set_integer("VolMuteMods", mods);
 
-	kl = window->hotkeys_up_label;
+	kl = dialog->hotkeys_up_label;
 	get_keycode_for_label(GTK_LABEL(kl), &keycode, &mods);
 	prefs_set_integer("VolUpKey", keycode);
 	prefs_set_integer("VolUpMods", mods);
 
-	kl = window->hotkeys_down_label;
+	kl = dialog->hotkeys_down_label;
 	get_keycode_for_label(GTK_LABEL(kl), &keycode, &mods);
 	prefs_set_integer("VolDownKey", keycode);
 	prefs_set_integer("VolDownMods", mods);
 
 	// notifications
 #ifdef HAVE_LIBN
-	GtkWidget *nc = window->noti_enable_check;
+	GtkWidget *nc = dialog->noti_enable_check;
 	gint noti_spin;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(nc));
 	prefs_set_boolean("EnableNotifications", active);
 
-	nc = window->noti_hotkey_check;
+	nc = dialog->noti_hotkey_check;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(nc));
 	prefs_set_boolean("HotkeyNotifications", active);
 
-	nc = window->noti_mouse_check;
+	nc = dialog->noti_mouse_check;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(nc));
 	prefs_set_boolean("MouseNotifications", active);
 
-	nc = window->noti_popup_check;
+	nc = dialog->noti_popup_check;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(nc));
 	prefs_set_boolean("PopupNotifications", active);
 
-	nc = window->noti_ext_check;
+	nc = dialog->noti_ext_check;
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(nc));
 	prefs_set_boolean("ExternalNotifications", active);
 
-	nc = window->noti_timeout_spin;
+	nc = dialog->noti_timeout_spin;
 	noti_spin = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(nc));
 	prefs_set_integer("NotificationTimeout", noti_spin);
 #endif
 }
 
+/**
+ * Set the preferences dialog values according to current preferences.
+ * @param dialog struct holding the GtkWidgets of the preferences dialog.
+ */
 void
-prefs_dialog_populate(PrefsWindow *window)
+prefs_dialog_populate(PrefsDialog *dialog)
 {
 	gdouble *vol_meter_clrs;
 	gchar *slider_orientation, *vol_cmd, *custcmd;
 
-	DEBUG("Populating prefs window values");
+	DEBUG("Populating prefs dialog values");
 
 	// volume slider orientation
 	slider_orientation = prefs_get_string("SliderOrientation", NULL);
 	if (slider_orientation) {
-		GtkComboBox *combo_box = GTK_COMBO_BOX
-					 (window->vol_orientation_combo);
+		GtkComboBox *combo_box =
+			GTK_COMBO_BOX(dialog->vol_orientation_combo);
 #ifndef WITH_GTK3
 		/* Gtk2 ComboBoxes don't have item ids */
 		if (!strcmp(slider_orientation, "horizontal"))
@@ -616,27 +617,28 @@ prefs_dialog_populate(PrefsWindow *window)
 
 	// volume text display
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->vol_text_check),
+	(GTK_TOGGLE_BUTTON(dialog->vol_text_check),
 	 prefs_get_boolean("DisplayTextVolume", FALSE));
 
-	on_vol_text_check_toggled(GTK_TOGGLE_BUTTON(window->vol_text_check), window);
+	on_vol_text_check_toggled
+	(GTK_TOGGLE_BUTTON(dialog->vol_text_check), dialog);
 
 	// volume text position
 	gtk_combo_box_set_active
-	(GTK_COMBO_BOX(window->vol_pos_combo),
+	(GTK_COMBO_BOX(dialog->vol_pos_combo),
 	 prefs_get_integer("TextVolumePosition", 0));
 
 	// volume meter display
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->vol_meter_draw_check),
+	(GTK_TOGGLE_BUTTON(dialog->vol_meter_draw_check),
 	 prefs_get_boolean("DrawVolMeter", FALSE));
 
-	on_vol_meter_draw_check_toggled(GTK_TOGGLE_BUTTON(window->vol_meter_draw_check),
-					window);
+	on_vol_meter_draw_check_toggled
+	(GTK_TOGGLE_BUTTON(dialog->vol_meter_draw_check), dialog);
 
 	// volume meter position
 	gtk_spin_button_set_value
-	(GTK_SPIN_BUTTON(window->vol_meter_pos_spin),
+	(GTK_SPIN_BUTTON(dialog->vol_meter_pos_spin),
 	 prefs_get_integer("VolMeterPos", 0));
 
 	// volume meter colors
@@ -648,7 +650,7 @@ prefs_dialog_populate(PrefsWindow *window)
 	vol_meter_color_button_color.blue = vol_meter_clrs[2];
 	vol_meter_color_button_color.alpha = 1.0;
 	gtk_color_chooser_set_rgba
-	(GTK_COLOR_CHOOSER(window->vol_meter_color_button),
+	(GTK_COLOR_CHOOSER(dialog->vol_meter_color_button),
 	 &vol_meter_color_button_color);
 #else
 	GdkColor vol_meter_color_button_color;
@@ -656,125 +658,125 @@ prefs_dialog_populate(PrefsWindow *window)
 	vol_meter_color_button_color.green = (guint32) (vol_meter_clrs[1] * 65536);
 	vol_meter_color_button_color.blue = (guint32) (vol_meter_clrs[2] * 65536);
 	gtk_color_button_set_color
-	(GTK_COLOR_BUTTON(window->vol_meter_color_button),
+	(GTK_COLOR_BUTTON(dialog->vol_meter_color_button),
 	 &vol_meter_color_button_color);
 #endif
 	g_free(vol_meter_clrs);
 
 	// icon theme
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->system_theme),
+	(GTK_TOGGLE_BUTTON(dialog->system_theme),
 	 prefs_get_boolean("SystemTheme", FALSE));
 
 	// fill in card & channel combo boxes
-	fill_card_combo(GTK_COMBO_BOX_TEXT(window->card_combo), window->audio);
+	fill_card_combo(GTK_COMBO_BOX_TEXT(dialog->card_combo), dialog->audio);
 #ifdef GTK3
 	/* On Gtk3, refilling the card combo doesn't emit a 'changed' signal,
 	 * therefore we must refill channel combo explicitely.
 	 */
-	fill_chan_combo(GTK_COMBO_BOX_TEXT(window->chan_combo),
-	                audio_get_card(window->audio));
+	fill_chan_combo(GTK_COMBO_BOX_TEXT(dialog->chan_combo),
+	                audio_get_card(dialog->audio));
 #endif
 
 	// normalize volume
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->normalize_vol_check),
+	(GTK_TOGGLE_BUTTON(dialog->normalize_vol_check),
 	 prefs_get_boolean("NormalizeVolume", FALSE));
 
 	// volume control command
 	vol_cmd = prefs_get_vol_command();
 	if (vol_cmd) {
-		gtk_entry_set_text(GTK_ENTRY(window->vol_control_entry), vol_cmd);
+		gtk_entry_set_text(GTK_ENTRY(dialog->vol_control_entry), vol_cmd);
 		g_free(vol_cmd);
 	}
 
 	// volume scroll steps
 	gtk_spin_button_set_value
-	(GTK_SPIN_BUTTON(window->scroll_step_spin),
+	(GTK_SPIN_BUTTON(dialog->scroll_step_spin),
 	 prefs_get_double("ScrollStep", 5));
 
 	gtk_spin_button_set_value
-	(GTK_SPIN_BUTTON(window->fine_scroll_step_spin),
+	(GTK_SPIN_BUTTON(dialog->fine_scroll_step_spin),
 	 prefs_get_double("FineScrollStep", 1));
 
 	//  middle click
 	gtk_combo_box_set_active
-	(GTK_COMBO_BOX(window->middle_click_combo),
+	(GTK_COMBO_BOX(dialog->middle_click_combo),
 	 prefs_get_integer("MiddleClickAction", 0));
 
-	on_middle_click_combo_changed(GTK_COMBO_BOX_TEXT(window->middle_click_combo), window);
+	on_middle_click_combo_changed
+	(GTK_COMBO_BOX_TEXT(dialog->middle_click_combo), dialog);
 
 	// custom command
-	gtk_entry_set_invisible_char(GTK_ENTRY(window->custom_entry), 8226);
+	gtk_entry_set_invisible_char(GTK_ENTRY(dialog->custom_entry), 8226);
 
 	custcmd = prefs_get_string("CustomCommand", NULL);
 	if (custcmd) {
-		gtk_entry_set_text(GTK_ENTRY(window->custom_entry), custcmd);
+		gtk_entry_set_text(GTK_ENTRY(dialog->custom_entry), custcmd);
 		g_free(custcmd);
 	}
 
 	// hotkeys enabled
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->hotkeys_enable_check),
+	(GTK_TOGGLE_BUTTON(dialog->hotkeys_enable_check),
 	 prefs_get_boolean("EnableHotKeys", FALSE));
 
 	// hotkeys scroll step
 	gtk_spin_button_set_value
-	(GTK_SPIN_BUTTON(window->hotkeys_vol_spin),
+	(GTK_SPIN_BUTTON(dialog->hotkeys_vol_spin),
 	 prefs_get_integer("HotkeyVolumeStep", 1));
 
 	// hotkeys
-	set_label_for_keycode(GTK_LABEL(window->hotkeys_mute_label),
+	set_label_for_keycode(GTK_LABEL(dialog->hotkeys_mute_label),
 			      prefs_get_integer("VolMuteKey", -1),
 			      prefs_get_integer("VolMuteMods", 0));
 
-	set_label_for_keycode(GTK_LABEL(window->hotkeys_up_label),
+	set_label_for_keycode(GTK_LABEL(dialog->hotkeys_up_label),
 			      prefs_get_integer("VolUpKey", -1),
 			      prefs_get_integer("VolUpMods", 0));
 
-	set_label_for_keycode(GTK_LABEL(window->hotkeys_down_label),
+	set_label_for_keycode(GTK_LABEL(dialog->hotkeys_down_label),
 			      prefs_get_integer("VolDownKey", -1),
 			      prefs_get_integer("VolDownMods", 0));
 
-	on_hotkeys_enable_check_toggled(GTK_TOGGLE_BUTTON(window->hotkeys_enable_check),
-					window);
+	on_hotkeys_enable_check_toggled
+	(GTK_TOGGLE_BUTTON(dialog->hotkeys_enable_check), dialog);
 
 	// notifications
 #ifdef HAVE_LIBN
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->noti_enable_check),
+	(GTK_TOGGLE_BUTTON(dialog->noti_enable_check),
 	 prefs_get_boolean("EnableNotifications", FALSE));
 
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->noti_hotkey_check),
+	(GTK_TOGGLE_BUTTON(dialog->noti_hotkey_check),
 	 prefs_get_boolean("HotkeyNotifications", TRUE));
 
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->noti_mouse_check),
+	(GTK_TOGGLE_BUTTON(dialog->noti_mouse_check),
 	 prefs_get_boolean("MouseNotifications", TRUE));
 
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->noti_popup_check),
+	(GTK_TOGGLE_BUTTON(dialog->noti_popup_check),
 	 prefs_get_boolean("PopupNotifications", FALSE));
 
 	gtk_toggle_button_set_active
-	(GTK_TOGGLE_BUTTON(window->noti_ext_check),
+	(GTK_TOGGLE_BUTTON(dialog->noti_ext_check),
 	 prefs_get_boolean("ExternalNotifications", FALSE));
 
 	gtk_spin_button_set_value
-	(GTK_SPIN_BUTTON(window->noti_timeout_spin),
+	(GTK_SPIN_BUTTON(dialog->noti_timeout_spin),
 	 prefs_get_integer("NotificationTimeout", 1500));
 
-	on_noti_enable_check_toggled(GTK_TOGGLE_BUTTON(window->noti_enable_check), window);
+	on_noti_enable_check_toggled
+	(GTK_TOGGLE_BUTTON(dialog->noti_enable_check), dialog);
 #endif
 }
 
-/* Public functions */
-
 gint
-prefs_dialog_run(PrefsWindow *window)
+prefs_dialog_run(PrefsDialog *dialog)
 {
-	GtkDialog *prefs_dialog = GTK_DIALOG(window->prefs_window);
+	GtkDialog *prefs_dialog = GTK_DIALOG(dialog->prefs_dialog);
 	gint resp;
 
 	resp = gtk_dialog_run(prefs_dialog);
@@ -783,27 +785,27 @@ prefs_dialog_run(PrefsWindow *window)
 }
 
 void
-prefs_dialog_destroy(PrefsWindow *window)
+prefs_dialog_destroy(PrefsDialog *dialog)
 {
-	audio_signals_disconnect(window->audio, on_audio_changed, window);
+	audio_signals_disconnect(dialog->audio, on_audio_changed, dialog);
 
-	if (window->hotkey_dialog)
-		hotkey_dialog_destroy(window->hotkey_dialog);
-	gtk_widget_destroy(window->prefs_window);
-	g_free(window);
+	if (dialog->hotkey_dialog)
+		hotkey_dialog_destroy(dialog->hotkey_dialog);
+	gtk_widget_destroy(dialog->prefs_dialog);
+	g_free(dialog);
 }
 
-PrefsWindow *
+PrefsDialog *
 prefs_dialog_create(GtkWindow *parent, Audio *audio)
 {
 	gchar *uifile = NULL;
 	GtkBuilder *builder = NULL;
-	PrefsWindow *window;
+	PrefsDialog *dialog;
 
-	window = g_new0(PrefsWindow, 1);
+	dialog = g_new0(PrefsDialog, 1);
 
 	/* Build UI file */
-	uifile = ui_get_builder_file(PREFS_UI_FILE);
+	uifile = get_ui_file(PREFS_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building from ui file '%s'", uifile);
@@ -824,149 +826,70 @@ prefs_dialog_create(GtkWindow *parent, Audio *audio)
 
 	/* Save some widgets for later use */
 	// Top level widgets
-	assign_gtk_widget(builder, window, prefs_window);
-	assign_gtk_widget(builder, window, notebook);
-	assign_gtk_widget(builder, window, ok_button);
-	assign_gtk_widget(builder, window, cancel_button);
+	assign_gtk_widget(builder, dialog, prefs_dialog);
+	assign_gtk_widget(builder, dialog, notebook);
+	assign_gtk_widget(builder, dialog, ok_button);
+	assign_gtk_widget(builder, dialog, cancel_button);
 	// View panel
-	assign_gtk_widget(builder, window, vol_orientation_combo);
-	assign_gtk_widget(builder, window, vol_text_check);
-	assign_gtk_widget(builder, window, vol_pos_label);
-	assign_gtk_widget(builder, window, vol_pos_combo);
-	assign_gtk_widget(builder, window, vol_meter_draw_check);
-	assign_gtk_widget(builder, window, vol_meter_pos_label);
-	assign_gtk_widget(builder, window, vol_meter_pos_spin);
-	assign_gtk_adjustment(builder, window, vol_meter_pos_adjustment);
-	assign_gtk_widget(builder, window, vol_meter_color_label);
-	assign_gtk_widget(builder, window, vol_meter_color_button);
-	assign_gtk_widget(builder, window, system_theme);
+	assign_gtk_widget(builder, dialog, vol_orientation_combo);
+	assign_gtk_widget(builder, dialog, vol_text_check);
+	assign_gtk_widget(builder, dialog, vol_pos_label);
+	assign_gtk_widget(builder, dialog, vol_pos_combo);
+	assign_gtk_widget(builder, dialog, vol_meter_draw_check);
+	assign_gtk_widget(builder, dialog, vol_meter_pos_label);
+	assign_gtk_widget(builder, dialog, vol_meter_pos_spin);
+	assign_gtk_adjustment(builder, dialog, vol_meter_pos_adjustment);
+	assign_gtk_widget(builder, dialog, vol_meter_color_label);
+	assign_gtk_widget(builder, dialog, vol_meter_color_button);
+	assign_gtk_widget(builder, dialog, system_theme);
 	// Device panel
-	assign_gtk_widget(builder, window, card_combo);
-	assign_gtk_widget(builder, window, chan_combo);
-	assign_gtk_widget(builder, window, normalize_vol_check);
+	assign_gtk_widget(builder, dialog, card_combo);
+	assign_gtk_widget(builder, dialog, chan_combo);
+	assign_gtk_widget(builder, dialog, normalize_vol_check);
 	// Behavior panel
-	assign_gtk_widget(builder, window, vol_control_entry);
-	assign_gtk_widget(builder, window, scroll_step_spin);
-	assign_gtk_widget(builder, window, fine_scroll_step_spin);
-	assign_gtk_widget(builder, window, middle_click_combo);
-	assign_gtk_widget(builder, window, custom_label);
-	assign_gtk_widget(builder, window, custom_entry);
+	assign_gtk_widget(builder, dialog, vol_control_entry);
+	assign_gtk_widget(builder, dialog, scroll_step_spin);
+	assign_gtk_widget(builder, dialog, fine_scroll_step_spin);
+	assign_gtk_widget(builder, dialog, middle_click_combo);
+	assign_gtk_widget(builder, dialog, custom_label);
+	assign_gtk_widget(builder, dialog, custom_entry);
 	// Hotkeys panel
-	assign_gtk_widget(builder, window, hotkeys_enable_check);
-	assign_gtk_widget(builder, window, hotkeys_vol_label);
-	assign_gtk_widget(builder, window, hotkeys_vol_spin);
-	assign_gtk_widget(builder, window, hotkeys_mute_eventbox);
-	assign_gtk_widget(builder, window, hotkeys_mute_label);
-	assign_gtk_widget(builder, window, hotkeys_up_eventbox);
-	assign_gtk_widget(builder, window, hotkeys_up_label);
-	assign_gtk_widget(builder, window, hotkeys_down_eventbox);
-	assign_gtk_widget(builder, window, hotkeys_down_label);
+	assign_gtk_widget(builder, dialog, hotkeys_enable_check);
+	assign_gtk_widget(builder, dialog, hotkeys_vol_label);
+	assign_gtk_widget(builder, dialog, hotkeys_vol_spin);
+	assign_gtk_widget(builder, dialog, hotkeys_mute_eventbox);
+	assign_gtk_widget(builder, dialog, hotkeys_mute_label);
+	assign_gtk_widget(builder, dialog, hotkeys_up_eventbox);
+	assign_gtk_widget(builder, dialog, hotkeys_up_label);
+	assign_gtk_widget(builder, dialog, hotkeys_down_eventbox);
+	assign_gtk_widget(builder, dialog, hotkeys_down_label);
 	// Notifications panel
 #ifdef HAVE_LIBN
-	assign_gtk_widget(builder, window, noti_vbox_enabled);
-	assign_gtk_widget(builder, window, noti_enable_check);
-	assign_gtk_widget(builder, window, noti_timeout_spin);
-	assign_gtk_widget(builder, window, noti_timeout_label);
-	assign_gtk_widget(builder, window, noti_hotkey_check);
-	assign_gtk_widget(builder, window, noti_mouse_check);
-	assign_gtk_widget(builder, window, noti_popup_check);
-	assign_gtk_widget(builder, window, noti_ext_check);
+	assign_gtk_widget(builder, dialog, noti_vbox_enabled);
+	assign_gtk_widget(builder, dialog, noti_enable_check);
+	assign_gtk_widget(builder, dialog, noti_timeout_spin);
+	assign_gtk_widget(builder, dialog, noti_timeout_label);
+	assign_gtk_widget(builder, dialog, noti_hotkey_check);
+	assign_gtk_widget(builder, dialog, noti_mouse_check);
+	assign_gtk_widget(builder, dialog, noti_popup_check);
+	assign_gtk_widget(builder, dialog, noti_ext_check);
 #else
-	assign_gtk_widget(builder, window, noti_vbox_disabled);
+	assign_gtk_widget(builder, dialog, noti_vbox_disabled);
 #endif
 
 	/* Set transient parent */
-	gtk_window_set_transient_for(GTK_WINDOW(window->prefs_window), parent);
+	gtk_window_set_transient_for(GTK_WINDOW(dialog->prefs_dialog), parent);
 
 	/* Connect ui signal handlers */
-	gtk_builder_connect_signals(builder, window);
+	gtk_builder_connect_signals(builder, dialog);
 
 	/* Connect audio signal handlers */
-	window->audio = audio;
-	audio_signals_connect(audio, on_audio_changed, window);
+	dialog->audio = audio;
+	audio_signals_connect(audio, on_audio_changed, dialog);
 
 	/* Cleanup */
 	g_object_unref(G_OBJECT(builder));
 	g_free(uifile);
 
-	return window;
+	return dialog;
 }
-
-#if 0
-
-/* Ok & Cancel signal handlers */
-
-/**
- * Handles the 'clicked' signal on the GtkButton 'ok_button',
- * therefore closing the preferences window, applying and saving changes.
- *
- * @param button the GtkButton that received the signal.
- * @param window user data set when the signal handler was connected.
- */
-void
-on_ok_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
-{
-	g_assert(window == instance);
-
-	/* Save values to preferences */
-	retrieve_window_values(window);
-
-	/* Save preferences to file */
-	prefs_save();
-
-	/* Disconnect audio signals */
-	audio_signals_disconnect(window->audio, on_audio_changed, window);
-
-	/* Destroy the window */
-	prefs_window_destroy(instance);
-	instance = NULL;
-
-	/* Make it effective */
-	apply_prefs();
-}
-
-/**
- * Handles the 'clicked' signal on the GtkButton 'cancel_button',
- * therefore closing the preferences window and discarding any changes.
- *
- * @param button the GtkButton that received the signal.
- * @param window user data set when the signal handler was connected.
- */
-void
-on_cancel_button_clicked(G_GNUC_UNUSED GtkButton *button, PrefsWindow *window)
-{
-	g_assert(window == instance);
-
-	prefs_window_destroy(window);
-	instance = NULL;
-}
-
-/**
- * Handles the 'key-press-event' signal on the GtkWindow 'prefs_window',
- * currently handles Esc key (aka Cancel) and Return key (aka OK).
- *
- * @param widget the widget that received the signal.
- * @param event the key event that was triggered.
- * @param window user data set when the signal handler was connected.
- * @return TRUE to stop other handlers from being invoked for the event.
- * FALSE to propagate the event further.
- */
-gboolean
-on_prefs_window_key_press_event(G_GNUC_UNUSED GtkWidget *widget,
-				GdkEventKey *event, PrefsWindow *window)
-{
-	switch (event->keyval) {
-	case GDK_KEY_Escape:
-		gtk_button_clicked(GTK_BUTTON(window->cancel_button));
-		break;
-	case GDK_KEY_Return:
-		gtk_button_clicked(GTK_BUTTON(window->ok_button));
-		break;
-	default:
-		break;
-	}
-
-	return FALSE;
-}
-
-#endif

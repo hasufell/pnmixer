@@ -21,7 +21,7 @@
 #include <gtk/gtk.h>
 
 #include "support-log.h"
-#include "ui-support.h"
+#include "support-ui.h"
 #include "ui-about-dialog.h"
 
 #ifdef WITH_GTK3
@@ -61,7 +61,7 @@ about_dialog_create(GtkWindow *parent)
 	dialog = g_new0(AboutDialog, 1);
 
 	/* Build UI file */
-	uifile = ui_get_builder_file(ABOUT_UI_FILE);
+	uifile = get_ui_file(ABOUT_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building from ui file '%s'", uifile);

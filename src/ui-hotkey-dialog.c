@@ -24,7 +24,7 @@
 
 #include "support-log.h"
 #include "support-intl.h"
-#include "ui-support.h"
+#include "support-ui.h"
 #include "ui-hotkey-dialog.h"
 
 #include "main.h"
@@ -184,7 +184,7 @@ hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 	dialog = g_new0(HotkeyDialog, 1);
 
 	/* Build UI file */
-	uifile = ui_get_builder_file(HOTKEY_DIALOG_UI_FILE);
+	uifile = get_ui_file(HOTKEY_DIALOG_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building from ui file '%s'", uifile);

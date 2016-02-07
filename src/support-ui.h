@@ -1,4 +1,4 @@
-/* ui-support.h
+/* support-ui.h
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,13 +9,14 @@
  */
 
 /**
- * @file ui-support.h
- * Header for ui-support.c.
- * @brief header for ui-support.c
+ * @file support-ui.h
+ * Header for support-ui.c.
+ * This should be included in ui files only.
+ * @brief header for support-ui.c
  */
 
-#ifndef _UI_SUPPORT_H_
-#define _UI_SUPPORT_H_
+#ifndef _SUPPORT_UI_H_
+#define _SUPPORT_UI_H_
 
 #include <gtk/gtk.h>
 
@@ -52,8 +53,10 @@
 		g_assert(GTK_IS_ADJUSTMENT(container->name)); \
 	} while (0)
 
+
+/* Define some simple functions lacking in Gtk2 */
 #ifndef WITH_GTK3
-GtkBuilder *gtk_builder_new_from_file (const gchar *filename);
+GtkBuilder *gtk_builder_new_from_file(const gchar *filename);
 void gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box);
 #endif
 
@@ -61,6 +64,6 @@ void gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box);
  * UI file helpers
  */
 
-gchar *ui_get_builder_file(const char *filename);
+gchar *get_ui_file(const char *filename);
 
-#endif				// _UI_SUPPORT_H_
+#endif				// _SUPPORT_UI_H_

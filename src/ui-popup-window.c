@@ -29,7 +29,7 @@
 #include "audio.h"
 #include "prefs.h"
 #include "support-log.h"
-#include "ui-support.h"
+#include "support-ui.h"
 #include "ui-popup-window.h"
 
 #include "main.h"
@@ -368,9 +368,9 @@ popup_window_create(Audio *audio)
 	gchar *orientation;
 	orientation = prefs_get_string("SliderOrientation", "vertical");
 	if (!g_strcmp0(orientation, "horizontal"))
-		uifile = ui_get_builder_file(POPUP_WINDOW_HORIZONTAL_UI_FILE);
+		uifile = get_ui_file(POPUP_WINDOW_HORIZONTAL_UI_FILE);
 	else
-		uifile = ui_get_builder_file(POPUP_WINDOW_VERTICAL_UI_FILE);
+		uifile = get_ui_file(POPUP_WINDOW_VERTICAL_UI_FILE);
 	g_free(orientation);
 
 	DEBUG("Building from ui file '%s'", uifile);

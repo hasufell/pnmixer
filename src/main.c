@@ -27,13 +27,12 @@
 #include "main.h"
 #include "audio.h"
 #include "notif.h"
-#include "support-log.h"
 #include "hotkeys.h"
 #include "prefs.h"
 #include "support-intl.h"
-#include "ui-support.h"
+#include "support-log.h"
 #include "ui-about-dialog.h"
-#include "ui-prefs-window.h"
+#include "ui-prefs-dialog.h"
 #include "ui-popup-menu.h"
 #include "ui-popup-window.h"
 #include "ui-tray-icon.h"
@@ -49,7 +48,7 @@ static Hotkeys *hotkeys;
 static Notif *notif;
 
 /* Temporary instances */
-static PrefsWindow *prefs_dialog;
+static PrefsDialog *prefs_dialog;
 static AboutDialog *about_dialog;
 
 /**

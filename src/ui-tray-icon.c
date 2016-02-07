@@ -27,7 +27,7 @@
 #include "prefs.h"
 #include "support-log.h"
 #include "support-intl.h"
-#include "ui-support.h"
+#include "support-ui.h"
 #include "ui-tray-icon.h"
 
 #include "main.h"

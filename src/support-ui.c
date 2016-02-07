@@ -1,4 +1,4 @@
-/* ui-support.c
+/* support-ui.c
  * PNmixer is written by Nick Lanham, a fork of OBmixer
  * which was programmed by Lee Ferrett, derived
  * from the program "AbsVolume" by Paul Sherman
@@ -9,8 +9,9 @@
  */
 
 /**
- * @file ui-support.c
- * High-level dialogs that are tied to the main window.
+ * @file support-ui.c
+ * Various ui-related functions.
+ * This should be included in ui files only.
  * @brief Various ui-related functions.
  */
 
@@ -19,12 +20,9 @@
 
 #include "support-log.h"
 #include "support-intl.h"
-#include "support-log.h"
 #include "ui-about-dialog.h"
 
 #include "main.h"
-
-
 
 #ifndef WITH_GTK3
 GtkBuilder *
@@ -33,9 +31,9 @@ gtk_builder_new_from_file (const gchar *filename)
 	GError *error = NULL;
 	GtkBuilder *builder;
 
-	builder = gtk_builder_new ();
-	if (!gtk_builder_add_from_file (builder, filename, &error))
-		g_error ("failed to add UI: %s", error->message);
+	builder = gtk_builder_new();
+	if (!gtk_builder_add_from_file(builder, filename, &error))
+		g_error("failed to add UI: %s", error->message);
 
 	return builder;
 }
@@ -61,7 +59,7 @@ gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box)
  * @return path to the ui file or NULL on failure
  */
 gchar *
-ui_get_builder_file(const char *filename)
+get_ui_file(const char *filename)
 {
 	gchar *path;
 	path = g_build_filename(".", "data", "ui", filename, NULL);

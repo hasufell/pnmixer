@@ -25,7 +25,7 @@
 #include "audio.h"
 #include "support-log.h"
 #include "support-intl.h"
-#include "ui-support.h"
+#include "support-ui.h"
 #include "ui-popup-menu.h"
 #include "ui-about-dialog.h"
 
@@ -219,7 +219,7 @@ popup_menu_create(Audio *audio)
 	menu = g_new0(PopupMenu, 1);
 
 	/* Build UI file */
-	uifile = ui_get_builder_file(POPUP_MENU_UI_FILE);
+	uifile = get_ui_file(POPUP_MENU_UI_FILE);
 	g_assert(uifile);
 
 	DEBUG("Building from ui file '%s'", uifile);

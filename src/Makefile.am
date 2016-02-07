@@ -17,12 +17,12 @@ pnmixer_SOURCES =		\
 	prefs.c			\
 	support-intl.c		\
 	support-log.c		\
+	support-ui.c		\
 	ui-about-dialog.c	\
 	ui-hotkey-dialog.c	\
 	ui-popup-menu.c		\
 	ui-popup-window.c	\
-	ui-prefs-window.c	\
-	ui-support.c		\
+	ui-prefs-dialog.c	\
 	ui-tray-icon.c
 
 pnmixer_LDADD = @PACKAGE_LIBS@ $(INTLLIBS)
