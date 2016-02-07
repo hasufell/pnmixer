@@ -22,5 +22,12 @@ install-doc: doc
 	$(MKDIR_P) "$(DESTDIR)$(htmldir)"
 	cp -pR "$(top_srcdir)"/src/html/* "$(DESTDIR)$(htmldir)"/
 
+indent-xml:
+	for f in data/ui/*.glade; do			\
+		mv "$$f" "$$f.bck";			\
+		xmllint --format "$$f.bck" > "$$f";	\
+		rm "$$f.bck";				\
+	done
+
 clean-local:
 	rm -rf src/html src/latex
