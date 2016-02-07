@@ -32,6 +32,38 @@
 
 #include "main.h"
 
+/* Helpers */
+
+/* Removes the previously attached key_filter() function from
+ * the root window.
+ */
+static void
+hotkeys_remove_filter(GdkFilterFunc filter, gpointer data)
+{
+	GdkWindow *window;
+
+	window = gdk_x11_window_foreign_new_for_display(
+		gdk_display_get_default(), GDK_ROOT_WINDOW());
+
+	gdk_window_remove_filter(window, filter, data);
+}
+
+/* Ataches the key_filter() function as a filter
+ * to the root window, so it will intercept window events.
+ */
+static void
+hotkeys_add_filter(GdkFilterFunc filter, gpointer data)
+{
+	GdkWindow *window;
+
+	window = gdk_x11_window_foreign_new_for_display(
+		gdk_display_get_default(), GDK_ROOT_WINDOW());
+
+	gdk_window_add_filter(window, filter, data);
+}
+
+/* Public functions & callbacks */
+
 struct hotkeys {
 	/* Audio system */
 	Audio  *audio;
@@ -40,8 +72,6 @@ struct hotkeys {
 	Hotkey *up_hotkey;
 	Hotkey *down_hotkey;
 };
-
-/* Helpers */
 
 /**
  * This function is called before gdk/gtk can respond
@@ -78,36 +108,6 @@ key_filter(GdkXEvent *gdk_xevent, G_GNUC_UNUSED GdkEvent *event, gpointer data)
 	return GDK_FILTER_CONTINUE;
 }
 
-/* Removes the previously attached key_filter() function from
- * the root window.
- */
-static void
-hotkeys_remove_filter(Hotkeys *hotkeys)
-{
-	GdkWindow *window;
-
-	window = gdk_x11_window_foreign_new_for_display(
-		gdk_display_get_default(), GDK_ROOT_WINDOW());
-
-	gdk_window_remove_filter(window, key_filter, hotkeys);
-}
-
-/* Ataches the key_filter() function as a filter
- * to the root window, so it will intercept window events.
- */
-static void
-hotkeys_add_filter(Hotkeys *hotkeys)
-{
-	GdkWindow *window;
-
-	window = gdk_x11_window_foreign_new_for_display(
-		gdk_display_get_default(), GDK_ROOT_WINDOW());
-
-	gdk_window_add_filter(window, key_filter, hotkeys);
-}
-
-/* Public functions */
-
 /**
  * Reload hotkey preferences.
  * This has to be called each time the preferences are modified.
@@ -115,7 +115,7 @@ hotkeys_add_filter(Hotkeys *hotkeys)
  * @param hotkeys a Hotkeys instance.
  */
 void
-hotkeys_reload_prefs(Hotkeys *hotkeys)
+hotkeys_reload(Hotkeys *hotkeys)
 {
 	gboolean enabled;
 	gint key, mods;
@@ -168,7 +168,6 @@ hotkeys_reload_prefs(Hotkeys *hotkeys)
 
 	/* Display error message if needed */
 	if (mute_err || up_err || down_err) {
-		// TODO: check if idle report is needed
 		run_error_dialog("%s:\n%s%s%s%s%s%s",
 		                _("Could not bind the following hotkeys"),
 		                mute_err ? _("Mute/Unmute") : "",
@@ -193,7 +192,7 @@ hotkeys_free(Hotkeys *hotkeys)
 		return;
 
 	/* Disable hotkeys */
-	hotkeys_remove_filter(hotkeys);
+	hotkeys_remove_filter(key_filter, hotkeys);
 
 	/* Free anything */
 	hotkey_free(hotkeys->mute_hotkey);
@@ -221,10 +220,10 @@ hotkeys_new(Audio *audio)
 	hotkeys->audio = audio;
 
 	/* Load preferences */
-	hotkeys_reload_prefs(hotkeys);
+	hotkeys_reload(hotkeys);
 
 	/* Enable the hotkeys */
-	hotkeys_add_filter(hotkeys);
+	hotkeys_add_filter(key_filter, hotkeys);
 
 	return hotkeys;
 }

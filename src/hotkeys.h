@@ -23,6 +23,6 @@ typedef struct hotkeys Hotkeys;
 
 Hotkeys *hotkeys_new(Audio *audio);
 void hotkeys_free(Hotkeys *hotkeys);
-void hotkeys_reload_prefs(Hotkeys *hotkeys);
+void hotkeys_reload(Hotkeys *hotkeys);
 
 #endif				// _HOTKEYS_H

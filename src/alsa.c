@@ -138,8 +138,6 @@ elem_set_volume(const char *hctl, snd_mixer_elem_t *elem, double volume, int dir
 		return FALSE;
 	}
 
-	// TODO: what about the 'intentionally set twice' thing ?
-
 	// ALSA_CARD_DEBUG(hctl, "Volume set: %lf (%d)", volume, dir);
 
 	return TRUE;
@@ -225,8 +223,6 @@ elem_set_volume_normalized(const char *hctl, snd_mixer_elem_t *elem, double volu
 		return FALSE;
 	}
 
-	// TODO: what about the 'intentionally set twice' thing ?
-
 	// ALSA_CARD_DEBUG(hctl, "Normalized volume set: %lf (%d)", volume, dir);
 
 	return TRUE;
@@ -286,12 +282,14 @@ elem_set_mute(const char *hctl, snd_mixer_elem_t *elem, gboolean mute)
 	return TRUE;
 }
 
+#if 0
 static void
 elem_set_callback(snd_mixer_elem_t *elem, snd_mixer_elem_callback_t cb, void *data)
 {
 	snd_mixer_elem_set_callback(elem, cb);
 	snd_mixer_elem_set_callback_private(elem, data);
 }
+#endif
 
 /*
  * Alsa mixer handling (deals with 'snd_mixer_t').
@@ -605,6 +603,9 @@ struct alsa_card {
 	gpointer cb_data;
 };
 
+#if 0
+// TODO: remove if useless
+
 /**
  * Alsa callback for a mixer element.
  * This is triggered in the following cases:
@@ -614,8 +615,6 @@ struct alsa_card {
 static int
 mixer_elem_cb(snd_mixer_elem_t *elem, unsigned int mask)
 {
-	// TODO: remove if useless
-
 	const char *channel = snd_mixer_selem_get_name(elem);
 
 	// DEBUG("Entering %s()", __func__);
@@ -653,6 +652,7 @@ mixer_elem_cb(snd_mixer_elem_t *elem, unsigned int mask)
 
 	return 0;
 }
+#endif
 
 /**
  * Callback function for volume changes.
@@ -862,10 +862,12 @@ alsa_card_new(gboolean normalize, const char *card_name, const char *channel)
 	                                         (GIOFunc) poll_watch_cb, card);
 	g_free(pollfds);
 
+#if 0
 	/* Install alsa callback.
 	 * Gets us notified from external volumes changes and 
 	 */
 	elem_set_callback(card->mixer_elem, mixer_elem_cb, card);
+#endif
 
 	/* Sum up the situation */
 	DEBUG("'%s': %s (%s): initialized !",

@@ -112,50 +112,6 @@ hotkey_grab(Hotkey *hotkey)
 /* Public functions */
 
 /**
- * Translate a key into a Gtk Accelerator string.
- * 
- * @param code the key code to process.
- * @param mods the key modifiers to process.
- * @return the accelerator string, must be freed.
- */
-gchar *
-hotkey_code_to_accel(guint code, GdkModifierType mods)
-{
-	Display *disp;
-	guint sym;
-	gchar *accel;
-	
-	disp = gdk_x11_get_default_xdisplay();
-
-	sym = XkbKeycodeToKeysym(disp, code, 0, 0);
-	accel = gtk_accelerator_name(sym, mods);
-
-	return accel;
-}
-
-/**
- * Translate a Gtk Accelerator string to a key code and mods.
- *
- * @param accel the accelerator string to parse.
- * @param code the key code returned after parsing.
- * @param mods the key modifiers after parsing.
- */
-void
-hotkey_accel_to_code(const gchar *accel, gint *code, GdkModifierType *mods)
-{
-	Display *disp;
-	guint sym;
-
-	disp = gdk_x11_get_default_xdisplay();
-
-	gtk_accelerator_parse(accel, &sym, mods);
-	if (sym != 0)
-		*code = XKeysymToKeycode(disp, sym);
-	else
-		*code = -1;
-}
-
-/**
  * Checks if the keycode we got (minus modifiers like
  * numlock/capslock) matches the hotkey.
  * Thus numlock + o will match o.
@@ -207,11 +163,11 @@ hotkey_free(Hotkey *hotkey)
 Hotkey*
 hotkey_new(guint code, GdkModifierType mods)
 {
-	Display *disp;
 	Hotkey *hotkey;
+	Display *disp;
 
-	disp = gdk_x11_get_default_xdisplay();
 	hotkey = g_new0(Hotkey, 1);
+	disp = gdk_x11_get_default_xdisplay();
 
 	hotkey->code = code;
 	hotkey->mods = mods;
@@ -224,4 +180,48 @@ hotkey_new(guint code, GdkModifierType mods)
 	}
 
 	return hotkey;
+}
+
+/**
+ * Translate a key into a Gtk Accelerator string.
+ * 
+ * @param code the key code to process.
+ * @param mods the key modifiers to process.
+ * @return the accelerator string, must be freed.
+ */
+gchar *
+hotkey_code_to_accel(guint code, GdkModifierType mods)
+{
+	Display *disp;
+	guint sym;
+	gchar *accel;
+	
+	disp = gdk_x11_get_default_xdisplay();
+
+	sym = XkbKeycodeToKeysym(disp, code, 0, 0);
+	accel = gtk_accelerator_name(sym, mods);
+
+	return accel;
+}
+
+/**
+ * Translate a Gtk Accelerator string to a key code and mods.
+ *
+ * @param accel the accelerator string to parse.
+ * @param code the key code returned after parsing.
+ * @param mods the key modifiers after parsing.
+ */
+void
+hotkey_accel_to_code(const gchar *accel, gint *code, GdkModifierType *mods)
+{
+	Display *disp;
+	guint sym;
+
+	disp = gdk_x11_get_default_xdisplay();
+
+	gtk_accelerator_parse(accel, &sym, mods);
+	if (sym != 0)
+		*code = XKeysymToKeycode(disp, sym);
+	else
+		*code = -1;
 }

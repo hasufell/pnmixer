@@ -145,13 +145,13 @@ run_prefs_dialog(void)
 	 */
 	if (resp == GTK_RESPONSE_OK) {
 		/* Audio preferences */
-		audio_reload_prefs(audio);
+		audio_reload(audio);
 
 		/* Notifications preferences */
-		notif_reload_prefs(notif);
+		notif_reload(notif);
 
 		/* Hotkeys preferences */
-		hotkeys_reload_prefs(hotkeys);
+		hotkeys_reload(hotkeys);
 
 		/* Popup window, rebuild it from scratch. This is needed in case
 		 * the slider orientation was modified.
@@ -160,7 +160,7 @@ run_prefs_dialog(void)
 		popup_window = popup_window_create(audio);
 
 		/* Tray icon preferences */
-		tray_icon_reload_prefs(tray_icon);
+		tray_icon_reload(tray_icon);
 
 		/* Reload audio */
 		do_reload_audio();

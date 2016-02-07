@@ -47,20 +47,7 @@
   notify_notification_set_hint_int32(notification, key, value)
 #endif
 
-struct notif {
-	/* Audio system */
-	Audio *audio;
-	/* Preferences */
-	gboolean enabled;
-	gboolean popup;
-	gboolean tray;
-	gboolean hotkey;
-	gboolean external;
-	/* Notifications */
-	NotifyNotification *volume_notif;
-	NotifyNotification *text_notif;
-
-};
+/* Helpers */
 
 static void
 show_volume_notif(NotifyNotification *notification,
@@ -80,8 +67,6 @@ show_volume_notif(NotifyNotification *notification,
 		icon = "audio-volume-medium";
 	else
 		icon = "audio-volume-high";
-
-	//TODO: display double volume
 
 	if (muted)
 		summary = g_strdup("Volume muted");
@@ -114,37 +99,22 @@ show_text_notif(NotifyNotification *notification,
 	}
 }
 
-static void
-notif_handle_audio_values_changed(Notif *notif, AudioEvent *event)
-{
-	if (!notif->enabled)
-		return;
+/* Public functions & signal handlers */
 
-	switch (event->user) {
-	case AUDIO_USER_UNKNOWN:
-		if (!notif->external)
-			return;
-		break;
-	case AUDIO_USER_POPUP:
-		if (!notif->popup)
-			return;
-		break;
-	case AUDIO_USER_TRAY_ICON:
-		if (!notif->tray)
-			return;
-		break;
-	case AUDIO_USER_HOTKEYS:
-		if (!notif->hotkey)
-			return;
-		break;
-	default:
-		WARN("Unhandled audio user");
-		return;
-	}
+struct notif {
+	/* Audio system */
+	Audio *audio;
+	/* Preferences */
+	gboolean enabled;
+	gboolean popup;
+	gboolean tray;
+	gboolean hotkey;
+	gboolean external;
+	/* Notifications */
+	NotifyNotification *volume_notif;
+	NotifyNotification *text_notif;
 
-	show_volume_notif(notif->volume_notif, event->card, event->channel,
-	                  event->muted, event->volume);
-}
+};
 
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
@@ -157,14 +127,44 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 		                _("No sound card"),
 		                _("No playable soundcard found"));
 		break;
+
 	case AUDIO_CARD_DISCONNECTED:
 		show_text_notif(notif->text_notif,
 		                _("Soundcard disconnected"),
 		                _("Soundcard has been disconnected, reloading..."));
 		break;
+
 	case AUDIO_VALUES_CHANGED:
-		notif_handle_audio_values_changed(notif, event);
+		if (!notif->enabled)
+			return;
+
+		switch (event->user) {
+		case AUDIO_USER_UNKNOWN:
+			if (!notif->external)
+				return;
+			break;
+		case AUDIO_USER_POPUP:
+			if (!notif->popup)
+				return;
+			break;
+		case AUDIO_USER_TRAY_ICON:
+			if (!notif->tray)
+				return;
+			break;
+		case AUDIO_USER_HOTKEYS:
+			if (!notif->hotkey)
+				return;
+			break;
+		default:
+			WARN("Unhandled audio user");
+			return;
+		}
+
+		show_volume_notif(notif->volume_notif,
+		                  event->card, event->channel,
+		                  event->muted, event->volume);
 		break;
+
 	default:
 		break;
 	}
@@ -175,7 +175,7 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
  * This has to be called each time the preferences are modified.
  */
 void
-notif_reload_prefs(Notif *notif)
+notif_reload(Notif *notif)
 {
 	guint timeout;
 	NotifyNotification *notification;
@@ -249,7 +249,7 @@ notif_new(Audio *audio)
 	audio_signals_connect(audio, on_audio_changed, notif);
 
 	/* Load preferences */
-	notif_reload_prefs(notif);
+	notif_reload(notif);
 
 	return notif;
 }
@@ -269,7 +269,7 @@ notif_new(G_GNUC_UNUSED Audio *audio)
 }
 
 void
-notif_reload_prefs(G_GNUC_UNUSED Notif *notif)
+notif_reload(G_GNUC_UNUSED Notif *notif)
 {
 }
 

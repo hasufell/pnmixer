@@ -61,9 +61,10 @@ void gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box);
 #endif
 
 /*
- * UI file helpers
+ * File helpers
  */
 
 gchar *get_ui_file(const char *filename);
+gchar *get_pixmap_file(const gchar *filename);
 
 #endif				// _SUPPORT_UI_H_

@@ -107,7 +107,6 @@ fill_chan_combo(GtkComboBoxText *combo, const gchar *card_name)
 	channel_list = audio_get_channel_list(card_name);
 
 	/* Empty the combo box */
-	// TODO: define for Gtk2 (look to Gtk3 code)
 	gtk_combo_box_text_remove_all(combo);
 
 	/* Fill the combo box with the channels, save the selected channel index */

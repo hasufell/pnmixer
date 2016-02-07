@@ -25,6 +25,6 @@ typedef struct notif Notif;
 
 Notif* notif_new(Audio *audio);
 void notif_free(Notif *notif);
-void notif_reload_prefs(Notif *notif);
+void notif_reload(Notif *notif);
 
 #endif				// _NOTIF_H_

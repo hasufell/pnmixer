@@ -25,8 +25,8 @@
 
 #include "audio.h"
 #include "prefs.h"
-#include "support-log.h"
 #include "support-intl.h"
+#include "support-log.h"
 #include "support-ui.h"
 #include "ui-tray-icon.h"
 
@@ -44,52 +44,8 @@ enum {
 };
 
 /*
- * Pixmaps directories
+ * Pixbuf handling
  */
-
-/* List of available pixmap directories, populated the first time
- * ui_tray_icon_new() is run.
- */
-static GSList *pixmaps_directories = NULL;
-
-/* Use this function to set the directory containing installed pixmaps. */
-static void
-add_pixmap_directory(const gchar *directory)
-{
-	pixmaps_directories = g_slist_prepend(pixmaps_directories, g_strdup(directory));
-}
-
-/**
- * This is an internally used function to find pixmap files.
- * It searches through the GList pixmaps_directories.
- *
- * @param filename the pixmap file to find
- * @return the path name where we found the pixmap file,
- * newly allocated or NULL on failure
- */
-static gchar *
-find_pixmap_file(const gchar *filename)
-{
-	GSList *elem;
-
-	/* We step through each of the pixmaps directory to find it. */
-	elem = pixmaps_directories;
-	while (elem) {
-		gchar *dir;
-		gchar *pathname;
-
-		dir = elem->data;
-		pathname = g_build_filename(dir, filename, NULL);
-
-		if (g_file_test(pathname, G_FILE_TEST_EXISTS))
-			return pathname;
-
-		g_free(pathname);
-		elem = elem->next;
-	}
-
-	return NULL;
-}
 
 /**
  * This is an internally used function to create GdkPixbufs.
@@ -97,29 +53,30 @@ find_pixmap_file(const gchar *filename)
  * @param filename filename to create the GtkPixbuf from
  * @return the new GdkPixbuf, NULL on failure
  */
-GdkPixbuf *
-create_pixbuf(const gchar *filename)
+static GdkPixbuf *
+pixbuf_new_from_file(const gchar *filename)
 {
-	gchar *pathname = NULL;
-	GdkPixbuf *pixbuf;
 	GError *error = NULL;
+	GdkPixbuf *pixbuf;
+	gchar *pathname = NULL;
 
 	if (!filename || !filename[0])
 		return NULL;
 
-	pathname = find_pixmap_file(filename);
+	pathname = get_pixmap_file(filename);
 
 	if (!pathname) {
-		WARN("Couldn't find pixmap file: %s", filename);
+		ERROR("Couldn't find pixmap file '%s'", filename);
 		return NULL;
 	}
 
 	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
 	if (!pixbuf) {
-		run_error_dialog(_("Failed to load pixbuf file: %s: %s"),
-		                pathname, error->message);
+		ERROR("Failed to create pixbuf from file '%s': %s",
+			pathname, error->message);
 		g_error_free(error);
 	}
+
 	g_free(pathname);
 	return pixbuf;
 }
@@ -127,36 +84,29 @@ create_pixbuf(const gchar *filename)
 /**
  * Looks up icons based on the currently selected theme.
  *
- * @param filename icon name to look up
+ * @param iconname icon name to look up
  * @param size size of the icon
  * @return the corresponding theme icon, NULL on failure,
  * use g_object_unref() to release the reference to the icon
  */
-GdkPixbuf *
-get_stock_pixbuf(const char *filename, gint size)
+static GdkPixbuf *
+pixbuf_new_from_stock(const gchar *iconname, gint size)
 {
-	GError *err = NULL;
-	GdkPixbuf *return_buf = NULL;
 	static GtkIconTheme *icon_theme = NULL;
+	GError *err = NULL;
+	GdkPixbuf *pixbuf = NULL;
 
 	if (icon_theme == NULL)
 		icon_theme = gtk_icon_theme_get_default();
-	return_buf = gtk_icon_theme_load_icon(icon_theme, filename,
-					      size, 0, &err);
-	if (err != NULL) {
-		DEBUG("Unable to load icon %s: %s", filename, err->message);
+
+	pixbuf = gtk_icon_theme_load_icon(icon_theme, iconname, size, 0, &err);
+	if (!pixbuf) {
+		ERROR("Unable to load icon '%s': %s", iconname, err->message);
 		g_error_free(err);
 	}
-	return return_buf;
+
+	return pixbuf;
 }
-
-
-
-
-/*
- * Tray icon pixbuf array.
- * The array contains all the icons currently in use, stored as GdkPixbuf.
- */
 
 /* Frees a pixbuf array. */
 static void
@@ -185,24 +135,24 @@ pixbuf_array_new(int size)
 	system_theme = prefs_get_boolean("SystemTheme", FALSE);
 
 	if (system_theme) {
-		pixbufs[VOLUME_MUTED] = get_stock_pixbuf("audio-volume-muted", size);
-		pixbufs[VOLUME_OFF] = get_stock_pixbuf("audio-volume-off", size);
-		pixbufs[VOLUME_LOW] = get_stock_pixbuf("audio-volume-low", size);
-		pixbufs[VOLUME_MEDIUM] = get_stock_pixbuf("audio-volume-medium", size);
-		pixbufs[VOLUME_HIGH] = get_stock_pixbuf("audio-volume-high", size);
+		pixbufs[VOLUME_MUTED] = pixbuf_new_from_stock("audio-volume-muted", size);
+		pixbufs[VOLUME_OFF] = pixbuf_new_from_stock("audio-volume-off", size);
+		pixbufs[VOLUME_LOW] = pixbuf_new_from_stock("audio-volume-low", size);
+		pixbufs[VOLUME_MEDIUM] = pixbuf_new_from_stock("audio-volume-medium", size);
+		pixbufs[VOLUME_HIGH] = pixbuf_new_from_stock("audio-volume-high", size);
 		/* 'audio-volume-off' is not available in every icon set.
 		 * Check freedesktop standard for more info:
 		 *   http://standards.freedesktop.org/icon-naming-spec/
 		 *   icon-naming-spec-latest.html
 		 */
 		if (pixbufs[VOLUME_OFF] == NULL)
-			pixbufs[VOLUME_OFF] = get_stock_pixbuf("audio-volume-low", size);
+			pixbufs[VOLUME_OFF] = pixbuf_new_from_stock("audio-volume-low", size);
 	} else {
-		pixbufs[VOLUME_MUTED] = create_pixbuf("pnmixer-muted.png");
-		pixbufs[VOLUME_OFF] = create_pixbuf("pnmixer-off.png");
-		pixbufs[VOLUME_LOW] = create_pixbuf("pnmixer-low.png");
-		pixbufs[VOLUME_MEDIUM] = create_pixbuf("pnmixer-medium.png");
-		pixbufs[VOLUME_HIGH] = create_pixbuf("pnmixer-high.png");
+		pixbufs[VOLUME_MUTED] = pixbuf_new_from_file("pnmixer-muted.png");
+		pixbufs[VOLUME_OFF] = pixbuf_new_from_file("pnmixer-off.png");
+		pixbufs[VOLUME_LOW] = pixbuf_new_from_file("pnmixer-low.png");
+		pixbufs[VOLUME_MEDIUM] = pixbuf_new_from_file("pnmixer-medium.png");
+		pixbufs[VOLUME_HIGH] = pixbuf_new_from_file("pnmixer-high.png");
 	}
 
 	return g_memdup(pixbufs, sizeof pixbufs);
@@ -282,7 +232,6 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 	guchar *pixels, *p;
 
 	// TODO: make this feature cool
-	// TODO: remove the comment about "more CPU usage"
 
 	/* Ensure the pixbuf is as expected */
 	g_assert(gdk_pixbuf_get_colorspace(pixbuf) == GDK_COLORSPACE_RGB);
@@ -346,16 +295,6 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 
 /* Helpers */
 
-// TODO: move that
-
-struct tray_icon {
-	Audio *audio;
-	VolMeter *vol_meter;
-	GtkStatusIcon *status_icon;
-	gint status_icon_size;
-	GdkPixbuf **pixbufs;
-};
-
 /* Update the tray icon pixbuf according to the current audio state. */
 static void
 update_status_icon_pixbuf(GtkStatusIcon *status_icon,
@@ -391,42 +330,25 @@ update_status_icon_tooltip(GtkStatusIcon *status_icon,
 {
 	char tooltip[64];
 
-	// TODO: print double volume with only two decimals, or zero
-	
 	if (!muted)
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
-			 card, channel, _("Volume"), (int) volume);
+			 card, channel, _("Volume"), (gint) volume);
 	else
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%\n%s"),
-			 card, channel, _("Volume"), (int) volume, _("Muted"));
+			 card, channel, _("Volume"), (gint) volume, _("Muted"));
 
 	gtk_status_icon_set_tooltip_text(status_icon, tooltip);
 }
 
-/* Rebuild the tray icon according to preferences */
-static void
-rebuild_tray_icon(TrayIcon *icon)
-{
-	const gchar *card, *channel;
-	gdouble volume;
-	gboolean muted;
+/* Public functions & signal handlers */
 
-	pixbuf_array_free(icon->pixbufs);
-	icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
-
-	vol_meter_free(icon->vol_meter);
-	icon->vol_meter = vol_meter_new();
-
-	card = audio_get_card(icon->audio);
-	channel = audio_get_channel(icon->audio);
-	volume = audio_get_volume(icon->audio);
-	muted = audio_is_muted(icon->audio);
-	update_status_icon_pixbuf(icon->status_icon, icon->pixbufs, icon->vol_meter,
-	                          volume, muted);
-	update_status_icon_tooltip(icon->status_icon, card, channel, volume, muted);
-}
-
-/* Signal handlers */
+struct tray_icon {
+	Audio *audio;
+	VolMeter *vol_meter;
+	GdkPixbuf **pixbufs;
+	GtkStatusIcon *status_icon;
+	gint status_icon_size;
+};
 
 /**
  * Handles the 'activate' signal on the GtkStatusIcon, bringing up or hiding
@@ -551,7 +473,7 @@ on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size, TrayIcon *i
 	icon->status_icon_size = size;
 
 	/* Rebuild everything */
-	rebuild_tray_icon(icon);
+	tray_icon_reload(icon);
 
 	return FALSE;
 }
@@ -566,18 +488,33 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 	                           event->volume, event->muted);
 }
 
-/* Public functions */
-
 /**
- * Update the tray icon according to the current preferences.
+ * Update the tray icon according to the current preferences
+ * and the current audio status. Both can't be separated.
  * This has to be called each time the preferences are modified.
  *
  * @param icon a TrayIcon instance.
  */
 void
-tray_icon_reload_prefs(TrayIcon *icon)
+tray_icon_reload(TrayIcon *icon)
 {
-	rebuild_tray_icon(icon);
+	const gchar *card, *channel;
+	gdouble volume;
+	gboolean muted;
+
+	pixbuf_array_free(icon->pixbufs);
+	icon->pixbufs = pixbuf_array_new(icon->status_icon_size);
+
+	vol_meter_free(icon->vol_meter);
+	icon->vol_meter = vol_meter_new();
+
+	card = audio_get_card(icon->audio);
+	channel = audio_get_channel(icon->audio);
+	volume = audio_get_volume(icon->audio);
+	muted = audio_is_muted(icon->audio);
+	update_status_icon_pixbuf(icon->status_icon, icon->pixbufs, icon->vol_meter,
+	                          volume, muted);
+	update_status_icon_tooltip(icon->status_icon, card, channel, volume, muted);
 }
 
 /**
@@ -609,18 +546,13 @@ tray_icon_create(Audio *audio)
 
 	icon = g_new0(TrayIcon, 1);
 
-	/* Init pixmaps directories */
-	if (!pixmaps_directories) {
-		add_pixmap_directory(PACKAGE_DATA_DIR "/" PACKAGE "/pixmaps");
-		add_pixmap_directory("./data/pixmaps");
-	}
-
 	/* Create everything */
 	icon->vol_meter = vol_meter_new();
 	icon->status_icon = gtk_status_icon_new();
 	icon->status_icon_size = ICON_MIN_SIZE;
 
 	/* Connect ui signal handlers */
+
 	// Left-click
 	g_signal_connect(icon->status_icon, "activate",
 			 G_CALLBACK(on_activate), icon);
@@ -645,7 +577,7 @@ tray_icon_create(Audio *audio)
 	gtk_status_icon_set_visible(icon->status_icon, TRUE);
 
 	/* Load preferences */
-	tray_icon_reload_prefs(icon);
+	tray_icon_reload(icon);
 
 	return icon;
 }

@@ -33,7 +33,7 @@ typedef struct audio Audio;
 
 Audio *audio_new(void);
 void audio_free(Audio *audio);
-void audio_reload_prefs(Audio *audio);
+void audio_reload(Audio *audio);
 void audio_unhook_soundcard(Audio *audio);
 void audio_hook_soundcard(Audio *audio);
 const char *audio_get_card(Audio *audio);

@@ -53,24 +53,51 @@ gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box)
 /**
  * Gets the path to an ui file.
  * Looks first in ./data/ui/[file], and then in
- * PACKAGE_DATA_DIR/pnmixer/ui/[file].
+ * PACKAGE_DATA_DIR/PACKAGE/ui/[file].
  *
  * @param filename the name of the ui file
- * @return path to the ui file or NULL on failure
+ * @return path to the ui file or NULL on failure. Must be freed.
  */
 gchar *
 get_ui_file(const char *filename)
 {
 	gchar *path;
+
 	path = g_build_filename(".", "data", "ui", filename, NULL);
 	if (g_file_test(path, G_FILE_TEST_EXISTS))
 		return path;
 	g_free(path);
-	path = g_build_filename(PACKAGE_DATA_DIR, "pnmixer", "ui",
-				filename, NULL);
+
+	path = g_build_filename(PACKAGE_DATA_DIR, PACKAGE, "ui", filename, NULL);
 	if (g_file_test(path, G_FILE_TEST_EXISTS))
 		return path;
 	g_free(path);
+
 	return NULL;
 }
 
+/**
+ * Gets the path to a pixmap file.
+ * Looks first in ./data/ui/[file], and then in
+ * PACKAGE_DATA_DIR/PACKAGE/ui/[file].
+ *
+ * @param filename the pixmap file to find
+ * @return path to the ui file or NULL on failure. Must be freed.
+ */
+gchar *
+get_pixmap_file(const gchar *filename)
+{
+	gchar *path;
+
+	path = g_build_filename(".", "data", "pixmaps", filename, NULL);
+	if (g_file_test(path, G_FILE_TEST_EXISTS))
+		return path;
+	g_free(path);
+
+	path = g_build_filename(PACKAGE_DATA_DIR, PACKAGE, "pixmaps", filename, NULL);
+	if (g_file_test(path, G_FILE_TEST_EXISTS))
+		return path;
+	g_free(path);
+
+	return NULL;
+}

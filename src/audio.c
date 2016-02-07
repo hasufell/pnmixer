@@ -390,7 +390,7 @@ end:
 }
 
 void
-audio_reload_prefs(Audio *audio)
+audio_reload(Audio *audio)
 {
 	audio->scroll_step = prefs_get_double("ScrollStep", 5);
 }
@@ -411,7 +411,7 @@ audio_new(void)
 	Audio *audio;
 
 	audio = g_new0(Audio, 1);
-	audio_reload_prefs(audio);
+	audio_reload(audio);
 
 	return audio;
 }
