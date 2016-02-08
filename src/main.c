@@ -21,7 +21,6 @@
 #endif
 
 #include <stdlib.h>
-
 #include <glib.h>
 
 #include "main.h"
@@ -350,8 +349,9 @@ main(int argc, char *argv[])
 	audio_reload(audio);
 
 	/* Run */
-	DEBUG("Running main loop...");
+	DEBUG("---- Running main loop ----");
 	gtk_main();
+	DEBUG("---- Exiting main loop ----");
 
 	/* Cleanup */
 	audio_signals_disconnect(audio, on_audio_changed, NULL);

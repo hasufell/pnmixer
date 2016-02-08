@@ -423,12 +423,14 @@ audio_hook_soundcard(Audio *audio)
 
 	g_assert(audio->soundcard == NULL);
 
-	DEBUG("Hooking soundcard to the audio system");
+	DEBUG("Hooking soundcard '%s' to the audio system", audio->card);
 
 	/* Attempt to create the card */
 	soundcard = alsa_card_new(audio->card, audio->channel, audio->normalize);
 	if (soundcard)
 		goto end;
+
+	DEBUG("Failed to hook soundcard, trying every card available");
 
 	/* On failure, try to create the card from the list of available cards.
 	 * We don't try the card name that just failed.

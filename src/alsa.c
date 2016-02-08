@@ -765,7 +765,8 @@ alsa_card_free(AlsaCard *card)
 	if (card == NULL)
 		return;
 
-	unwatch_poll_descriptors(card->watch_ids);
+	if (card->watch_ids)
+		unwatch_poll_descriptors(card->watch_ids);
 
 	if (card->mixer)
 		mixer_close(card->hctl, card->mixer);

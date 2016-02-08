@@ -132,7 +132,7 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 	case AUDIO_CARD_DISCONNECTED:
 		show_text_notif(notif->text_notif,
 		                _("Soundcard disconnected"),
-		                _("Soundcard has been disconnected, reloading..."));
+		                _("Soundcard has been disconnected, reloading sound system..."));
 		break;
 
 	case AUDIO_VALUES_CHANGED:
