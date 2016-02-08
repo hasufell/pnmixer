@@ -126,7 +126,7 @@ run_prefs_dialog(void)
 		return;
 
 	/* Create the preferences dialog */
-	prefs_dialog = prefs_dialog_create(main_window, audio);
+	prefs_dialog = prefs_dialog_create(main_window, audio, hotkeys);
 	prefs_dialog_populate(prefs_dialog);
 
 	/* Run it */

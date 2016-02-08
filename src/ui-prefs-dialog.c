@@ -31,6 +31,7 @@
 #include "audio.h"
 #include "prefs.h"
 #include "hotkey.h"
+#include "hotkeys.h"
 #include "support-log.h"
 #include "support-intl.h"
 #include "support-ui.h"
@@ -167,9 +168,17 @@ fill_card_combo(GtkComboBoxText *combo, Audio *audio)
 /* Public functions & signals handlers */
 
 struct prefs_dialog {
-	/* Audio system */
+	/* Audio system
+	 * We need it to display card/channel lists, and also to be notified
+	 * if something interesting happens (card disappearing, for example).
+	 */
 	Audio *audio;
-	/* Hotkey dialog - to ensure there's only one dialog at a time */
+	/* Hotkeys system
+	 * When assigning hotkeys, we must unbind the hotkeys first.
+	 * Otherwise the currently assigned keys are intercepted
+	 * and can't be used.
+	 */
+	Hotkeys *hotkeys;
 	HotkeyDialog *hotkey_dialog;
 	/* Top-level widgets */
 	GtkWidget *prefs_dialog;
@@ -328,7 +337,7 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 		return FALSE;
 
 	/* We want it to be double-click */
-	if (event->type == GDK_2BUTTON_PRESS)
+	if (event->type != GDK_2BUTTON_PRESS)
 		return FALSE;
 
 	/* Let's check which eventbox was clicked */
@@ -349,12 +358,18 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 	if (dialog->hotkey_dialog)
 		return FALSE;
 
+	/* Unbind hotkeys */
+	hotkeys_unbind(dialog->hotkeys);
+
 	/* Run the hotkey dialog */
 	dialog->hotkey_dialog = hotkey_dialog_create
 	                        (GTK_WINDOW(dialog->prefs_dialog), hotkey);
 	key_pressed = hotkey_dialog_run(dialog->hotkey_dialog);
 	hotkey_dialog_destroy(dialog->hotkey_dialog);
 	dialog->hotkey_dialog = NULL;
+
+	/* Bind hotkeys */
+	hotkeys_bind(dialog->hotkeys);
 
 	/* Check the response */
 	if (key_pressed == NULL)
@@ -790,12 +805,13 @@ prefs_dialog_destroy(PrefsDialog *dialog)
 
 	if (dialog->hotkey_dialog)
 		hotkey_dialog_destroy(dialog->hotkey_dialog);
+
 	gtk_widget_destroy(dialog->prefs_dialog);
 	g_free(dialog);
 }
 
 PrefsDialog *
-prefs_dialog_create(GtkWindow *parent, Audio *audio)
+prefs_dialog_create(GtkWindow *parent, Audio *audio, Hotkeys *hotkeys)
 {
 	gchar *uifile = NULL;
 	GtkBuilder *builder = NULL;
@@ -882,8 +898,11 @@ prefs_dialog_create(GtkWindow *parent, Audio *audio)
 	/* Connect ui signal handlers */
 	gtk_builder_connect_signals(builder, dialog);
 
-	/* Connect audio signal handlers */
+	/* Save some references */
+	dialog->hotkeys = hotkeys;
 	dialog->audio = audio;
+
+	/* Connect audio signal handlers */
 	audio_signals_connect(audio, on_audio_changed, dialog);
 
 	/* Cleanup */

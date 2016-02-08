@@ -81,6 +81,8 @@ find_vol_control_command(void)
 			return *cmd;
 		cmd++;
 	}
+
+	return NULL;
 }
 
 /**

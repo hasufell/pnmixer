@@ -18,10 +18,11 @@
 #define _UI_PREFS_DIALOG_H_
 
 #include "audio.h"
+#include "hotkeys.h"
 
 typedef struct prefs_dialog PrefsDialog;
 
-PrefsDialog *prefs_dialog_create(GtkWindow *parent, Audio *audio);
+PrefsDialog *prefs_dialog_create(GtkWindow *parent, Audio *audio, Hotkeys *hotkeys);
 void prefs_dialog_destroy(PrefsDialog *dialog);
 gint prefs_dialog_run(PrefsDialog *dialog);
 

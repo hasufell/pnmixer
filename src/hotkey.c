@@ -57,14 +57,21 @@ grab_error_handler(G_GNUC_UNUSED Display *disp, G_GNUC_UNUSED XErrorEvent *ev)
 	return 0;
 }
 
-/* Ungrab a key */
-static void
+/* Public functions */
+
+/**
+ * Ungrab a key manually. Should be paired with a hotkey_grab() call.
+ *
+ * @param hotkey a Hotkey instance.
+ * @return TRUE on success, FALSE on error.
+ */
+void
 hotkey_ungrab(Hotkey *hotkey)
 {
 	Display *disp;
 	guint i;
 
-	DEBUG("Unbinding hotkey %s", hotkey->str);
+	DEBUG("Ungrabing hotkey '%s'", hotkey->str);
 
 	disp = gdk_x11_get_default_xdisplay();
 
@@ -74,15 +81,20 @@ hotkey_ungrab(Hotkey *hotkey)
 		           GDK_ROOT_WINDOW());
 }
 
-/* Grab a key using X Window System */
-static gboolean
+/**
+ * Grab a key manually. Should be paired with a hotkey_ungrab() call.
+ *
+ * @param hotkey a Hotkey instance.
+ * @return TRUE on success, FALSE on error.
+ */
+gboolean
 hotkey_grab(Hotkey *hotkey)
 {
 	Display *disp;
 	XErrorHandler old_hdlr;
 	guint i;
 
-	DEBUG("Binding hotkey %s", hotkey->str);
+	DEBUG("Grabing hotkey '%s'", hotkey->str);
 
 	disp = gdk_x11_get_default_xdisplay();
 
@@ -108,8 +120,6 @@ hotkey_grab(Hotkey *hotkey)
 
 	return TRUE;
 }
-
-/* Public functions */
 
 /**
  * Checks if the keycode we got (minus modifiers like

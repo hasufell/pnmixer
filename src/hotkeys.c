@@ -169,7 +169,7 @@ hotkeys_reload(Hotkeys *hotkeys)
 	/* Display error message if needed */
 	if (mute_err || up_err || down_err) {
 		run_error_dialog("%s:\n%s%s%s%s%s%s",
-		                 _("Could not bind the following hotkeys"),
+		                 _("Could not grab the following hotkeys"),
 		                 mute_err ? _("Mute/Unmute") : "",
 		                 mute_err ? "\n" : "",
 		                 up_err ? _("Volume Up") : "",
@@ -178,6 +178,42 @@ hotkeys_reload(Hotkeys *hotkeys)
 		                 down_err ? "\n" : ""
 		                );
 	}
+}
+
+/**
+ * Unbind hotkeys manually. Should be paired with a hotkeys_bind() call.
+ *
+ * @param hotkeys a Hotkeys instance.
+ */
+void
+hotkeys_unbind(Hotkeys *hotkeys)
+{
+	hotkeys_remove_filter(key_filter, hotkeys);
+
+	if (hotkeys->mute_hotkey)
+		hotkey_ungrab(hotkeys->mute_hotkey);
+	if (hotkeys->up_hotkey)
+		hotkey_ungrab(hotkeys->up_hotkey);
+	if (hotkeys->down_hotkey)
+		hotkey_ungrab(hotkeys->down_hotkey);
+}
+
+/**
+ * Bind hotkeys manually. Should be paired with a hotkeys_unbind() call.
+ *
+ * @param hotkeys a Hotkeys instance.
+ */
+void
+hotkeys_bind(Hotkeys *hotkeys)
+{
+	if (hotkeys->mute_hotkey)
+		hotkey_grab(hotkeys->mute_hotkey);
+	if (hotkeys->up_hotkey)
+		hotkey_grab(hotkeys->up_hotkey);
+	if (hotkeys->down_hotkey)
+		hotkey_grab(hotkeys->down_hotkey);
+
+	hotkeys_add_filter(key_filter, hotkeys);
 }
 
 /**
@@ -202,7 +238,7 @@ hotkeys_free(Hotkeys *hotkeys)
 }
 
 /**
- * Creates the hotkeys subsystem.
+ * Creates the hotkeys subsystem, and bind the hotkeys.
  *
  * @param audio the audio system, needed to control the audio.
  * @return the newly created Hotkeys instance.
@@ -222,7 +258,7 @@ hotkeys_new(Audio *audio)
 	/* Load preferences */
 	hotkeys_reload(hotkeys);
 
-	/* Enable the hotkeys */
+	/* Bind hotkeys */
 	hotkeys_add_filter(key_filter, hotkeys);
 
 	return hotkeys;

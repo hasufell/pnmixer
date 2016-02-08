@@ -35,6 +35,9 @@ Hotkey *hotkey_new(guint code, GdkModifierType mods);
 void hotkey_free(Hotkey *key);
 gboolean hotkey_matches(Hotkey *hotkey, guint code, GdkModifierType mods);
 
+void hotkey_ungrab(Hotkey *hotkey);
+gboolean hotkey_grab(Hotkey *hotkey);
+
 gchar *hotkey_code_to_accel(guint code, GdkModifierType mods);
 void hotkey_accel_to_code(const gchar *accel, gint *code, GdkModifierType *mods);
 
