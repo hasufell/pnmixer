@@ -28,18 +28,13 @@ GSList *audio_get_channel_list(const char *card);
 
 typedef struct audio Audio;
 
-/* Soundcard management.
- */
+/* Soundcard management */
 
 Audio *audio_new(void);
 void audio_free(Audio *audio);
 void audio_reload(Audio *audio);
-void audio_unhook_soundcard(Audio *audio);
-void audio_hook_soundcard(Audio *audio);
-const char *audio_get_card(Audio *audio);
-const char *audio_get_channel(Audio *audio);
 
-/* Mute and volume handling.
+/* Audio status: card & channel name, mute & volume handling.
  * Everyone who changes the volume must declare who he is.
  */
 
@@ -52,6 +47,8 @@ enum audio_user {
 
 typedef enum audio_user AudioUser;
 
+const char *audio_get_card(Audio *audio);
+const char *audio_get_channel(Audio *audio);
 gboolean audio_is_muted(Audio *audio);
 void audio_toggle_mute(Audio *audio, AudioUser user);
 gdouble audio_get_volume(Audio *audio);
@@ -59,7 +56,7 @@ void audio_set_volume(Audio *audio, AudioUser user, gdouble volume);
 void audio_lower_volume(Audio *audio, AudioUser user);
 void audio_raise_volume(Audio *audio, AudioUser user);
 
-/* Signals handling.
+/* Signal handling.
  * The audio system sends signals out there when something happens.
  */
 
@@ -77,8 +74,8 @@ typedef enum audio_signal AudioSignal;
 struct audio_event {
 	AudioSignal signal;
 	AudioUser user;
-	gchar *card;
-	gchar *channel;
+	const gchar *card;
+	const gchar *channel;
 	gboolean muted;
 	gdouble volume;
 };
@@ -88,11 +85,6 @@ typedef struct audio_event AudioEvent;
 typedef void (*AudioCallback) (Audio *audio, AudioEvent *event, gpointer data);
 
 void audio_signals_connect(Audio *audio, AudioCallback callback, gpointer data);
- /* Never forget to call that, otherwise it will segfault.
-  * This is unlike Glib signal handling, where disconnecting
-  * can be omitted. This works thanks to ref counting.
-  * //TODO: make a better comment.
-  */
 void audio_signals_disconnect(Audio *audio, AudioCallback callback, gpointer data);
 
 #endif				// _AUDIO_H

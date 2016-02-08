@@ -24,8 +24,7 @@ typedef struct alsa_card AlsaCard;
 GSList *alsa_list_cards(void);
 GSList *alsa_list_channels(const char *card_name);
 
-AlsaCard *alsa_card_new_from_name(gboolean normalize, const char *card);
-AlsaCard *alsa_card_new_from_list(gboolean normalize, GSList *card_list);
+AlsaCard *alsa_card_new(const char *card, const char *channel, gboolean normalize);
 void alsa_card_free(AlsaCard *card);
 
 enum alsa_event {

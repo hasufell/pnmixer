@@ -144,15 +144,6 @@ run_prefs_dialog(void)
 	 * while new prefs are applied.
 	 */
 	if (resp == GTK_RESPONSE_OK) {
-		/* Audio preferences */
-		audio_reload(audio);
-
-		/* Notifications preferences */
-		notif_reload(notif);
-
-		/* Hotkeys preferences */
-		hotkeys_reload(hotkeys);
-
 		/* Popup window, rebuild it from scratch. This is needed in case
 		 * the slider orientation was modified.
 		 */
@@ -162,8 +153,14 @@ run_prefs_dialog(void)
 		/* Tray icon preferences */
 		tray_icon_reload(tray_icon);
 
+		/* Hotkeys preferences */
+		hotkeys_reload(hotkeys);
+
+		/* Notifications preferences */
+		notif_reload(notif);
+
 		/* Reload audio */
-		do_reload_audio();
+		audio_reload(audio);
 
 		/* Save preferences to file */
 		prefs_save();
@@ -267,23 +264,16 @@ do_show_popup_menu(GtkMenuPositionFunc func, gpointer data, guint button, guint 
 	popup_menu_show(popup_menu, func, data, button, activate_time);
 }
 
-void
-do_reload_audio(void)
-{
-	audio_unhook_soundcard(audio);
-	audio_hook_soundcard(audio);
-}
-
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, G_GNUC_UNUSED gpointer data)
 {
 	switch (event->signal) {
 	case AUDIO_CARD_DISCONNECTED:
-		do_reload_audio();
+		audio_reload(audio);
 		break;
 	case AUDIO_CARD_ERROR:
 		if (run_audio_error_dialog() == GTK_RESPONSE_YES)
-			do_reload_audio();
+			audio_reload(audio);
 		break;
 	default:
 		break;
@@ -367,7 +357,7 @@ main(int argc, char *argv[])
 	audio_signals_connect(audio, on_audio_changed, NULL);
 
 	/* Hook the soundcard */
-	audio_hook_soundcard(audio);
+	audio_reload(audio);
 
 	/* Run */
 	DEBUG("Running main loop...");

@@ -17,7 +17,6 @@
 #include <glib.h>
 #include <alsa/asoundlib.h>
 
-#include "prefs.h"
 #include "support-log.h"
 #include "alsa.h"
 
@@ -295,29 +294,10 @@ elem_set_callback(snd_mixer_elem_t *elem, snd_mixer_elem_callback_t cb, void *da
  * Alsa mixer handling (deals with 'snd_mixer_t').
  */
 
-/* Get the list of playable channels */
-static GSList *
-mixer_list_playable(G_GNUC_UNUSED const char *hctl, snd_mixer_t *mixer)
-{
-	GSList *list = NULL;
-	snd_mixer_elem_t *elem = NULL;
-
-	elem = snd_mixer_first_elem(mixer);
-	while (elem) {
-		if (snd_mixer_selem_has_playback_volume(elem)) {
-			const char *chan_name = snd_mixer_selem_get_name(elem);
-			list = g_slist_append(list, g_strdup(chan_name));
-		}
-		elem = snd_mixer_elem_next(elem);
-	}
-
-	return list;
-}
-
 /* Get poll descriptors in a dynamic array (must be freed).
  * The array is terminated by a fd set to -1.
  */
-struct pollfd *
+static struct pollfd *
 mixer_get_poll_descriptors(const char *hctl, snd_mixer_t *mixer)
 {
 	int err, count;
@@ -340,9 +320,43 @@ mixer_get_poll_descriptors(const char *hctl, snd_mixer_t *mixer)
 	return fds;
 }
 
-/* Get a mixer element by name */
+/* Get the list of playable channels */
+static GSList *
+mixer_list_playable(G_GNUC_UNUSED const char *hctl, snd_mixer_t *mixer)
+{
+	GSList *list = NULL;
+	snd_mixer_elem_t *elem = NULL;
+
+	elem = snd_mixer_first_elem(mixer);
+	while (elem) {
+		if (snd_mixer_selem_has_playback_volume(elem)) {
+			const char *chan_name = snd_mixer_selem_get_name(elem);
+			list = g_slist_append(list, g_strdup(chan_name));
+		}
+		elem = snd_mixer_elem_next(elem);
+	}
+
+	return list;
+}
+
+/* Return TRUE if the mixer has at least one playable channel, FALSE otherwise */
+static gboolean
+mixer_is_playable(const char *hctl, snd_mixer_t *mixer)
+{
+	GSList *playable_chans;
+
+	playable_chans = mixer_list_playable(hctl, mixer);
+	if (playable_chans) {
+		g_slist_free_full(playable_chans, g_free);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+/* Get a playable mixer element by name */
 static snd_mixer_elem_t *
-mixer_get_elem(const char *hctl, snd_mixer_t *mixer, const char *channel)
+mixer_get_playable_elem(const char *hctl, snd_mixer_t *mixer, const char *channel)
 {
 	snd_mixer_elem_t *elem;
 	snd_mixer_selem_id_t *sid;
@@ -370,6 +384,7 @@ mixer_get_elem(const char *hctl, snd_mixer_t *mixer, const char *channel)
 	return elem;
 }
 
+/* Get the first playable mixer elem */
 static snd_mixer_elem_t *
 mixer_get_first_playable_elem(const char *hctl, snd_mixer_t *mixer)
 {
@@ -453,92 +468,93 @@ failure:
 }
 
 /*
- * Alsa misc functions.
+ * Alsa card iterator.
+ * The Alsa API is really awkward when it comes to deal with cards
+ * and getting various informations from it.
+ * This iterator is here to make it less painful.
  */
 
-static GSList *
-list_cards(void)
-{
-	int err;
+struct alsa_card_iter {
 	int number;
-	GSList *list = NULL;
+	char *name;
+	char *hctl;
+};
 
-	/* Always first in the list, the 'default' card */
-	list = g_slist_append(list, g_strdup(ALSA_DEFAULT_CARD));
+typedef struct alsa_card_iter AlsaCardIter;
 
-	/* Then, iterate on available cards */
-	for (number = -1;;) {
-		char *name;
+/* Free an iterator */
+void
+alsa_card_iter_free(AlsaCardIter *iter)
+{
+	if (iter == NULL)
+		return;
 
-		/* Get next soundcard */
-		err = snd_card_next(&number);
-		if (err < 0) {
-			ALSA_ERR(err, "Can't enumerate sound cards");
-			break;
-		}
-
-		if (number < 0)
-			break;
-
-		/* Get card name */
-		err = snd_card_get_name(number, &name);
-		if (err < 0) {
-			ALSA_ERR(err, "Can't get card name");
-			break;
-		}
-
-		/* Add it to the list */
-		list = g_slist_append(list, name);
-	}
-
-	return list;
+	g_free(iter->name);
+	g_free(iter->hctl);
+	g_free(iter);
 }
 
-/* Find a card by name, and return its corresponding HCTL name.
- * Result must be freed.
+/* Create a new iterator */
+AlsaCardIter *
+alsa_card_iter_new(void)
+{
+	AlsaCardIter *iter;
+
+	iter = g_new0(AlsaCardIter, 1);
+	iter->number = -2;
+
+	return iter;
+}
+
+/* Iterate over alsa cards. Return TRUE as long as there is a card,
+ * and FALSE when there's no more card.
+ * After it returned FALSE, the iterator shouldn't be used anymore and
+ * should be freed.
  */
-static char *
-card_name_to_hctl(const char *card_name)
+gboolean
+alsa_card_iter_loop(AlsaCardIter *iter)
 {
 	int err;
-	int number;
 
-	/* Handle the special 'default' card */
-	if (!g_strcmp0(card_name, ALSA_DEFAULT_CARD))
-		return g_strdup(ALSA_DEFAULT_HCTL);
+	/* Free iter data at first */
+	g_free(iter->name);
+	iter->name = NULL;
+	g_free(iter->hctl);
+	iter->hctl = NULL;
 
-	/* Iterate on cards and try to find the one */
-	for (number = -1;;) {
-		char *name;
-
-		/* Get next soundcard */
-		err = snd_card_next(&number);
-		if (err < 0) {
-			ALSA_ERR(err, "Can't enumerate sound cards");
-			break;
-		}
-
-		if (number < 0)
-			break;
-
-		/* Get card name */
-		err = snd_card_get_name(number, &name);
-		if (err < 0) {
-			ALSA_ERR(err, "Can't get card name");
-			break;
-		}
-
-		/* Check if it's the card we're looking for */
-		if (!g_strcmp0(name, card_name)) {
-			g_free(name);
-			return g_strdup_printf("hw:%d", number);
-		}
-
-		/* Nope. Don't forget to free before continuing. */
-		g_free(name);
+	/* First elem is the default alsa soundcard.
+	 * It's not really reachable as it with the ALSA API,
+	 * so we add it manually here.
+	 */
+	if (iter->number == -2) {
+		iter->number = -1;
+		iter->name = g_strdup(ALSA_DEFAULT_CARD);
+		iter->hctl = g_strdup(ALSA_DEFAULT_HCTL);
+		return TRUE;
 	}
 
-	return NULL;
+	/* Get next alsa soundcard */
+	err = snd_card_next(&iter->number);
+	if (err < 0) {
+		ALSA_ERR(err, "Can't enumerate sound cards");
+		return FALSE;
+	}
+
+	/* No more soundcards ? */
+	if (iter->number < 0)
+		return FALSE;
+
+	/* Get card name */
+	err = snd_card_get_name(iter->number, &(iter->name));
+	if (err < 0) {
+		ALSA_ERR(err, "Can't get card name");
+		return FALSE;
+	}
+
+	/* Get HCTL name */
+	iter->hctl = g_strdup_printf("hw:%d", iter->number);
+
+	return TRUE;
 }
 
 /* 
@@ -656,6 +672,7 @@ mixer_elem_cb(snd_mixer_elem_t *elem, unsigned int mask)
 
 /**
  * Callback function for volume changes.
+ * We forward changes to higher level, through a callback mechanism again.
  *
  * @param source the GIOChannel event source
  * @param condition the condition which has been satisfied
@@ -817,10 +834,11 @@ alsa_card_free(AlsaCard *card)
 	g_free(card);
 }
 
-static AlsaCard *
-alsa_card_new(gboolean normalize, const char *card_name, const char *channel)
+AlsaCard *
+alsa_card_new(const char *card_name, const char *channel, gboolean normalize)
 {
 	AlsaCard *card;
+	AlsaCardIter *iter;
 
 	card = g_new0(AlsaCard, 1);
 
@@ -833,7 +851,15 @@ alsa_card_new(gboolean normalize, const char *card_name, const char *channel)
 	card->name = g_strdup(card_name);
 
 	/* Get corresponding HCTL name */
-	card->hctl = card_name_to_hctl(card_name);
+	iter = alsa_card_iter_new();
+	while (alsa_card_iter_loop(iter)) {
+		if (!g_strcmp0(iter->name, card_name)) {
+			card->hctl = g_strdup(iter->hctl);
+			break;
+		}
+	}
+	alsa_card_iter_free(iter);
+
 	if (card->hctl == NULL)
 		goto failure;
 
@@ -843,7 +869,7 @@ alsa_card_new(gboolean normalize, const char *card_name, const char *channel)
 		goto failure;
 
 	/* Get mixer element */
-	card->mixer_elem = mixer_get_elem(card->hctl, card->mixer, channel);
+	card->mixer_elem = mixer_get_playable_elem(card->hctl, card->mixer, channel);
 	if (card->mixer_elem == NULL)
 		card->mixer_elem = mixer_get_first_playable_elem(card->hctl, card->mixer);
 	if (card->mixer_elem == NULL)
@@ -880,74 +906,74 @@ failure:
 	return NULL;
 }
 
-AlsaCard *
-alsa_card_new_from_name(gboolean normalize, const char *card_name)
-{
-	AlsaCard *card;
-	char *channel;
-
-	channel = prefs_get_channel(card_name);
-	card = alsa_card_new(normalize, card_name, channel);
-	g_free(channel);
-
-	return card;
-}
-
-AlsaCard *
-alsa_card_new_from_list(gboolean normalize, GSList *card_list)
-{
-	AlsaCard *card = NULL;
-	GSList *item;
-
-	for (item = card_list; item; item = item->next) {
-		char *channel;
-		const char *card_name;
-
-		card_name = item->data;
-		channel = prefs_get_channel(card_name);
-		card = alsa_card_new(normalize, card_name, channel);
-		g_free(channel);
-
-		if (card)
-			break;
-	}
-
-	return card;
-}
-
 /*
  * Alsa listing functions
  */
 
-/* Return the list of available cards.
- * Must be freed using g_free.
+/* Return the list of playable cards as a GSList.
+ * Must be freed using g_slist_free_full().
  */
 GSList *
 alsa_list_cards(void)
 {
-	return list_cards();
+	AlsaCardIter *iter;
+	GSList *list = NULL;
+
+	/* Iterate over cards */
+	iter = alsa_card_iter_new();
+	while (alsa_card_iter_loop(iter)) {
+		snd_mixer_t *mixer;
+
+		/* Open mixer */
+		mixer = mixer_open(iter->hctl);
+		if (mixer == NULL)
+			continue;
+
+		/* Only keep cards with playable channels */
+		if (mixer_is_playable(iter->hctl, mixer))
+			list = g_slist_append(list, g_strdup(iter->name));
+
+		/* Close mixer */
+		mixer_close(iter->hctl, mixer);
+	}
+	alsa_card_iter_free(iter);
+
+	return list;
 }
 
 /* For a given card name, return the list of playable channels as a GSList.
- * Must be freed using g_free.
+ * Must be freed using g_slist_free_full().
  */
 GSList *
 alsa_list_channels(const char *card_name)
 {
-	char *hctl;
+	AlsaCardIter *iter;
+	char *hctl = NULL;
 	snd_mixer_t *mixer;
-	GSList *list;
+	GSList *list = NULL;
 
-	hctl = card_name_to_hctl(card_name);
+	/* Iterate over cards to find the one provided in argument */
+	iter = alsa_card_iter_new();
+	while (alsa_card_iter_loop(iter)) {
+		if (!g_strcmp0(iter->name, card_name)) {
+			hctl = g_strdup(iter->hctl);
+			break;
+		}
+	}
+	alsa_card_iter_free(iter);
+
 	if (hctl == NULL)
 		goto exit;
 
+	/* Open the mixer */
 	mixer = mixer_open(hctl);
 	if (mixer == NULL)
 		goto exit;
 
+	/* Get a list of playable channels */
 	list = mixer_list_playable(hctl, mixer);
 
+	/* Cleanup */
 exit:
 	if (mixer)
 		mixer_close(hctl, mixer);

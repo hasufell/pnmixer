@@ -141,9 +141,9 @@ on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-			G_GNUC_UNUSED PopupMenu *menu)
+                        PopupMenu *menu)
 {
-	do_reload_audio();
+	audio_reload(menu->audio);
 }
 
 /**
