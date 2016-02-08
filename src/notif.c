@@ -201,7 +201,7 @@ notif_reload(Notif *notif)
 
 	notification = NOTIFICATION_NEW("", NULL, NULL);
 	notify_notification_set_timeout(notification, timeout * 2);
-	NOTIFICATION_SET_HINT_STRING(notification, "x-canonical-private-synchronous", "");		
+	NOTIFICATION_SET_HINT_STRING(notification, "x-canonical-private-synchronous", "");
 	if (notif->text_notif)
 		g_object_unref(notif->text_notif);
 	notif->text_notif = notification;

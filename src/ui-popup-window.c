@@ -58,10 +58,10 @@ configure_vol_text(GtkScale *vol_scale)
 	position = prefs_get_integer("TextVolumePosition", 0);
 
 	gtk_position =
-		position == 0 ? GTK_POS_TOP :
-		position == 1 ? GTK_POS_BOTTOM :
-		position == 2 ? GTK_POS_LEFT :
-		GTK_POS_RIGHT;
+	        position == 0 ? GTK_POS_TOP :
+	        position == 1 ? GTK_POS_BOTTOM :
+	        position == 2 ? GTK_POS_LEFT :
+	        GTK_POS_RIGHT;
 
 	if (enabled) {
 		gtk_scale_set_draw_value(vol_scale, TRUE);
@@ -95,7 +95,7 @@ update_mute_check(GtkToggleButton *mute_check, GCallback handler_func,
 	gint n_handlers_blocked;
 
 	n_handlers_blocked = g_signal_handlers_block_by_func
-			     (G_OBJECT(mute_check), handler_func, handler_data);
+	                     (G_OBJECT(mute_check), handler_func, handler_data);
 	g_assert(n_handlers_blocked == 1);
 
 	gtk_toggle_button_set_active(mute_check, muted);
@@ -133,7 +133,7 @@ struct popup_window {
  */
 gboolean
 on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
-		      PopupWindow *window)
+                      PopupWindow *window)
 {
 	switch (event->type) {
 
@@ -183,7 +183,7 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  */
 gboolean
 on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
-			  gdouble value, PopupWindow *window)
+                          gdouble value, PopupWindow *window)
 {
 	GtkAdjustment *gtk_adj;
 
@@ -282,12 +282,12 @@ popup_window_show(PopupWindow *window)
 		return;
 
 	if (gdk_device_grab(pointer_dev,
-			    gtk_widget_get_window(popup_window),
-			    GDK_OWNERSHIP_NONE,
-			    TRUE,
-			    GDK_BUTTON_PRESS_MASK,
-			    NULL,
-			    GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
+	                    gtk_widget_get_window(popup_window),
+	                    GDK_OWNERSHIP_NONE,
+	                    TRUE,
+	                    GDK_BUTTON_PRESS_MASK,
+	                    NULL,
+	                    GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
 		WARN("Could not grab %s\n", gdk_device_get_name(pointer_dev));
 
 	GdkDevice *keyboard_dev = gdk_device_get_associated_device(pointer_dev);
@@ -296,17 +296,17 @@ popup_window_show(PopupWindow *window)
 		return;
 
 	if (gdk_device_grab(keyboard_dev,
-			    gtk_widget_get_window(popup_window),
-			    GDK_OWNERSHIP_NONE,
-			    TRUE,
-			    GDK_KEY_PRESS_MASK,
-			    NULL, GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
+	                    gtk_widget_get_window(popup_window),
+	                    GDK_OWNERSHIP_NONE,
+	                    TRUE,
+	                    GDK_KEY_PRESS_MASK,
+	                    NULL, GDK_CURRENT_TIME) != GDK_GRAB_SUCCESS)
 		WARN("Could not grab %s\n", gdk_device_get_name(keyboard_dev));
 #else
 	gdk_pointer_grab(gtk_widget_get_window(popup_window), TRUE,
-			 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);
+	                 GDK_BUTTON_PRESS_MASK, NULL, NULL, GDK_CURRENT_TIME);
 	gdk_keyboard_grab(gtk_widget_get_window(popup_window), TRUE,
-			  GDK_CURRENT_TIME);
+	                  GDK_CURRENT_TIME);
 #endif
 }
 

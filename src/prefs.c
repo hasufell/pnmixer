@@ -340,7 +340,7 @@ prefs_load(void)
 {
 	GError *err = NULL;
 	gchar *filename = g_build_filename(g_get_user_config_dir(),
-					   "pnmixer", "config", NULL);
+	                                   "pnmixer", "config", NULL);
 
 	if (keyFile != NULL)
 		g_key_file_free(keyFile);
@@ -350,7 +350,7 @@ prefs_load(void)
 	if (g_file_test(filename, G_FILE_TEST_EXISTS)) {
 		if (!g_key_file_load_from_file(keyFile, filename, 0, &err)) {
 			run_error_dialog(_("Couldn't load preferences file: %s"),
-			                err->message);
+			                 err->message);
 			g_error_free(err);
 			g_key_file_free(keyFile);
 			keyFile = NULL;
@@ -359,7 +359,7 @@ prefs_load(void)
 		if (!g_key_file_load_from_data
 		    (keyFile, DEFAULT_PREFS, strlen(DEFAULT_PREFS), 0, &err)) {
 			run_error_dialog(_("Couldn't load default preferences: %s"),
-			                err->message);
+			                 err->message);
 			g_error_free(err);
 			g_key_file_free(keyFile);
 			keyFile = NULL;
@@ -378,7 +378,7 @@ prefs_save(void)
 	gsize len;
 	GError *err = NULL;
 	gchar *filename = g_build_filename(g_get_user_config_dir(),
-					   "pnmixer", "config", NULL);
+	                                   "pnmixer", "config", NULL);
 	gchar *filedata = g_key_file_to_data(keyFile, &len, NULL);
 
 	g_file_set_contents(filename, filedata, len, &err);
@@ -400,16 +400,16 @@ void
 prefs_ensure_save_dir(void)
 {
 	gchar *prefs_dir = g_build_filename(g_get_user_config_dir(),
-					    "pnmixer", NULL);
+	                                    "pnmixer", NULL);
 
 	if (!g_file_test(prefs_dir, G_FILE_TEST_IS_DIR)) {
 		if (g_file_test(prefs_dir, G_FILE_TEST_EXISTS))
 			run_error_dialog(_("'%s' exists but is not a directory, "
-			                  "won't be able to save preferences."),
-			                prefs_dir);
+			                   "won't be able to save preferences."),
+			                 prefs_dir);
 		else if (g_mkdir(prefs_dir, S_IRWXU))
 			run_error_dialog(_("Couldn't make prefs directory: %s"),
-			                strerror(errno));
+			                 strerror(errno));
 	}
 
 	g_free(prefs_dir);

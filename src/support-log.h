@@ -54,5 +54,5 @@ extern gboolean want_debug;
 		if (want_debug == TRUE) \
 			_DEBUG(fmt, ##__VA_ARGS__); \
 	} while (0) \
-
+ 
 #endif				// _SUPPORT_LOG_H_

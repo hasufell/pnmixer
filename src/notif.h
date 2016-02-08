@@ -23,7 +23,7 @@
 
 typedef struct notif Notif;
 
-Notif* notif_new(Audio *audio);
+Notif *notif_new(Audio *audio);
 void notif_free(Notif *notif);
 void notif_reload(Notif *notif);
 

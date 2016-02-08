@@ -71,7 +71,7 @@ lrint_dir(double x, int dir)
 }
 
 /* Return the name of a mixer element */
-static const char*
+static const char *
 elem_get_name(snd_mixer_elem_t *elem)
 {
 	return snd_mixer_selem_get_name(elem);
@@ -164,7 +164,7 @@ elem_get_volume_normalized(const char *hctl, snd_mixer_elem_t *elem, double *vol
 		ALSA_CARD_WARN(hctl, "Invalid playback dB range [%ld - %ld]", min, max);
 		return FALSE;
 	}
-	
+
 	err = snd_mixer_selem_get_playback_dB(elem, channel, &value);
 	if (err < 0) {
 		ALSA_CARD_ERR(hctl, err, "Can't get playback dB");
@@ -438,7 +438,7 @@ mixer_open(const char *hctl)
 		ALSA_CARD_ERR(hctl, err, "Can't attach card to mixer");
 		goto failure;
 	}
-	
+
 	err = snd_mixer_selem_register(mixer, NULL, NULL);
 	if (err < 0) {
 		ALSA_CARD_ERR(hctl, err, "Can't register mixer simple element");
@@ -548,7 +548,7 @@ alsa_card_iter_loop(AlsaCardIter *iter)
 	return TRUE;
 }
 
-/* 
+/*
  * Alsa poll descriptors handling with GIO.
  */
 
@@ -583,7 +583,7 @@ watch_poll_descriptors(const char *hctl, struct pollfd *pollfds,
 
 static void
 unwatch_poll_descriptors(guint *watch_ids)
-{	
+{
 	int i;
 
 	for (i = 0; watch_ids[i] != 0; i++) {
@@ -681,7 +681,7 @@ poll_watch_cb(GIOChannel *source, GIOCondition condition, AlsaCard *card)
 
 	/* Arriving here, no errors happened.
 	 * We can safely notify that values changed.
- 	 */
+	 */
 	if (callback)
 		callback(ALSA_CARD_VALUES_CHANGED, data);
 
@@ -727,7 +727,7 @@ alsa_card_set_volume(AlsaCard *card, gdouble value, int dir)
 
 	/* Set volume */
 	if (card->normalize)
-	        set = elem_set_volume_normalized(card->hctl, card->mixer_elem, volume, dir);
+		set = elem_set_volume_normalized(card->hctl, card->mixer_elem, volume, dir);
 
 	if (!set)
 		elem_set_volume(card->hctl, card->mixer_elem, volume, dir);
@@ -826,7 +826,7 @@ alsa_card_new(const char *card_name, const char *channel, gboolean normalize)
 		goto failure;
 
 	card->watch_ids = watch_poll_descriptors(card->hctl, pollfds,
-	                                         (GIOFunc) poll_watch_cb, card);
+	                  (GIOFunc) poll_watch_cb, card);
 	g_free(pollfds);
 
 	/* Sum up the situation */

@@ -90,8 +90,8 @@ run_mixer_command(void)
 		g_free(cmd);
 	} else {
 		run_error_dialog(_("No mixer application was found on your system. "
-		                  "Please open preferences and set the command you want "
-		                  "to run for volume control."));
+		                   "Please open preferences and set the command you want "
+		                   "to run for volume control."));
 	}
 }
 
@@ -107,7 +107,7 @@ run_custom_command(void)
 		g_free(cmd);
 	} else {
 		run_error_dialog(_("You have not specified a custom command to run, "
-		                  "please specify one in preferences."));
+		                   "please specify one in preferences."));
 	}
 }
 
@@ -205,10 +205,10 @@ run_error_dialog(char *fmt, ...)
 
 	if (main_window) {
 		GtkWidget *dialog = gtk_message_dialog_new(main_window,
-				    GTK_DIALOG_DESTROY_WITH_PARENT,
-				    GTK_MESSAGE_ERROR,
-				    GTK_BUTTONS_CLOSE,
-				    NULL);
+		                    GTK_DIALOG_DESTROY_WITH_PARENT,
+		                    GTK_MESSAGE_ERROR,
+		                    GTK_BUTTONS_CLOSE,
+		                    NULL);
 		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
 		g_object_set(dialog, "text", err_buf, NULL);
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -234,18 +234,18 @@ run_audio_error_dialog(void)
 		return GTK_RESPONSE_NO;
 
 	dialog = gtk_message_dialog_new
-		(main_window,
-		 GTK_DIALOG_DESTROY_WITH_PARENT,
-		 GTK_MESSAGE_ERROR,
-		 GTK_BUTTONS_YES_NO,
-		 _("Warning: Connection to sound system failed."));
+	         (main_window,
+	          GTK_DIALOG_DESTROY_WITH_PARENT,
+	          GTK_MESSAGE_ERROR,
+	          GTK_BUTTONS_YES_NO,
+	          _("Warning: Connection to sound system failed."));
 
 	gtk_message_dialog_format_secondary_text
-		(GTK_MESSAGE_DIALOG(dialog),
-		 _("Do you want to re-initialize the audio connection ?\n\n"
-		   "If you do not, you will either need to restart PNMixer "
-		   "or select the 'Reload Audio' option in the right-click "
-		   "menu in order for PNMixer to function."));
+	(GTK_MESSAGE_DIALOG(dialog),
+	 _("Do you want to re-initialize the audio connection ?\n\n"
+	   "If you do not, you will either need to restart PNMixer "
+	   "or select the 'Reload Audio' option in the right-click "
+	   "menu in order for PNMixer to function."));
 
 	gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
 	resp = gtk_dialog_run(GTK_DIALOG(dialog));

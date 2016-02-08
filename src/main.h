@@ -28,6 +28,6 @@ void run_prefs_dialog(void);
 
 void do_toggle_popup_window(void);
 void do_show_popup_menu(GtkMenuPositionFunc func, gpointer data,
-			guint button, guint activate_time);
+                        guint button, guint activate_time);
 
 #endif				// _MAIN_H

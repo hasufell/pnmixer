@@ -104,7 +104,7 @@ audio_event_new(Audio *audio, AudioSignal signal, AudioUser user)
 {
 	AudioEvent *event;
 
-	/* At the moment there's no need to duplicate card/channel 
+	/* At the moment there's no need to duplicate card/channel
 	 * name strings, so let's optimize a very little and make
 	 * them const pointers.
 	 */
@@ -164,7 +164,7 @@ static GSList *
 audio_handler_list_append(GSList *list, AudioHandler *handler)
 {
 	GSList *item;
-	
+
 	/* Ensure that the handler is not already part of the list.
 	 * It's probably an error to have a duplicated handler.
 	 */
@@ -431,7 +431,7 @@ audio_hook_soundcard(Audio *audio)
 		goto end;
 
 	/* On failure, try to create the card from the list of available cards.
-	 * We don't try the card name that just failed. 
+	 * We don't try the card name that just failed.
 	 */
 	card_list = alsa_list_cards();
 	item = g_slist_find_custom(card_list, audio->card, (GCompareFunc) g_strcmp0);

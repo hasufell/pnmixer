@@ -73,7 +73,7 @@ pixbuf_new_from_file(const gchar *filename)
 	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
 	if (!pixbuf) {
 		ERROR("Failed to create pixbuf from file '%s': %s",
-			pathname, error->message);
+		      pathname, error->message);
 		g_error_free(error);
 	}
 
@@ -328,10 +328,10 @@ update_status_icon_tooltip(GtkStatusIcon *status_icon,
 
 	if (!muted)
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
-			 card, channel, _("Volume"), (gint) volume);
+		         card, channel, _("Volume"), (gint) volume);
 	else
 		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%\n%s"),
-			 card, channel, _("Volume"), (gint) volume, _("Muted"));
+		         card, channel, _("Volume"), (gint) volume, _("Muted"));
 
 	gtk_status_icon_set_tooltip_text(status_icon, tooltip);
 }
@@ -355,7 +355,7 @@ struct tray_icon {
  */
 static void
 on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
-	    G_GNUC_UNUSED TrayIcon *icon)
+            G_GNUC_UNUSED TrayIcon *icon)
 {
 	do_toggle_popup_window();
 }
@@ -373,7 +373,7 @@ on_activate(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  */
 static void
 on_popup_menu(GtkStatusIcon *status_icon, guint button,
-	      guint activate_time, G_GNUC_UNUSED TrayIcon *icon)
+              guint activate_time, G_GNUC_UNUSED TrayIcon *icon)
 {
 	do_show_popup_menu(gtk_status_icon_position_menu, status_icon, button, activate_time);
 }
@@ -390,7 +390,7 @@ on_popup_menu(GtkStatusIcon *status_icon, guint button,
  */
 static gboolean
 on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
-			GdkEventButton *event, G_GNUC_UNUSED TrayIcon *icon)
+                        GdkEventButton *event, G_GNUC_UNUSED TrayIcon *icon)
 {
 	int middle_click_action;
 
@@ -431,7 +431,7 @@ on_button_release_event(G_GNUC_UNUSED GtkStatusIcon *status_icon,
  */
 static gboolean
 on_scroll_event(G_GNUC_UNUSED GtkStatusIcon *status_icon, GdkEventScroll *event,
-		TrayIcon *icon)
+                TrayIcon *icon)
 {
 	if (event->direction == GDK_SCROLL_UP)
 		audio_raise_volume(icon->audio, AUDIO_USER_TRAY_ICON);
@@ -551,19 +551,19 @@ tray_icon_create(Audio *audio)
 
 	// Left-click
 	g_signal_connect(icon->status_icon, "activate",
-			 G_CALLBACK(on_activate), icon);
+	                 G_CALLBACK(on_activate), icon);
 	// Right-click
 	g_signal_connect(icon->status_icon, "popup-menu",
-			 G_CALLBACK(on_popup_menu), icon);
+	                 G_CALLBACK(on_popup_menu), icon);
 	// Middle-click
 	g_signal_connect(icon->status_icon, "button-release-event",
-			 G_CALLBACK(on_button_release_event), icon);
+	                 G_CALLBACK(on_button_release_event), icon);
 	// Mouse scrolling on the icon
 	g_signal_connect(icon->status_icon, "scroll_event",
-			 G_CALLBACK(on_scroll_event), icon);
+	                 G_CALLBACK(on_scroll_event), icon);
 	// Change of size
 	g_signal_connect(icon->status_icon, "size-changed",
-			 G_CALLBACK(on_size_changed), icon);
+	                 G_CALLBACK(on_size_changed), icon);
 
 	/* Connect audio signals handlers */
 	icon->audio = audio;

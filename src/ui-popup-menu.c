@@ -66,7 +66,7 @@ update_mute_item(GtkCheckMenuItem *mute_item, GCallback handler_func,
 	gint n_handlers_blocked;
 
 	n_handlers_blocked = g_signal_handlers_block_by_func
-			     (G_OBJECT(mute_item), handler_func, handler_data);
+	                     (G_OBJECT(mute_item), handler_func, handler_data);
 	g_assert(n_handlers_blocked == 1);
 
 	gtk_check_menu_item_set_active(mute_item, active);
@@ -115,7 +115,7 @@ on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
  */
 void
 on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-		       G_GNUC_UNUSED PopupMenu *menu)
+                       G_GNUC_UNUSED PopupMenu *menu)
 {
 	run_mixer_command();
 }
@@ -128,7 +128,7 @@ on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-		       G_GNUC_UNUSED PopupMenu *menu)
+                       G_GNUC_UNUSED PopupMenu *menu)
 {
 	run_prefs_dialog();
 }
@@ -154,7 +154,7 @@ on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
  */
 void
 on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
-		       G_GNUC_UNUSED PopupMenu *menu)
+                       G_GNUC_UNUSED PopupMenu *menu)
 {
 	run_about_dialog();
 }
@@ -167,7 +167,7 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 #ifdef WITH_GTK3
 	update_mute_check(GTK_TOGGLE_BUTTON(menu->mute_check), event->muted);
 #else
-	update_mute_item(GTK_CHECK_MENU_ITEM(menu->mute_item), 
+	update_mute_item(GTK_CHECK_MENU_ITEM(menu->mute_item),
 	                 (GCallback) on_mute_item_activate, menu, event->muted);
 #endif
 }
@@ -185,10 +185,10 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
  */
 void
 popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
-		guint button, guint activate_time)
+                guint button, guint activate_time)
 {
 	gtk_menu_popup(GTK_MENU(menu->menu), NULL, NULL,
-		       func, data, button, activate_time);
+	               func, data, button, activate_time);
 }
 
 /**

@@ -31,7 +31,7 @@ struct hotkey {
 
 typedef struct hotkey Hotkey;
 
-Hotkey* hotkey_new(guint code, GdkModifierType mods);
+Hotkey *hotkey_new(guint code, GdkModifierType mods);
 void hotkey_free(Hotkey *key);
 gboolean hotkey_matches(Hotkey *hotkey, guint code, GdkModifierType mods);
 

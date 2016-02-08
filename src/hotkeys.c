@@ -42,8 +42,8 @@ hotkeys_remove_filter(GdkFilterFunc filter, gpointer data)
 {
 	GdkWindow *window;
 
-	window = gdk_x11_window_foreign_new_for_display(
-		gdk_display_get_default(), GDK_ROOT_WINDOW());
+	window = gdk_x11_window_foreign_new_for_display
+	         (gdk_display_get_default(), GDK_ROOT_WINDOW());
 
 	gdk_window_remove_filter(window, filter, data);
 }
@@ -56,8 +56,8 @@ hotkeys_add_filter(GdkFilterFunc filter, gpointer data)
 {
 	GdkWindow *window;
 
-	window = gdk_x11_window_foreign_new_for_display(
-		gdk_display_get_default(), GDK_ROOT_WINDOW());
+	window = gdk_x11_window_foreign_new_for_display
+	         (gdk_display_get_default(), GDK_ROOT_WINDOW());
 
 	gdk_window_add_filter(window, filter, data);
 }
@@ -169,14 +169,14 @@ hotkeys_reload(Hotkeys *hotkeys)
 	/* Display error message if needed */
 	if (mute_err || up_err || down_err) {
 		run_error_dialog("%s:\n%s%s%s%s%s%s",
-		                _("Could not bind the following hotkeys"),
-		                mute_err ? _("Mute/Unmute") : "",
-		                mute_err ? "\n" : "",
-		                up_err ? _("Volume Up") : "",
-		                up_err ? "\n" : "",
-		                down_err ? _("Volume Down") : "",
-		                down_err ? "\n" : ""
-			);
+		                 _("Could not bind the following hotkeys"),
+		                 mute_err ? _("Mute/Unmute") : "",
+		                 mute_err ? "\n" : "",
+		                 up_err ? _("Volume Up") : "",
+		                 up_err ? "\n" : "",
+		                 down_err ? _("Volume Down") : "",
+		                 down_err ? "\n" : ""
+		                );
 	}
 }
 

@@ -24,6 +24,6 @@ typedef struct popup_menu PopupMenu;
 PopupMenu *popup_menu_create(Audio *audio);
 void popup_menu_destroy(PopupMenu *menu);
 void popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
-		     guint button, guint activate_time);
+                     guint button, guint activate_time);
 
 #endif				// _UI_POPUP_MENU_H_

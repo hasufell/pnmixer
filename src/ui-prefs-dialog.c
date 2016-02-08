@@ -78,7 +78,7 @@ set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
 /**
  * Fills the GtkComboBoxText 'combo' with the currently available
  * channels of the card.
- * 
+ *
  *
  * @param combo the GtkComboBoxText widget for the channels
  * @param channels list of available channels
@@ -317,7 +317,7 @@ on_hotkeys_enable_check_toggled(GtkToggleButton *button, PrefsDialog *dialog)
  */
 gboolean
 on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
-				       PrefsDialog *dialog)
+                                       PrefsDialog *dialog)
 {
 	const gchar *hotkey;
 	GtkLabel *hotkey_label;
@@ -351,7 +351,7 @@ on_hotkey_event_box_button_press_event(GtkWidget *widget, GdkEventButton *event,
 
 	/* Run the hotkey dialog */
 	dialog->hotkey_dialog = hotkey_dialog_create
-		(GTK_WINDOW(dialog->prefs_dialog), hotkey);
+	                        (GTK_WINDOW(dialog->prefs_dialog), hotkey);
 	key_pressed = hotkey_dialog_run(dialog->hotkey_dialog);
 	hotkey_dialog_destroy(dialog->hotkey_dialog);
 	dialog->hotkey_dialog = NULL;
@@ -395,7 +395,7 @@ on_noti_enable_check_toggled(GtkToggleButton *button, PrefsDialog *dialog)
 #else
 void
 on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
-			     G_GNUC_UNUSED PrefsDialog *dialog)
+                             G_GNUC_UNUSED PrefsDialog *dialog)
 {
 }
 #endif
@@ -601,7 +601,7 @@ prefs_dialog_populate(PrefsDialog *dialog)
 	slider_orientation = prefs_get_string("SliderOrientation", NULL);
 	if (slider_orientation) {
 		GtkComboBox *combo_box =
-			GTK_COMBO_BOX(dialog->vol_orientation_combo);
+		        GTK_COMBO_BOX(dialog->vol_orientation_combo);
 #ifndef WITH_GTK3
 		/* Gtk2 ComboBoxes don't have item ids */
 		if (!strcmp(slider_orientation, "horizontal"))
@@ -727,16 +727,16 @@ prefs_dialog_populate(PrefsDialog *dialog)
 
 	// hotkeys
 	set_label_for_keycode(GTK_LABEL(dialog->hotkeys_mute_label),
-			      prefs_get_integer("VolMuteKey", -1),
-			      prefs_get_integer("VolMuteMods", 0));
+	                      prefs_get_integer("VolMuteKey", -1),
+	                      prefs_get_integer("VolMuteMods", 0));
 
 	set_label_for_keycode(GTK_LABEL(dialog->hotkeys_up_label),
-			      prefs_get_integer("VolUpKey", -1),
-			      prefs_get_integer("VolUpMods", 0));
+	                      prefs_get_integer("VolUpKey", -1),
+	                      prefs_get_integer("VolUpMods", 0));
 
 	set_label_for_keycode(GTK_LABEL(dialog->hotkeys_down_label),
-			      prefs_get_integer("VolDownKey", -1),
-			      prefs_get_integer("VolDownMods", 0));
+	                      prefs_get_integer("VolDownKey", -1),
+	                      prefs_get_integer("VolDownMods", 0));
 
 	on_hotkeys_enable_check_toggled
 	(GTK_TOGGLE_BUTTON(dialog->hotkeys_enable_check), dialog);

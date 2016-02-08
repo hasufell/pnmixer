@@ -160,7 +160,7 @@ hotkey_free(Hotkey *hotkey)
  * @param mods the key's modifiers.
  * @return the newly created Hotkey instance.
  */
-Hotkey*
+Hotkey *
 hotkey_new(guint code, GdkModifierType mods)
 {
 	Hotkey *hotkey;
@@ -184,7 +184,7 @@ hotkey_new(guint code, GdkModifierType mods)
 
 /**
  * Translate a key into a Gtk Accelerator string.
- * 
+ *
  * @param code the key code to process.
  * @param mods the key modifiers to process.
  * @return the accelerator string, must be freed.
@@ -195,7 +195,7 @@ hotkey_code_to_accel(guint code, GdkModifierType mods)
 	Display *disp;
 	guint sym;
 	gchar *accel;
-	
+
 	disp = gdk_x11_get_default_xdisplay();
 
 	sym = XkbKeycodeToKeysym(disp, code, 0, 0);
