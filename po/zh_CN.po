@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pnmixer master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-02-08 14:17+0700\n"
+"POT-Creation-Date: 2016-02-08 16:43+0700\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Yuexuan Gu <lastavengers@outlook.com>\n"
 "Language-Team: none\n"
@@ -19,49 +19,49 @@ msgstr ""
 
 #: ../src/hotkeys.c:172
 #, fuzzy
-msgid "Could not bind the following hotkeys"
+msgid "Could not grab the following hotkeys"
 msgstr "无法绑定以下热键：\n"
 
-#: ../src/hotkeys.c:173 ../src/ui-prefs-dialog.c:338
+#: ../src/hotkeys.c:173 ../src/ui-prefs-dialog.c:347
 #: ../data/ui/prefs-dialog-gtk3.glade.h:42
 #: ../data/ui/prefs-dialog-gtk2.glade.h:40
 msgid "Mute/Unmute"
 msgstr "静音/取消静音"
 
-#: ../src/hotkeys.c:175 ../src/ui-prefs-dialog.c:341
+#: ../src/hotkeys.c:175 ../src/ui-prefs-dialog.c:350
 msgid "Volume Up"
 msgstr "提高音量"
 
-#: ../src/hotkeys.c:177 ../src/ui-prefs-dialog.c:344
+#: ../src/hotkeys.c:177 ../src/ui-prefs-dialog.c:353
 msgid "Volume Down"
 msgstr "降低音量"
 
-#: ../src/main.c:68
+#: ../src/main.c:67
 #, c-format
 msgid "Unable to run command: %s"
 msgstr "无法运行命令： %s"
 
-#: ../src/main.c:92
+#: ../src/main.c:91
 msgid ""
 "No mixer application was found on your system. Please open preferences and "
 "set the command you want to run for volume control."
 msgstr "没有在系统中发现混频器。请打开首选项并 设置用于音量控制的命令。"
 
-#: ../src/main.c:109
+#: ../src/main.c:108
 msgid ""
 "You have not specified a custom command to run, please specify one in "
 "preferences."
 msgstr "没有指定一个命令用于运行，请在首选项中指定。"
 
-#: ../src/main.c:212 ../src/main.c:250
+#: ../src/main.c:217 ../src/main.c:253
 msgid "PNMixer Error"
 msgstr "PNMixer 发生错误"
 
-#: ../src/main.c:241
+#: ../src/main.c:244
 msgid "Warning: Connection to sound system failed."
 msgstr "警告: 无法连接到 sound system。"
 
-#: ../src/main.c:245
+#: ../src/main.c:248
 #, fuzzy
 msgid ""
 "Do you want to re-initialize the audio connection ?\n"
@@ -75,11 +75,11 @@ msgstr ""
 "PNmixer 生效。"
 
 #. Parse options
-#: ../src/main.c:312
+#: ../src/main.c:315
 msgid "- A mixer for the system tray."
 msgstr "- 一个运行在系统托盘上的混频器。"
 
-#: ../src/main.c:320
+#: ../src/main.c:323
 #, c-format
 msgid "%s version: %s\n"
 msgstr "%s 版本：%s\n"
@@ -98,32 +98,32 @@ msgstr "声卡未连接"
 
 #: ../src/notif.c:135
 #, fuzzy
-msgid "Soundcard has been disconnected, reloading..."
+msgid "Soundcard has been disconnected, reloading sound system..."
 msgstr "已和声卡失去连接，正在重新加载 Alsa ……"
 
-#: ../src/prefs.c:352
+#: ../src/prefs.c:353
 #, c-format
 msgid "Couldn't load preferences file: %s"
 msgstr "无法载入默认配置文件：%s"
 
-#: ../src/prefs.c:361
+#: ../src/prefs.c:362
 #, c-format
 msgid "Couldn't load default preferences: %s"
 msgstr "无法载入默认配置：%s"
 
-#: ../src/prefs.c:387
+#: ../src/prefs.c:388
 #, c-format
 msgid "Couldn't write preferences file: %s"
 msgstr "无法写入配置文件： %s"
 
-#: ../src/prefs.c:407
+#: ../src/prefs.c:408
 #, fuzzy, c-format
 msgid "'%s' exists but is not a directory, won't be able to save preferences."
 msgstr "错误： %s 已存在但不是一个目录，因此无法保存 配置。"
 
-#: ../src/prefs.c:411
-#, c-format
-msgid "Couldn't make prefs directory: %s"
+#: ../src/prefs.c:412
+#, fuzzy, c-format
+msgid "Couldn't make preferences directory: %s"
 msgstr "无法建立 prefs 目录：%s"
 
 #: ../src/ui-hotkey-dialog.c:48
@@ -140,12 +140,12 @@ msgstr "按下热键以设置："
 msgid "Could not grab the keyboard."
 msgstr "Could not grab the keyboard."
 
-#: ../src/ui-prefs-dialog.c:366
+#: ../src/ui-prefs-dialog.c:381
 #, fuzzy
 msgid "None"
 msgstr "(空)"
 
-#: ../src/ui-prefs-dialog.c:824
+#: ../src/ui-prefs-dialog.c:840
 msgid "Notifications"
 msgstr "通知"
 
@@ -277,7 +277,8 @@ msgid "Preferences"
 msgstr "首选项"
 
 #: ../data/ui/popup-menu-gtk3.glade.h:5 ../data/ui/popup-menu-gtk2.glade.h:7
-msgid "Reload Alsa"
+#, fuzzy
+msgid "Reload Sound"
 msgstr "重新加载 Alsa"
 
 #: ../data/ui/popup-menu-gtk3.glade.h:6 ../data/ui/popup-menu-gtk2.glade.h:8
@@ -589,7 +590,8 @@ msgid "_Volume Control"
 msgstr "音量控制 (_V)"
 
 #: ../data/ui/popup-menu-gtk2.glade.h:6
-msgid "_Reload Alsa"
+#, fuzzy
+msgid "_Reload Sound"
 msgstr "重新加载 Alsa (_R)"
 
 #: ../data/ui/prefs-dialog-gtk2.glade.h:3

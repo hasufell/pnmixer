@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pnmixer master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-02-08 14:17+0700\n"
+"POT-Creation-Date: 2016-02-08 16:43+0700\n"
 "PO-Revision-Date: 2015-08-10 01:47+0200\n"
 "Last-Translator: Mario Blättermann <mario.blaettermann@gmail.com>\n"
 "Language-Team: Deutsch <gnome-de@gnome.org>\n"
@@ -20,29 +20,29 @@ msgstr ""
 
 #: ../src/hotkeys.c:172
 #, fuzzy
-msgid "Could not bind the following hotkeys"
+msgid "Could not grab the following hotkeys"
 msgstr "Folgende Tastenkürzel konnten nicht belegt werden:\n"
 
-#: ../src/hotkeys.c:173 ../src/ui-prefs-dialog.c:338
+#: ../src/hotkeys.c:173 ../src/ui-prefs-dialog.c:347
 #: ../data/ui/prefs-dialog-gtk3.glade.h:42
 #: ../data/ui/prefs-dialog-gtk2.glade.h:40
 msgid "Mute/Unmute"
 msgstr "Stumm (ein/aus)"
 
-#: ../src/hotkeys.c:175 ../src/ui-prefs-dialog.c:341
+#: ../src/hotkeys.c:175 ../src/ui-prefs-dialog.c:350
 msgid "Volume Up"
 msgstr "Lauter"
 
-#: ../src/hotkeys.c:177 ../src/ui-prefs-dialog.c:344
+#: ../src/hotkeys.c:177 ../src/ui-prefs-dialog.c:353
 msgid "Volume Down"
 msgstr "Leiser"
 
-#: ../src/main.c:68
+#: ../src/main.c:67
 #, c-format
 msgid "Unable to run command: %s"
 msgstr "Befehl %s konnte nicht ausgeführt werden"
 
-#: ../src/main.c:92
+#: ../src/main.c:91
 msgid ""
 "No mixer application was found on your system. Please open preferences and "
 "set the command you want to run for volume control."
@@ -51,7 +51,7 @@ msgstr ""
 "öffnen Sie Einstellungen und wählen Sie den Befehl für die "
 "Lautstärkeregelung."
 
-#: ../src/main.c:109
+#: ../src/main.c:108
 msgid ""
 "You have not specified a custom command to run, please specify one in "
 "preferences."
@@ -59,15 +59,15 @@ msgstr ""
 "Sie haben keinen benutzerdefinierten Befehl zur Ausführung angegeben, bitte "
 "tun Sie dies in den Einstellungen."
 
-#: ../src/main.c:212 ../src/main.c:250
+#: ../src/main.c:217 ../src/main.c:253
 msgid "PNMixer Error"
 msgstr "PNMixer-Fehler"
 
-#: ../src/main.c:241
+#: ../src/main.c:244
 msgid "Warning: Connection to sound system failed."
 msgstr "Achtung: Verbindung zum Soundsystem konnte nicht hergestellt werden."
 
-#: ../src/main.c:245
+#: ../src/main.c:248
 #, fuzzy
 msgid ""
 "Do you want to re-initialize the audio connection ?\n"
@@ -81,11 +81,11 @@ msgstr ""
 "neuladen« im Kontextmenü auswählen, damit PNMixer funktioniert."
 
 #. Parse options
-#: ../src/main.c:312
+#: ../src/main.c:315
 msgid "- A mixer for the system tray."
 msgstr "- Ein Mixer für das Benachrichtigungsfeld."
 
-#: ../src/main.c:320
+#: ../src/main.c:323
 #, c-format
 msgid "%s version: %s\n"
 msgstr "%s Version: %s\n"
@@ -103,34 +103,34 @@ msgid "Soundcard disconnected"
 msgstr ""
 
 #: ../src/notif.c:135
-msgid "Soundcard has been disconnected, reloading..."
+msgid "Soundcard has been disconnected, reloading sound system..."
 msgstr ""
 
-#: ../src/prefs.c:352
+#: ../src/prefs.c:353
 #, c-format
 msgid "Couldn't load preferences file: %s"
 msgstr "Einstellungsdatei konnte nicht geladen werden: %s"
 
-#: ../src/prefs.c:361
+#: ../src/prefs.c:362
 #, c-format
 msgid "Couldn't load default preferences: %s"
 msgstr "Standardeinstellungen konnten nicht geladen werden: %s"
 
-#: ../src/prefs.c:387
+#: ../src/prefs.c:388
 #, c-format
 msgid "Couldn't write preferences file: %s"
 msgstr "Die Einstellungsdatei konnte nicht geschrieben werden: %s"
 
-#: ../src/prefs.c:407
+#: ../src/prefs.c:408
 #, fuzzy, c-format
 msgid "'%s' exists but is not a directory, won't be able to save preferences."
 msgstr ""
 "Fehler: %s existiert, aber ist kein Ordner. Einstellungen können nicht "
 "gespeichert werden."
 
-#: ../src/prefs.c:411
-#, c-format
-msgid "Couldn't make prefs directory: %s"
+#: ../src/prefs.c:412
+#, fuzzy, c-format
+msgid "Couldn't make preferences directory: %s"
 msgstr "Ordner für Einstellungen konnte nicht angelegt werden: %s"
 
 #: ../src/ui-hotkey-dialog.c:48
@@ -147,12 +147,12 @@ msgstr "Neues Tastenkürzel drücken für:"
 msgid "Could not grab the keyboard."
 msgstr "Zugriff auf die Tastatur nicht möglich."
 
-#: ../src/ui-prefs-dialog.c:366
+#: ../src/ui-prefs-dialog.c:381
 #, fuzzy
 msgid "None"
 msgstr "(Keine)"
 
-#: ../src/ui-prefs-dialog.c:824
+#: ../src/ui-prefs-dialog.c:840
 msgid "Notifications"
 msgstr "Benachrichtigungen"
 
@@ -286,7 +286,8 @@ msgid "Preferences"
 msgstr "Einstellungen"
 
 #: ../data/ui/popup-menu-gtk3.glade.h:5 ../data/ui/popup-menu-gtk2.glade.h:7
-msgid "Reload Alsa"
+#, fuzzy
+msgid "Reload Sound"
 msgstr "Alsa neu laden"
 
 #: ../data/ui/popup-menu-gtk3.glade.h:6 ../data/ui/popup-menu-gtk2.glade.h:8
@@ -599,7 +600,8 @@ msgid "_Volume Control"
 msgstr "_Lautstärkeregler"
 
 #: ../data/ui/popup-menu-gtk2.glade.h:6
-msgid "_Reload Alsa"
+#, fuzzy
+msgid "_Reload Sound"
 msgstr "Alsa _neu laden"
 
 #: ../data/ui/prefs-dialog-gtk2.glade.h:3
