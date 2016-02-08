@@ -259,7 +259,7 @@ notif_new(Audio *audio)
 #else
 
 void
-notif_free(Notif *notif)
+notif_free(G_GNUC_UNUSED Notif *notif)
 {
 }
 
@@ -275,4 +275,3 @@ notif_reload(G_GNUC_UNUSED Notif *notif)
 }
 
 #endif				// HAVE_LIBN
-

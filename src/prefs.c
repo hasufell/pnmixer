@@ -44,13 +44,12 @@ DisplayTextVolume=true\n\
 TextVolumePosition=0\n\
 ScrollStep=5\n\
 FineScrollStep=1\n\
-HotkeyVolumeStep=1\n\
 MiddleClickAction=0\n\
 CustomCommand=\n\
 VolMuteKey=-1\n\
 VolUpKey=-1\n\
 VolDownKey=-1\n\
-AlsaCard=default\n\
+AlsaCard=(default)\n\
 SystemTheme=false"
 
 static GKeyFile *keyFile;

@@ -149,6 +149,7 @@ run_prefs_dialog(void)
 		 */
 		popup_window_destroy(popup_window);
 		popup_window = popup_window_create(audio);
+		main_window = popup_window_get_gtk_window(popup_window);
 
 		/* Tray icon preferences */
 		tray_icon_reload(tray_icon);
@@ -193,8 +194,9 @@ run_about_dialog(void)
 void
 run_error_dialog(char *fmt, ...)
 {
-	va_list ap;
+	GtkWidget *dialog;
 	char err_buf[512];
+	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(err_buf, sizeof err_buf, fmt, ap);
@@ -202,17 +204,19 @@ run_error_dialog(char *fmt, ...)
 
 	ERROR("%s", err_buf);
 
-	if (main_window) {
-		GtkWidget *dialog = gtk_message_dialog_new(main_window,
-		                    GTK_DIALOG_DESTROY_WITH_PARENT,
-		                    GTK_MESSAGE_ERROR,
-		                    GTK_BUTTONS_CLOSE,
-		                    NULL);
-		gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
-		g_object_set(dialog, "text", err_buf, NULL);
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-	}
+	if (!main_window)
+		return;
+
+	dialog = gtk_message_dialog_new(main_window,
+	                                GTK_DIALOG_DESTROY_WITH_PARENT,
+	                                GTK_MESSAGE_ERROR,
+	                                GTK_BUTTONS_CLOSE,
+	                                NULL);
+
+	g_object_set(dialog, "text", err_buf, NULL);
+	gtk_window_set_title(GTK_WINDOW(dialog), _("PNMixer Error"));
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
 }
 
 /**

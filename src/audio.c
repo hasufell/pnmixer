@@ -236,9 +236,11 @@ invoke_handlers(Audio *audio, AudioSignal signal)
 		else
 			/* If we find an action that's too old, it probably means
 			 * that somehow, a callback was never invocated.
-			 * This shouldn't happen, so let's warn about it.
+			 * It happens for example if the volume is at the max, and
+			 * we try to raise it. There's an action, but no volume change,
+			 * so the callback is never invocated.
 			 */
-			WARN("Discarding last action, too old");
+			DEBUG("Discarding last action, too old");
 
 		/* Consume the action */
 		audio_action_free(last_action);
@@ -384,6 +386,8 @@ audio_lower_volume(Audio *audio, AudioUser user)
 
 	volume = alsa_card_get_volume(soundcard);
 	volume -= scroll_step;
+	if (volume < 0)
+		volume = 0;
 	_audio_set_volume(audio, user, volume, -1);
 }
 
@@ -396,6 +400,8 @@ audio_raise_volume(Audio *audio, AudioUser user)
 
 	volume = alsa_card_get_volume(soundcard);
 	volume += scroll_step;
+	if (volume > 100)
+		volume = 100;
 	_audio_set_volume(audio, user, volume, +1);
 }
 
@@ -423,7 +429,7 @@ audio_hook_soundcard(Audio *audio)
 
 	g_assert(audio->soundcard == NULL);
 
-	DEBUG("Hooking soundcard '%s' to the audio system", audio->card);
+	DEBUG("Hooking soundcard '%s (%s)' to the audio system", audio->card, audio->channel);
 
 	/* Attempt to create the card */
 	soundcard = alsa_card_new(audio->card, audio->channel, audio->normalize);
