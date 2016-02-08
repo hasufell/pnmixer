@@ -408,7 +408,7 @@ prefs_ensure_save_dir(void)
 			                   "won't be able to save preferences."),
 			                 prefs_dir);
 		else if (g_mkdir(prefs_dir, S_IRWXU))
-			run_error_dialog(_("Couldn't make prefs directory: %s"),
+			run_error_dialog(_("Couldn't make preferences directory: %s"),
 			                 strerror(errno));
 	}
 
