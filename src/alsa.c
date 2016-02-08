@@ -281,15 +281,6 @@ elem_set_mute(const char *hctl, snd_mixer_elem_t *elem, gboolean mute)
 	return TRUE;
 }
 
-#if 0
-static void
-elem_set_callback(snd_mixer_elem_t *elem, snd_mixer_elem_callback_t cb, void *data)
-{
-	snd_mixer_elem_set_callback(elem, cb);
-	snd_mixer_elem_set_callback_private(elem, data);
-}
-#endif
-
 /*
  * Alsa mixer handling (deals with 'snd_mixer_t').
  */
@@ -601,9 +592,10 @@ unwatch_poll_descriptors(guint *watch_ids)
 	}
 }
 
-/* Alsa Card implementation.
- * High-level public functions and callbacks.
-*/
+/*
+ * Public functions & signal handling
+ */
+
 struct alsa_card {
 	gboolean normalize; /* Whether we work with normalized volume */
 	/* Card names */
@@ -618,57 +610,6 @@ struct alsa_card {
 	AlsaCb cb_func;
 	gpointer cb_data;
 };
-
-#if 0
-// TODO: remove if useless
-
-/**
- * Alsa callback for a mixer element.
- * This is triggered in the following cases:
- * - when the channel has been removed (cleanup, soundcard unplugged)
- * - when there's an EXTERNAL volume/mute change.
- */
-static int
-mixer_elem_cb(snd_mixer_elem_t *elem, unsigned int mask)
-{
-	const char *channel = snd_mixer_selem_get_name(elem);
-
-	// DEBUG("Entering %s()", __func__);
-
-	/* Test MASK_REMOVE first. Quoting Alsa documentation:
-	 *   Element has been removed. (Warning: test this first
-	 *   and if set don't test the other masks).
-	 */
-	if (mask == SND_CTL_EVENT_MASK_REMOVE) {
-		DEBUG("Channel '%s' has been removed", channel);
-		return 0;
-	}
-
-	/* Now test for a value change */
-	if (mask & SND_CTL_EVENT_MASK_VALUE) {
-		// DEBUG("Event value changed");
-
-#if 0
-		AlsaCard *card;
-		AlsaCb callback;
-
-		card = snd_mixer_elem_get_callback_private(elem);
-		callback = card->values_changed_cb;
-
-		if (callback) {
-			gboolean muted = alsa_card_is_muted(card);
-			gdouble volume = alsa_card_get_volume(card);
-			callback(muted, volume);
-		}
-
-#endif		
-	} else {
-		DEBUG("Unhandled event mask: %d", mask);
-	}
-
-	return 0;
-}
-#endif
 
 /**
  * Callback function for volume changes.
@@ -887,13 +828,6 @@ alsa_card_new(const char *card_name, const char *channel, gboolean normalize)
 	card->watch_ids = watch_poll_descriptors(card->hctl, pollfds,
 	                                         (GIOFunc) poll_watch_cb, card);
 	g_free(pollfds);
-
-#if 0
-	/* Install alsa callback.
-	 * Gets us notified from external volumes changes and 
-	 */
-	elem_set_callback(card->mixer_elem, mixer_elem_cb, card);
-#endif
 
 	/* Sum up the situation */
 	DEBUG("'%s': %s (%s): initialized !",
