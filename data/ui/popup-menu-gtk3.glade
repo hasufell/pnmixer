@@ -146,7 +146,7 @@
                     <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="tooltip_text" translatable="yes">Reload Alsa</property>
+                    <property name="tooltip_text" translatable="yes">Reload Sound</property>
                     <signal name="activate" handler="on_reload_item_activate" swapped="no"/>
                     <child>
                       <object class="GtkBox" id="box3">
@@ -169,7 +169,7 @@
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>
                             <property name="margin_end">8</property>
-                            <property name="label" translatable="yes">Reload Alsa</property>
+                            <property name="label" translatable="yes">Reload Sound</property>
                           </object>
                           <packing>
                             <property name="position">1</property>

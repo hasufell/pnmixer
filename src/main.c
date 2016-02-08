@@ -217,7 +217,7 @@ run_error_dialog(char *fmt, ...)
 
 /**
  * Emits a warning if the sound connection is lost, usually
- * via a dialog window (with option to reinitialize alsa) or stderr.
+ * via a dialog window (with option to reinitialize sound) or stderr.
  * Asks for alsa reload, check the return value to know.
  */
 gint

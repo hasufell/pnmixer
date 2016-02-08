@@ -484,12 +484,12 @@ prefs_dialog_retrieve(PrefsDialog *dialog)
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(system_theme));
 	prefs_set_boolean("SystemTheme", active);
 
-	// alsa card
+	// audio card
 	GtkWidget *acc = dialog->card_combo;
 	gchar *card = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(acc));
 	prefs_set_string("AlsaCard", card);
 
-	// alsa channel
+	// audio channel
 	GtkWidget *ccc = dialog->chan_combo;
 	gchar *chan = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ccc));
 	prefs_set_channel(card, chan);

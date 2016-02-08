@@ -84,11 +84,11 @@
                 </child>
                 <child>
                   <object class="GtkImageMenuItem" id="reload_item">
-                    <property name="label" translatable="yes">_Reload Alsa</property>
+                    <property name="label" translatable="yes">_Reload Sound</property>
                     <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="tooltip_text" translatable="yes">Reload Alsa</property>
+                    <property name="tooltip_text" translatable="yes">Reload Sound</property>
                     <property name="use_underline">True</property>
                     <property name="image">image5</property>
                     <property name="use_stock">False</property>
