@@ -27,6 +27,12 @@ Please run `make indent-xml` if you want to indent the xml ui files.
 * if unsure whether to make a function static or not, make it static first
 * use unsigned ints instead of signed ints whenever possible
 
+## Translating
+
+In order to update the po files, run the following command:
+
+	cd po && make update-po 
+
 ## How to contribute
 
 * [pull request on github](https://github.com/nicklan/pnmixer/pulls)
