@@ -69,16 +69,18 @@ static const gchar *vol_control_commands[] = {
 static const gchar *
 find_vol_control_command(void)
 {
-	gboolean ret;
 	gchar buf[256];
 	const char **cmd;
 
+	DEBUG("Looking for a volume control command...");
+
 	cmd = vol_control_commands;
 	while (*cmd) {
-		snprintf(buf, 256, "which %s | grep /%s > /dev/null", *cmd, *cmd);
-		ret = g_spawn_command_line_sync(buf, NULL, NULL, NULL, NULL);
-		if (ret == TRUE)
+		snprintf(buf, 256, "which %s >/dev/null", *cmd);
+		if (system(buf) == 0) {
+			DEBUG("'%s' selected as the volume control command", *cmd);
 			return *cmd;
+		}
 		cmd++;
 	}
 
