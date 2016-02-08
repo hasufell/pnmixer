@@ -165,8 +165,8 @@ struct vol_meter {
 	guchar red;
 	guchar green;
 	guchar blue;
-	gint x_offset;
-	gint y_offset;
+	gint x_offset_pct;
+	gint y_offset_pct;
 	/* Dynamic stuff */
 	GdkPixbuf *pixbuf;
 	gint width;
@@ -203,10 +203,8 @@ vol_meter_new(void)
 
 	vol_meter = g_new0(VolMeter, 1);
 
-	// TODO: pos should be percent now, maybe renaming variable
-	// in conf is the best...
-	vol_meter->x_offset = prefs_get_integer("VolMeterPos", 0);
-	vol_meter->y_offset = 5;
+	vol_meter->x_offset_pct = prefs_get_integer("VolMeterPos", 0);
+	vol_meter->y_offset_pct = 10;
 
 	vol_meter_clrs = prefs_get_double_list("VolMeterColor", NULL);
 	vol_meter->red = vol_meter_clrs[0] * 255;
@@ -230,8 +228,6 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 	gdouble div_factor;
 	int rowstride, i;
 	guchar *pixels, *p;
-
-	// TODO: make this feature cool
 
 	/* Ensure the pixbuf is as expected */
 	g_assert(gdk_pixbuf_get_colorspace(pixbuf) == GDK_COLORSPACE_RGB);
@@ -269,8 +265,8 @@ vol_meter_draw(VolMeter *vol_meter, GdkPixbuf *pixbuf, int volume)
 	}
 
 	/* Get the volume meter coordinates and height */
-	x = vol_meter->x_offset;
-	y = vol_meter->y_offset;
+	x = vol_meter->x_offset_pct * (icon_width - vol_meter_width) / 100;
+	y = vol_meter->y_offset_pct * icon_height / 100;
 
 	div_factor = (icon_height - (y * 2)) / 100.0;
 	h = volume * div_factor;

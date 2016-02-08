@@ -24,10 +24,11 @@
 
 #include "audio.h"
 #include "prefs.h"
-#include "support-log.h"
 #include "support-intl.h"
 #include "support-log.h"
 #include "notif.h"
+
+#include "main.h"
 
 #ifdef HAVE_LIBN
 
@@ -237,12 +238,13 @@ notif_new(Audio *audio)
 {
 	Notif *notif;
 
+	notif = g_new0(Notif, 1);
+
 	/* Init libnotify. This should be run once only */
 	g_assert(notify_is_initted() == FALSE);
 	if (!notify_init(PACKAGE))
-		return NULL;
-
-	notif = g_new0(Notif, 1);
+		run_error_dialog("Unable to initialize libnotify. "
+		                 "Notifications won't be sent.");
 
 	/* Connect audio signals handlers */
 	notif->audio = audio;
@@ -259,13 +261,12 @@ notif_new(Audio *audio)
 void
 notif_free(Notif *notif)
 {
-	g_free(notif);
 }
 
 Notif *
 notif_new(G_GNUC_UNUSED Audio *audio)
 {
-	return g_malloc(1);
+	return NULL;
 }
 
 void

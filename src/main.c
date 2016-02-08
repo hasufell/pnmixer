@@ -38,14 +38,15 @@
 #include "ui-tray-icon.h"
 
 /* Life-long instances */
-static GtkWindow *main_window;
-
 static Audio *audio;
 static PopupMenu *popup_menu;
 static PopupWindow *popup_window;
 static TrayIcon *tray_icon;
 static Hotkeys *hotkeys;
 static Notif *notif;
+
+/* Pointer toward the main window. We need it as a parent for dialogs. */
+static GtkWindow *main_window;
 
 /* Temporary instances */
 static PrefsDialog *prefs_dialog;
@@ -167,6 +168,9 @@ run_prefs_dialog(void)
 	}
 }
 
+/**
+ * Run the abut dialog.
+ */
 void
 run_about_dialog(void)
 {
@@ -181,9 +185,8 @@ run_about_dialog(void)
 	about_dialog = NULL;
 }
 
-
 /**
- * Reports an error, usually via a dialog window or on stderr.
+ * Report an error, usually via a dialog window or on stderr.
  *
  * @param err the error
  * @param ... more string segments in the format of printf
@@ -216,7 +219,7 @@ run_error_dialog(char *fmt, ...)
 /**
  * Emits a warning if the sound connection is lost, usually
  * via a dialog window (with option to reinitialize alsa) or stderr.
- * Also reload alsa.
+ * Asks for alsa reload, check the return value to know.
  */
 gint
 run_audio_error_dialog(void)
@@ -283,15 +286,9 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, G_GNUC_UNUSED gp
 
 static gboolean version = FALSE;
 static GOptionEntry args[] = {
-	{
-		"version", 0, 0, G_OPTION_ARG_NONE, &version, "Show version and exit",
-		NULL
-	},
-	{
-		"debug", 'd', 0, G_OPTION_ARG_NONE, &want_debug, "Run in debug mode",
-		NULL
-	},
-	{NULL, 0, 0, 0, NULL, NULL, NULL}
+	{ "version", 0, 0, G_OPTION_ARG_NONE, &version, "Show version and exit", NULL },
+	{ "debug", 'd', 0, G_OPTION_ARG_NONE, &want_debug, "Run in debug mode", NULL },
+	{ NULL, 0, 0, 0, NULL, NULL, NULL }
 };
 
 /**
@@ -341,22 +338,15 @@ main(int argc, char *argv[])
 	popup_window = popup_window_create(audio);
 	tray_icon = tray_icon_create(audio);
 
-	/* Get a pointer toward the main window, we need it to run dialogs */
+	/* Get a pointer toward the main window (needed to run dialogs) */
 	main_window = popup_window_get_gtk_window(popup_window);
 
-	/* Init the hotkeys control */
+	/* Init what's left */
 	hotkeys = hotkeys_new(audio);
-
-	/* Init the notifications system */
 	notif = notif_new(audio);
-	if (!notif)
-		run_error_dialog("Unable to initialize libnotify. "
-		                "Notifications won't be sent.");
 
-	/* Connect audio signals handlers */
+	/* Get the audio system ready */
 	audio_signals_connect(audio, on_audio_changed, NULL);
-
-	/* Hook the soundcard */
 	audio_reload(audio);
 
 	/* Run */
@@ -364,11 +354,7 @@ main(int argc, char *argv[])
 	gtk_main();
 
 	/* Cleanup */
-
-	main_window = NULL;
-
 	audio_signals_disconnect(audio, on_audio_changed, NULL);
-
 	notif_free(notif);
 	hotkeys_free(hotkeys);
 	tray_icon_destroy(tray_icon);

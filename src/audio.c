@@ -185,7 +185,7 @@ audio_handler_list_remove(GSList *list, AudioHandler *handler)
 
 	/* find the handler */
 	item = g_slist_find_custom(list, handler, (GCompareFunc) audio_handler_cmp);
-	if (item) {
+	if (item == NULL) {
 		WARN("Audio handler wasn't found in the list");
 		return list;
 	}
@@ -332,10 +332,7 @@ audio_toggle_mute(Audio *audio, AudioUser user)
 		return;
 
 	/* Create a new action */
-	if (audio->last_action) {
-		WARN("Last action hasn't been consumed");
-		audio_action_free(audio->last_action);
-	}
+	audio_action_free(audio->last_action);
 	audio->last_action = audio_action_new(user);
 
 	/* Do the job */
@@ -363,10 +360,7 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 		return;
 
 	/* Create a new action */
-	if (audio->last_action) {
-		WARN("Last action hasn't been consumed");
-		audio_action_free(audio->last_action);
-	}
+	audio_action_free(audio->last_action);
 	audio->last_action = audio_action_new(user);
 
 	/* Do the job */
@@ -439,12 +433,10 @@ audio_hook_soundcard(Audio *audio)
 	/* On failure, try to create the card from the list of available cards.
 	 * We don't try the card name that just failed. 
 	 */
-	// TODO: tester
 	card_list = alsa_list_cards();
 	item = g_slist_find_custom(card_list, audio->card, (GCompareFunc) g_strcmp0);
 	if (item) {
-		// TODO: degager ca
-		DEBUG("Removing '%s' from list", (char *) item->data);
+		DEBUG("Removing '%s' from card list", (char *) item->data);
 		card_list = g_slist_remove(card_list, item);
 		g_slist_free_full(item, g_free);
 	}
@@ -466,6 +458,12 @@ audio_hook_soundcard(Audio *audio)
 	g_slist_free_full(card_list, g_free);
 
 end:
+	/* Save soundcard NOW !
+	 * We're going to invoke handlers later on, and these guys
+	 * need a valid soundcard pointer.
+	 */
+	audio->soundcard = soundcard;
+
 	/* Finish making everything ready */
 	if (soundcard == NULL) {
 		/* Card and channel names set to emptry string */
@@ -492,9 +490,6 @@ end:
 		/* Tell the world */
 		invoke_handlers(audio, AUDIO_CARD_INITIALIZED);
 	}
-
-	/* Don't forget to save the soundcard */
-	audio->soundcard = soundcard;
 }
 
 void
