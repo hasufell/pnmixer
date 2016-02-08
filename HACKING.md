@@ -9,11 +9,11 @@ and browse it via `./src/html/index.html`.
 ## Coding style
 
 This is more or less kernel coding style. Try to match the surroundings.
-You can also use the tool [astyle](http://astyle.sourceforge.net/) and
-execute the following command to fix the source files:
-```sh
-astyle --style=linux --indent=tab=8 --align-pointer=name src/*.[ch]
-```
+For automatic code indentation we use [astyle](http://astyle.sourceforge.net/).
+Please run `make indent-code` if you want to indent the whole sources.
+
+To indent the xml ui files, we use [xmllint](http://xmlsoft.org/xmllint.html).
+Please run `make indent-xml` if you want to indent the xml ui files.
 
 ## Comments
 
