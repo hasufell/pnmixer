@@ -56,6 +56,34 @@ SystemTheme=false"
 static GKeyFile *keyFile;
 
 /**
+ * Default volume commands.
+ */
+static const gchar *vol_control_commands[] = {
+	"pavucontrol",
+	"gnome-alsamixer",
+	"xfce4-mixer",
+	"alsamixergui",
+	NULL
+};
+
+static const gchar *
+find_vol_control_command(void)
+{
+	gboolean ret;
+	gchar buf[256];
+	const char **cmd;
+
+	cmd = vol_control_commands;
+	while (*cmd) {
+		snprintf(buf, 256, "which %s | grep /%s > /dev/null", *cmd, *cmd);
+		ret = g_spawn_command_line_sync(buf, NULL, NULL, NULL, NULL);
+		if (ret == TRUE)
+			return *cmd;
+		cmd++;
+	}
+}
+
+/**
  * Gets a boolean value from preferences.
  * On error, returns def as default value.
  *
@@ -135,16 +163,28 @@ prefs_get_double(const gchar *key, gdouble def)
 gchar *
 prefs_get_string(const gchar *key, const gchar *def)
 {
-	gchar *ret = NULL;
+	gchar *ret;
 	GError *error = NULL;
 
 	ret = g_key_file_get_string(keyFile, "PNMixer", key, &error);
-	if (error) {
+
+	/* Return value if found */
+	if (error == NULL)
+		return ret;
+	else
 		g_error_free(error);
-		return g_strdup(def);
+
+	/* If the volume control command is not defined,
+	 * be clever and try to find a command installed.
+	 */
+	if (!g_strcmp0(key, "VolumeControlCommand")) {
+		const gchar *cmd = find_vol_control_command();
+		if (cmd)
+			return g_strdup(cmd);
 	}
 
-	return ret;
+	/* At last, return default value */
+	return g_strdup(def);
 }
 
 /**
@@ -168,8 +208,8 @@ prefs_get_double_list(const gchar *key, gsize *n)
 		ret = NULL;
 	}
 
-	/* VolMeterColor
-	 * Ensure we get a valid list, and provide default values if needed.
+	/* For the volume meter color, we need a little bit of care.
+	 * Ensure the list is valid, and provide default values if needed.
 	 */
 	if (!g_strcmp0(key, "VolMeterColor")) {
 		gsize i;
@@ -200,7 +240,6 @@ prefs_get_double_list(const gchar *key, gsize *n)
 	return ret;
 }
 
-
 /**
  * Gets the currently selected channel of the specified Alsa Card
  * from the global keyFile and returns the result.
@@ -215,47 +254,6 @@ prefs_get_channel(const gchar *card)
 	if (!card)
 		return NULL;
 	return g_key_file_get_string(keyFile, card, "Channel", NULL);
-}
-
-
-/**
- * Default volume commands.
- */
-static const gchar *vol_commands[] = {
-	"pavucontrol",
-	"gnome-alsamixer",
-	"xfce4-mixer",
-	"alsamixergui",
-	NULL
-};
-
-/**
- * Gets the current volume command from the user preferences
- * and returns it. If none is set, iterates through the list vol_commands to
- * determine the volume command.
- *
- * @return volume command from user preferences or valid command
- * from vol_commands or NULL on failure. Must be freed.
- */
-gchar *
-prefs_get_vol_command(void)
-{
-	gchar *ret;
-
-	ret = prefs_get_string("VolumeControlCommand", NULL);
-
-	if (ret == NULL) {
-		gchar buf[256];
-		const char **cmd = vol_commands;
-		while (*cmd) {
-			snprintf(buf, 256, "which %s | grep /%s > /dev/null", *cmd, *cmd);
-			if (!system(buf))
-				return g_strdup(*cmd);
-			cmd++;
-		}
-	}
-
-	return ret;
 }
 
 /**

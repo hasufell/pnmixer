@@ -20,6 +20,7 @@
 #ifndef _SUPPORT_LOG_H_
 #define _SUPPORT_LOG_H_
 
+#include <stdio.h>
 #include <glib.h>
 
 extern gboolean want_debug;

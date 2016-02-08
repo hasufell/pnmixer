@@ -683,7 +683,7 @@ prefs_dialog_populate(PrefsDialog *dialog)
 	 prefs_get_boolean("NormalizeVolume", FALSE));
 
 	// volume control command
-	vol_cmd = prefs_get_vol_command();
+	vol_cmd = prefs_get_string("VolumeControlCommand", NULL);
 	if (vol_cmd) {
 		gtk_entry_set_text(GTK_ENTRY(dialog->vol_control_entry), vol_cmd);
 		g_free(vol_cmd);

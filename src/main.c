@@ -83,7 +83,7 @@ run_mixer_command(void)
 {
 	gchar *cmd;
 
-	cmd = prefs_get_vol_command();
+	cmd = prefs_get_string("VolumeControlCommand", NULL);
 
 	if (cmd) {
 		run_command(cmd);
