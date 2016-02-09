@@ -47,7 +47,7 @@ Latest version can always be found at: <https://github.com/nicklan/pnmixer/relea
 Compilation and Install
 -----------------------
 Needed dependencies:
-- >=gtk+-3.6	(or >=gtk+-2.22 via --without-gtk3)
+- >=gtk+-3.12	(or >=gtk+-2.24 via --without-gtk3)
 - glib-2
 - alsa-lib	(aka libasound on some distros)
 - libX11
