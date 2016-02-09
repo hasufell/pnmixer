@@ -20,9 +20,6 @@
 
 #include "support-log.h"
 #include "support-intl.h"
-#include "ui-about-dialog.h"
-
-#include "main.h"
 
 #ifndef WITH_GTK3
 GtkBuilder *
@@ -73,6 +70,7 @@ get_ui_file(const char *filename)
 		return path;
 	g_free(path);
 
+	WARN("Could not find ui file '%s'", filename);
 	return NULL;
 }
 
@@ -99,5 +97,6 @@ get_pixmap_file(const gchar *filename)
 		return path;
 	g_free(path);
 
+	WARN("Could not find pixmap file '%s'", filename);
 	return NULL;
 }

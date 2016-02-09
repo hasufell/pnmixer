@@ -436,7 +436,7 @@ audio_hook_soundcard(Audio *audio)
 	if (soundcard)
 		goto end;
 
-	DEBUG("Failed to hook soundcard, trying every card available");
+	DEBUG("Could not hook soundcard, trying every card available");
 
 	/* On failure, try to create the card from the list of available cards.
 	 * We don't try the card name that just failed.

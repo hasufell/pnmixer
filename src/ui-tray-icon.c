@@ -72,7 +72,7 @@ pixbuf_new_from_file(const gchar *filename)
 
 	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
 	if (!pixbuf) {
-		ERROR("Failed to create pixbuf from file '%s': %s",
+		ERROR("Could not create pixbuf from file '%s': %s",
 		      pathname, error->message);
 		g_error_free(error);
 	}
