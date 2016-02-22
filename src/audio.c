@@ -11,9 +11,11 @@
 /**
  * @file audio.c
  * This file holds the audio related code.
- * It is a middleman between the low-level alsa code, and the
- * high-level ui code.
- * @brief Audio subsystem
+ * It is a middleman between the low-level audio backend (alsa),
+ * and the high-level ui code.
+ * This abstraction layer allows the high-level code to be completely
+ * unaware of the underlying audio implementation, may it be alsa or whatever.
+ * @brief Audio subsystem.
  */
 
 #include <glib.h>
@@ -24,8 +26,9 @@
 #include "support-log.h"
 
 /*
- * Enum to string, for easy debug.
+ * Enumeration to string, for friendly debug messages.
  */
+
 static const gchar *
 audio_user_to_str(AudioUser user)
 {
@@ -66,14 +69,9 @@ audio_signal_to_str(AudioSignal signal)
  * Audio Actions.
  * An audio action is created each time the volume/mute is changed.
  * It contains the user who made the action, and a timestamp.
- * Each volume/mute change will trigger a callback afterward.
- * In this callback, we look for the last audio action that happens,
- * validate its timestamp, then notify the system that a change made
- * by 'user' has been made.
- *
- * For this to work, we assume that each volume/mute change will be
- * followed by one callback invocation. The callback consumes the
- * audio action. This seems to work until now.
+ * It is recorded, and will be user later on, since every volume/mute
+ * change will trigger a callback afterward. This callback will deal
+ * with this 'audio action'.
  */
 
 struct audio_action {
@@ -97,18 +95,25 @@ audio_action_is_still_valid(AudioAction *action)
 
 	//DEBUG("delay: %ld", delay);
 
-	/* Maximum delay for an action is set to 1 second.
-	 * This is probably too much, but it doesn't hurt.
+	/* Ensure the delay is not too big. The delay here is the time
+	 * between the action was performed and the moment the callback
+	 * is invoked. It is supposed to be very quick, a matter of
+	 * milliseconds.
+	 * We set the maximum delay to 1 second, it's probably far too much.
+	 * However it doesn't hurt to set it too long. Setting it too short
+	 * could hurt.
 	 */
 	return delay < 1000000 ? TRUE : FALSE;
 }
 
+/* Free an audio action */
 static void
 audio_action_free(AudioAction *action)
 {
 	g_free(action);
 }
 
+/* Create a new audio action */
 static AudioAction *
 audio_action_new(AudioUser user)
 {
@@ -129,6 +134,7 @@ audio_action_new(AudioUser user)
  * It make things a little more efficient.
  */
 
+/* Free an audio event */
 static void
 audio_event_free(AudioEvent *event)
 {
@@ -138,6 +144,7 @@ audio_event_free(AudioEvent *event)
 	g_free(event);
 }
 
+/* Create a new audio event */
 static AudioEvent *
 audio_event_new(Audio *audio, AudioSignal signal, AudioUser user)
 {
@@ -173,12 +180,14 @@ struct audio_handler {
 
 typedef struct audio_handler AudioHandler;
 
+/* Free an audio handler */
 static void
 audio_handler_free(AudioHandler *handler)
 {
 	g_free(handler);
 }
 
+/* Create a new audio handler */
 static AudioHandler *
 audio_handler_new(AudioCallback callback, gpointer data)
 {
@@ -191,6 +200,9 @@ audio_handler_new(AudioCallback callback, gpointer data)
 	return handler;
 }
 
+/* Check if two handlers are the identical. We compare the content
+ * of the structures, not the pointers.
+ */
 static gint
 audio_handler_cmp(AudioHandler *h1, AudioHandler *h2)
 {
@@ -199,6 +211,7 @@ audio_handler_cmp(AudioHandler *h1, AudioHandler *h2)
 	return -1;
 }
 
+/* Add a handler to a handler list */
 static GSList *
 audio_handler_list_append(GSList *list, AudioHandler *handler)
 {
@@ -217,12 +230,13 @@ audio_handler_list_append(GSList *list, AudioHandler *handler)
 	return g_slist_append(list, handler);
 }
 
+/* Remove a handler from a handler list */
 static GSList *
 audio_handler_list_remove(GSList *list, AudioHandler *handler)
 {
 	GSList *item;
 
-	/* find the handler */
+	/* Find the handler */
 	item = g_slist_find_custom(list, handler, (GCompareFunc) audio_handler_cmp);
 	if (item == NULL) {
 		WARN("Audio handler wasn't found in the list");
@@ -247,14 +261,23 @@ struct audio {
 	gchar *channel;
 	gdouble scroll_step;
 	gboolean normalize;
-	/* Underlying sound system */
+	/* Underlying sound card */
 	AlsaCard *soundcard;
 	/* Last action performed */
 	AudioAction *last_action;
-	/* User signal handlers */
+	/* User signal handlers, to be invoked
+	 * when the audio status changes.
+	 */
 	GSList *handlers;
 };
 
+/**
+ * Convenient function to invoke the handlers
+ *
+ * @param audio an Audio instance.
+ * @param signal the signal to dispatch.
+ * @param user the user that made the action.
+ */
 static void
 invoke_handlers(Audio *audio, AudioSignal signal, AudioUser user)
 {
@@ -277,6 +300,12 @@ invoke_handlers(Audio *audio, AudioSignal signal, AudioUser user)
 	audio_event_free(event);
 }
 
+/**
+ * Callback invoked when an alsa event happens.
+ *
+ * @param event the event that happened.
+ * @param data associated data.
+ */
 static void
 on_alsa_event(enum alsa_event event, gpointer data)
 {
@@ -285,9 +314,11 @@ on_alsa_event(enum alsa_event event, gpointer data)
 
 	/* Check if we expected this event */
 	if (last_action) {
-		/* If the event was triggered by us, we have already
-		 * invoked the handlers. So just consume the action
-		 * and return.
+		/* If we are responsible for this event (aka we changed
+		 * the volume/mute state), there should be a 'last_action'
+		 * defined and valid. We just need to consume it.
+		 * There's no handler to invoke, we've done that already
+		 * when we changed the vloume/mute.
 		 */
 		if (audio_action_is_still_valid(last_action)) {
 			audio_action_free(last_action);
@@ -295,16 +326,18 @@ on_alsa_event(enum alsa_event event, gpointer data)
 			return;
 		}
 
-		/* There may be a pendig action that was never processed.
-		 * This happens when we raise the volume and it's already
-		 * to the max.
+		/* In some situation we can find a pending 'last_action' that
+		 * was never consumed. This happens for example when we try
+		 * to raise the volume and it's already at its maximum value.
 		 */
 		DEBUG("Discarding last action, too old");
 		audio_action_free(last_action);
 		audio->last_action = NULL;
 	}
 
-	/* Handlers need to be run */
+	/* Here, we are not at the origin of this change.
+	 * We must invoke the handlers.
+	 */
 	switch (event) {
 	case ALSA_CARD_ERROR:
 		invoke_handlers(audio, AUDIO_CARD_ERROR, AUDIO_USER_UNKNOWN);
@@ -320,7 +353,13 @@ on_alsa_event(enum alsa_event event, gpointer data)
 	}
 }
 
-/* Disconnect a signal handler designed by 'callback' and 'data'. */
+/**
+ * Disconnect a signal handler designed by 'callback' and 'data'.
+ *
+ * @param audio an Audio instance.
+ * @param callback the callback to disconnect.
+ * @param data the data to pass to the callback.
+ */
 void
 audio_signals_disconnect(Audio *audio, AudioCallback callback, gpointer data)
 {
@@ -331,9 +370,14 @@ audio_signals_disconnect(Audio *audio, AudioCallback callback, gpointer data)
 	audio_handler_free(handler);
 }
 
-/* Connect a signal handler designed by 'callback' and 'data'.
+/**
+ * Connect a signal handler designed by 'callback' and 'data'.
  * Remember to always pair 'connect' calls with 'disconnect' calls,
  * otherwise you'll be in trouble.
+ * 
+ * @param audio an Audio instance.
+ * @param callback the callback to connect.
+ * @param data the data to pass to the callback.
  */
 void
 audio_signals_connect(Audio *audio, AudioCallback callback, gpointer data)
@@ -344,18 +388,38 @@ audio_signals_connect(Audio *audio, AudioCallback callback, gpointer data)
 	audio->handlers = audio_handler_list_append(audio->handlers, handler);
 }
 
+/**
+ * Get the name of the card currently hooked.
+ * This is an internal string that shouldn't be modified.
+ *
+ * @param audio an Audio instance.
+ * @return the name of the card.
+ */
 const char *
 audio_get_card(Audio *audio)
 {
 	return audio->card;
 }
 
+/**
+ * Get the name of the channel currently in use.
+ * This is an internal string that shouldn't be modified.
+ *
+ * @param audio a Audio instance.
+ * @return the name of the channel.
+ */
 const char *
 audio_get_channel(Audio *audio)
 {
 	return audio->channel;
 }
 
+/**
+ * Get the mute state, either TRUE or FALSE.
+ * 
+ * @param audio an Audio instance.
+ * @return TRUE if the card is muted, FALSE otherwise.
+ */
 gboolean
 audio_is_muted(Audio *audio)
 {
@@ -367,6 +431,12 @@ audio_is_muted(Audio *audio)
 	return alsa_card_is_muted(soundcard);
 }
 
+/**
+ * Toggle the mute state.
+ * 
+ * @param audio an Audio instance.
+ * @param user the user who performs the action.
+ */
 void
 audio_toggle_mute(Audio *audio, AudioUser user)
 {
@@ -387,6 +457,12 @@ audio_toggle_mute(Audio *audio, AudioUser user)
 	invoke_handlers(audio, AUDIO_VALUES_CHANGED, user);
 }
 
+/**
+ * Get the volume in percent (value between 0 and 100).
+ * 
+ * @param audio an Audio instance.
+ * @return the volume in percent.
+ */
 gdouble
 audio_get_volume(Audio *audio)
 {
@@ -398,6 +474,15 @@ audio_get_volume(Audio *audio)
 	return alsa_card_get_volume(soundcard);
 }
 
+/**
+ * Actually set the volume.
+ *
+ * @param audio an Audio instance.
+ * @param user the user who performs the action.
+ * @param volume the volume value to set, in percent.
+ * @param dir the direction for the volume change
+ *        (-1: lowering, +1: raising, 0: setting).
+ */
 static void
 _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 {
@@ -422,12 +507,25 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 	invoke_handlers(audio, AUDIO_VALUES_CHANGED, user);
 }
 
+/**
+ * Set the volume.
+ *
+ * @param audio an Audio instance.
+ * @param user the user who performs the action.
+ * @param volume the volume value to set, in percent.
+ */
 void
 audio_set_volume(Audio *audio, AudioUser user, gdouble volume)
 {
 	_audio_set_volume(audio, user, volume, 0);
 }
 
+/**
+ * Lower the volume.
+ *
+ * @param audio an Audio instance.
+ * @param user the user who performs the action.
+ */
 void
 audio_lower_volume(Audio *audio, AudioUser user)
 {
@@ -442,6 +540,12 @@ audio_lower_volume(Audio *audio, AudioUser user)
 	_audio_set_volume(audio, user, volume, -1);
 }
 
+/**
+ * Raise the volume.
+ *
+ * @param audio an Audio instance.
+ * @param user the user who performs the action.
+ */
 void
 audio_raise_volume(Audio *audio, AudioUser user)
 {
@@ -456,6 +560,11 @@ audio_raise_volume(Audio *audio, AudioUser user)
 	_audio_set_volume(audio, user, volume, +1);
 }
 
+/**
+ * Unhook the currently hooked audio card.
+ *
+ * @param audio an Audio instance.
+ */
 static void
 audio_unhook_soundcard(Audio *audio)
 {
@@ -472,6 +581,14 @@ audio_unhook_soundcard(Audio *audio)
 	invoke_handlers(audio, AUDIO_CARD_CLEANED_UP, AUDIO_USER_UNKNOWN);
 }
 
+/**
+ * Attempt to hook an audio soundcard.
+ * Try everything possible, the goal is to have a working soundcard.
+ * So if the selected soundcard fails, we try any others until at some
+ * point we have a working soundcard.
+ *
+ * @param audio an Audio instance.
+ */
 static void
 audio_hook_soundcard(Audio *audio)
 {
@@ -488,7 +605,7 @@ audio_hook_soundcard(Audio *audio)
 		goto end;
 
 	/* On failure, try to create the card from the list of available cards.
-	 * We don't try the card name that just failed.
+	 * We don't try with the card name that just failed.
 	 */
 	DEBUG("Could not hook soundcard, trying every card available");
 
@@ -551,6 +668,12 @@ end:
 	}
 }
 
+/**
+ * Reload the current preferences, and reload the hooked soundcard.
+ * This has to be called each time the preferences are modified.
+ *
+ * @param audio an Audio instance.
+ */
 void
 audio_reload(Audio *audio)
 {
@@ -567,6 +690,12 @@ audio_reload(Audio *audio)
 	audio_hook_soundcard(audio);
 }
 
+/**
+ * Free an audio instance, therefore unhooking the sound card and
+ * freeing any allocated ressources.
+ *
+ * @param audio an Audio instance.
+ */
 void
 audio_free(Audio *audio)
 {
@@ -579,6 +708,13 @@ audio_free(Audio *audio)
 	g_free(audio);
 }
 
+/**
+ * Create a new Audio instance.
+ * This does almost nothing actually, all the heavy job is done
+ * in the audio_hook_soundcard() function.
+ *
+ * @return a newly allocated Audio instance.
+ */
 Audio *
 audio_new(void)
 {
@@ -589,12 +725,25 @@ audio_new(void)
 	return audio;
 }
 
+/**
+ * Return the list of playable cards as a GSList.
+ * Must be freed using g_slist_free_full() and g_free().
+ *
+ * @return a list of playable cards.
+ */
 GSList *
 audio_get_card_list(void)
 {
 	return alsa_list_cards();
 }
 
+/**
+ * For a given card name, return the list of playable channels as a GSList.
+ * Must be freed using g_slist_free_full() and g_free().
+ *
+ * @param card_name the name of the card for which we list the channels
+ * @return a list of playable channels.
+ */
 GSList *
 audio_get_channel_list(const char *card_name)
 {

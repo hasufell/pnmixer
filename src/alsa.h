@@ -19,10 +19,10 @@
 
 #include <glib.h>
 
-typedef struct alsa_card AlsaCard;
-
 GSList *alsa_list_cards(void);
 GSList *alsa_list_channels(const char *card_name);
+
+typedef struct alsa_card AlsaCard;
 
 AlsaCard *alsa_card_new(const char *card, const char *channel, gboolean normalize);
 void alsa_card_free(AlsaCard *card);
@@ -38,9 +38,9 @@ void alsa_card_install_callback(AlsaCard *card, AlsaCb callback, gpointer data);
 
 const char *alsa_card_get_name(AlsaCard *card);
 const char *alsa_card_get_channel(AlsaCard *card);
-gdouble alsa_card_get_volume(AlsaCard *card);
-void alsa_card_set_volume(AlsaCard *card, gdouble value, int dir);
 gboolean alsa_card_is_muted(AlsaCard *card);
 void alsa_card_toggle_mute(AlsaCard *card);
+gdouble alsa_card_get_volume(AlsaCard *card);
+void alsa_card_set_volume(AlsaCard *card, gdouble value, int dir);
 
 #endif				// _ALSA_H_

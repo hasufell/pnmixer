@@ -10,7 +10,7 @@
 
 /**
  * @file audio.h
- * Header for audio.c holding public functions.
+ * Header for audio.c
  * @brief header for audio.c
  */
 
@@ -19,23 +19,21 @@
 
 #include <glib.h>
 
-/* High-level audio functions, no need to have
- * a soundcard initialized to call that.
- */
+/* High-level audio functions, no need to have a soundcard ready for that */
 
 GSList *audio_get_card_list(void);
 GSList *audio_get_channel_list(const char *card);
 
-typedef struct audio Audio;
-
 /* Soundcard management */
+
+typedef struct audio Audio;
 
 Audio *audio_new(void);
 void audio_free(Audio *audio);
 void audio_reload(Audio *audio);
 
 /* Audio status: card & channel name, mute & volume handling.
- * Everyone who changes the volume must declare who he is.
+ * Everyone who changes the volume must say who he is.
  */
 
 enum audio_user {
