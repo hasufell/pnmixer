@@ -24,6 +24,45 @@
 #include "support-log.h"
 
 /*
+ * Enum to string, for easy debug.
+ */
+static const gchar *
+audio_user_to_str(AudioUser user)
+{
+	switch (user) {
+	case AUDIO_USER_POPUP:
+		return "popup";
+	case AUDIO_USER_TRAY_ICON:
+		return "tray icon";
+	case AUDIO_USER_HOTKEYS:
+		return "hotkeys";
+	default:
+		return "unknown";
+	}
+}
+
+static const gchar *
+audio_signal_to_str(AudioSignal signal)
+{
+	switch (signal) {
+	case AUDIO_NO_CARD:
+		return "no card";
+	case AUDIO_CARD_INITIALIZED:
+		return "card initialized";
+	case AUDIO_CARD_CLEANED_UP:
+		return "card cleaned up";
+	case AUDIO_CARD_DISCONNECTED:
+		return "card disconnected";
+	case AUDIO_CARD_ERROR:
+		return "card error";
+	case AUDIO_VALUES_CHANGED:
+		return "values changed";
+	default:
+		return "unknown";
+	}
+}
+
+/*
  * Audio Actions.
  * An audio action is created each time the volume/mute is changed.
  * It contains the user who made the action, and a timestamp.
@@ -217,35 +256,16 @@ struct audio {
 };
 
 static void
-invoke_handlers(Audio *audio, AudioSignal signal)
+invoke_handlers(Audio *audio, AudioSignal signal, AudioUser user)
 {
-	AudioAction *last_action = audio->last_action;
 	AudioEvent *event;
 	GSList *item;
 
+	DEBUG("** Dispatching '%s' signal caused by '%s' user",
+	      audio_signal_to_str(signal), audio_user_to_str(user));
+
 	/* Create a new event */
-	event = audio_event_new(audio, signal, AUDIO_USER_UNKNOWN);
-
-	/* Check if we're at the origin of this event. In this case,
-	 * a 'last_action' have been created beforehand.
-	 */
-	if (last_action) {
-		if (audio_action_is_still_valid(last_action))
-			/* Alright, we know who performed the action */
-			event->user = last_action->user;
-		else
-			/* If we find an action that's too old, it probably means
-			 * that somehow, a callback was never invocated.
-			 * It happens for example if the volume is at the max, and
-			 * we try to raise it. There's an action, but no volume change,
-			 * so the callback is never invocated.
-			 */
-			DEBUG("Discarding last action, too old");
-
-		/* Consume the action */
-		audio_action_free(last_action);
-		audio->last_action = NULL;
-	}
+	event = audio_event_new(audio, signal, user);
 
 	/* Invoke the various handlers around */
 	for (item = audio->handlers; item; item = item->next) {
@@ -261,16 +281,39 @@ static void
 on_alsa_event(enum alsa_event event, gpointer data)
 {
 	Audio *audio = (Audio *) data;
+	AudioAction *last_action = audio->last_action;
 
+	/* Check if we expected this event */
+	if (last_action) {
+		/* If the event was triggered by us, we have already
+		 * invoked the handlers. So just consume the action
+		 * and return.
+		 */
+		if (audio_action_is_still_valid(last_action)) {
+			audio_action_free(last_action);
+			audio->last_action = NULL;
+			return;
+		}
+
+		/* There may be a pendig action that was never processed.
+		 * This happens when we raise the volume and it's already
+		 * to the max.
+		 */
+		DEBUG("Discarding last action, too old");
+		audio_action_free(last_action);
+		audio->last_action = NULL;
+	}
+
+	/* Handlers need to be run */
 	switch (event) {
 	case ALSA_CARD_ERROR:
-		invoke_handlers(audio, AUDIO_CARD_ERROR);
+		invoke_handlers(audio, AUDIO_CARD_ERROR, AUDIO_USER_UNKNOWN);
 		break;
 	case ALSA_CARD_DISCONNECTED:
-		invoke_handlers(audio, AUDIO_CARD_DISCONNECTED);
+		invoke_handlers(audio, AUDIO_CARD_DISCONNECTED, AUDIO_USER_UNKNOWN);
 		break;
 	case ALSA_CARD_VALUES_CHANGED:
-		invoke_handlers(audio, AUDIO_VALUES_CHANGED);
+		invoke_handlers(audio, AUDIO_VALUES_CHANGED, AUDIO_USER_UNKNOWN);
 		break;
 	default:
 		WARN("Unhandled alsa event: %d", event);
@@ -333,12 +376,15 @@ audio_toggle_mute(Audio *audio, AudioUser user)
 	if (!soundcard)
 		return;
 
-	/* Create a new action */
+	/* Create a new action (the callback will dispose of it) */
 	audio_action_free(audio->last_action);
 	audio->last_action = audio_action_new(user);
 
-	/* Do the job */
+	/* Toggle mute state */
 	alsa_card_toggle_mute(soundcard);
+
+	/* Invoke the handlers */
+	invoke_handlers(audio, AUDIO_VALUES_CHANGED, user);
 }
 
 gdouble
@@ -361,14 +407,19 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 	if (!soundcard)
 		return;
 
-	/* Create a new action */
+	/* Create a new action (the callback will dispose of it) */
 	audio_action_free(audio->last_action);
 	audio->last_action = audio_action_new(user);
 
-	/* Do the job */
+	/* Set the volume */
 	alsa_card_set_volume(soundcard, volume, dir);
+
+	/* Automatically unmute the volume */
 	if (alsa_card_is_muted(soundcard))
 		alsa_card_toggle_mute(soundcard);
+
+	/* Invoke the handlers */
+	invoke_handlers(audio, AUDIO_VALUES_CHANGED, user);
 }
 
 void
@@ -418,7 +469,7 @@ audio_unhook_soundcard(Audio *audio)
 	audio->soundcard = NULL;
 
 	/* Invoke user handlers */
-	invoke_handlers(audio, AUDIO_CARD_CLEANED_UP);
+	invoke_handlers(audio, AUDIO_CARD_CLEANED_UP, AUDIO_USER_UNKNOWN);
 }
 
 static void
@@ -429,18 +480,18 @@ audio_hook_soundcard(Audio *audio)
 
 	g_assert(audio->soundcard == NULL);
 
+	/* Attempt to create the card */
 	DEBUG("Hooking soundcard '%s (%s)' to the audio system", audio->card, audio->channel);
 
-	/* Attempt to create the card */
 	soundcard = alsa_card_new(audio->card, audio->channel, audio->normalize);
 	if (soundcard)
 		goto end;
 
-	DEBUG("Could not hook soundcard, trying every card available");
-
 	/* On failure, try to create the card from the list of available cards.
 	 * We don't try the card name that just failed.
 	 */
+	DEBUG("Could not hook soundcard, trying every card available");
+
 	card_list = alsa_list_cards();
 	item = g_slist_find_custom(card_list, audio->card, (GCompareFunc) g_strcmp0);
 	if (item) {
@@ -481,7 +532,7 @@ end:
 		audio->channel = g_strdup("");
 
 		/* Tell the world */
-		invoke_handlers(audio, AUDIO_NO_CARD);
+		invoke_handlers(audio, AUDIO_NO_CARD, AUDIO_USER_UNKNOWN);
 	} else {
 		/* Card and channel names must match the truth.
 		 * Indeed, in case of failure, we may end up using a soundcard
@@ -496,7 +547,7 @@ end:
 		alsa_card_install_callback(soundcard, on_alsa_event, audio);
 
 		/* Tell the world */
-		invoke_handlers(audio, AUDIO_CARD_INITIALIZED);
+		invoke_handlers(audio, AUDIO_CARD_INITIALIZED, AUDIO_USER_UNKNOWN);
 	}
 }
 
