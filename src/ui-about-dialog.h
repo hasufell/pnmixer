@@ -10,8 +10,8 @@
 
 /**
  * @file ui-about-dialog.h
- * Header for ui-about-dialog.c, holding public functions and globals.
- * @brief header for ui-about-dialog.c
+ * Header for ui-about-dialog.c.
+ * @brief header for ui-about-dialog.c.
  */
 
 #ifndef _UI_ABOUT_DIALOG_H_

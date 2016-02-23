@@ -10,7 +10,7 @@
 
 /**
  * @file support-intl.c
- * Internationalization stuff.
+ * Internationalization support.
  * @brief Internationalization support.
  */
 

@@ -11,7 +11,7 @@
 /**
  * @file hotkeys.h
  * Header for hotkeys.c.
- * @brief header for hotkeys.c
+ * @brief Header for hotkeys.c.
  */
 
 #ifndef _HOTKEYS_H_

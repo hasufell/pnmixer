@@ -12,7 +12,7 @@
  * @file support-ui.h
  * Header for support-ui.c.
  * This should be included in ui files only.
- * @brief header for support-ui.c
+ * @brief Header for support-ui.c.
  */
 
 #ifndef _SUPPORT_UI_H_

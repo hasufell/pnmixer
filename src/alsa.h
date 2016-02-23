@@ -11,7 +11,7 @@
 /**
  * @file alsa.h
  * Header for alsa.c.
- * @brief header for alsa.c
+ * @brief Header for alsa.c.
  */
 
 #ifndef _ALSA_H_

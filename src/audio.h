@@ -10,8 +10,8 @@
 
 /**
  * @file audio.h
- * Header for audio.c
- * @brief header for audio.c
+ * Header for audio.c.
+ * @brief Header for audio.c.
  */
 
 #ifndef _AUDIO_H_

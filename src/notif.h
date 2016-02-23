@@ -11,7 +11,7 @@
 /**
  * @file notif.h
  * Header for notif.c.
- * @brief header for notif.c
+ * @brief Header for notif.c.
  */
 
 #ifdef HAVE_CONFIG_H

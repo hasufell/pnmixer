@@ -10,8 +10,8 @@
 
 /**
  * @file ui-tray-icon.h
- * Header for ui-tray-icon.c, holding public functions and globals.
- * @brief header for ui-tray-icon.c
+ * Header for ui-tray-icon.c.
+ * @brief Header for ui-tray-icon.c.
  */
 
 #ifndef _UI_TRAY_ICON_H_

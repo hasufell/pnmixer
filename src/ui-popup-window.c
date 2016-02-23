@@ -11,7 +11,7 @@
 /**
  * @file ui-popup-window.c
  * This file holds the ui-related code for the popup window.
- * @brief Popup window subsystem
+ * @brief Popup window subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -233,6 +233,13 @@ on_mixer_button_clicked(G_GNUC_UNUSED GtkButton *button, PopupWindow *window)
 	run_mixer_command();
 }
 
+/**
+ * Handle signals from the audio subsystem.
+ *
+ * @param audio the Audio instance that emitted the signal.
+ * @param event the AudioEvent containing useful information.
+ * @param data user supplied data.
+ */
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
@@ -249,7 +256,7 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
  * Return a pointer toward the internal GtkWindow instance.
  * Some parts of the code needs to know about it.
  *
- * @param menu a PopupWindow instance.
+ * @param window a PopupWindow instance.
  */
 GtkWindow *
 popup_window_get_gtk_window(PopupWindow *window)
@@ -260,7 +267,7 @@ popup_window_get_gtk_window(PopupWindow *window)
 /**
  * Shows the popup window, and grab the focus.
  *
- * @param menu a PopupWindow instance.
+ * @param window a PopupWindow instance.
  */
 void
 popup_window_show(PopupWindow *window)
@@ -313,7 +320,7 @@ popup_window_show(PopupWindow *window)
 /**
  * Hides the popup window.
  *
- * @param menu a PopupWindow instance.
+ * @param window a PopupWindow instance.
  */
 void
 popup_window_hide(PopupWindow *window)
@@ -324,7 +331,7 @@ popup_window_hide(PopupWindow *window)
 /**
  * Toggle the popup window (aka hide or show).
  *
- * @param menu a PopupWindow instance.
+ * @param window a PopupWindow instance.
  */
 void
 popup_window_toggle(PopupWindow *window)
@@ -340,7 +347,7 @@ popup_window_toggle(PopupWindow *window)
 /**
  * Destroys the popup window, freeing any resources.
  *
- * @param menu a PopupWindow instance.
+ * @param window a PopupWindow instance.
  */
 void
 popup_window_destroy(PopupWindow *window)
@@ -353,6 +360,7 @@ popup_window_destroy(PopupWindow *window)
 /**
  * Creates the popup window and connects all the signals.
  *
+ * @param audio pointer to this audio subsystem.
  * @return the newly created PopupWindow instance.
  */
 PopupWindow *

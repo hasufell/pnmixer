@@ -10,7 +10,8 @@
 
 /**
  * @file support-log.c
- * @brief Logging support, should be included by every file.
+ * Logging support.
+ * @brief Logging support.
  */
 
 #ifdef HAVE_CONFIG_H

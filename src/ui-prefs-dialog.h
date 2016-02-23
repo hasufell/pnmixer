@@ -10,8 +10,8 @@
 
 /**
  * @file ui-prefs-dialog.h
- * Header for ui-prefs-dialog.c, holding public functions and globals.
- * @brief header for ui-prefs-dialog.c
+ * Header for ui-prefs-dialog.c.
+ * @brief Header for ui-prefs-dialog.c.
  */
 
 #ifndef _UI_PREFS_DIALOG_H_

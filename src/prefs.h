@@ -10,8 +10,8 @@
 
 /**
  * @file prefs.h
- * Header for prefs.c, holding public functions and globals.
- * @brief header for prefs.c
+ * Header for prefs.c.
+ * @brief Header for prefs.c.
  */
 
 #ifndef _PREFS_H_

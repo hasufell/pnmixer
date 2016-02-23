@@ -11,9 +11,8 @@
 /**
  * @file prefs.c
  * This file holds the preferences subsystem,
- * managing the user config file as well as interaction
- * with the gtk preferences window.
- * @brief preferences subsystem
+ * managing the user config file.
+ * @brief Preferences subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,7 +53,7 @@ SystemTheme=false"
 
 static GKeyFile *keyFile;
 
-/**
+/*
  * Default volume commands.
  */
 static const gchar *vol_control_commands[] = {
@@ -65,6 +64,9 @@ static const gchar *vol_control_commands[] = {
 	NULL
 };
 
+/*
+ * Look for an installed volume command.
+ */
 static const gchar *
 find_vol_control_command(void)
 {
@@ -195,7 +197,7 @@ prefs_get_string(const gchar *key, const gchar *def)
  * On error, returns NULL.
  *
  * @param key the specific settings key
- * @param numcols integer pointer that will contain the returned array size
+ * @param n integer pointer that will contain the returned array size
  * @return the preference value or NULL on error
  */
 gdouble *

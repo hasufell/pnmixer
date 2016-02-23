@@ -11,9 +11,9 @@
 /**
  * @file main.c
  * The main program entry point. Also handles creating and opening
- * the widgets, connecting signals, updating the tray icon and
- * error handling.
- * @brief gtk+ initialization
+ * the widgets. Declares some high-level public functions needed by
+ * some widgets.
+ * @brief Main program entry point & high-level public functions.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -44,7 +44,9 @@ static TrayIcon *tray_icon;
 static Hotkeys *hotkeys;
 static Notif *notif;
 
-/* Pointer toward the main window. We need it as a parent for dialogs. */
+/* Pointer toward the main window.
+ * We need it as a parent for dialogs.
+ */
 static GtkWindow *main_window;
 
 /* Temporary instances */
@@ -71,11 +73,7 @@ run_command(const gchar *cmd)
 }
 
 /**
- * Opens the specified mixer application which can be triggered either
- * by clicking the 'Volume Control' GtkImageMenuItem in the context
- * menu, the GtkButton 'Mixer' in the left-click popup_window or
- * by middle-click if the Middle Click Action in the preferences
- * is set to 'Volume Control'.
+ * Run the specified mixer application.
  */
 void
 run_mixer_command(void)
@@ -94,6 +92,9 @@ run_mixer_command(void)
 	}
 }
 
+/**
+ * Run a custom command.
+ */
 void
 run_custom_command(void)
 {
@@ -111,10 +112,7 @@ run_custom_command(void)
 }
 
 /**
- * Brings up the preferences window, either triggered by clicking
- * on the GtkImageMenuItem 'Preferences' in the context menu
- * or by middle-click if the Middle Click Action in the preferences
- * is set to 'Show Preferences'.
+ * Brings up the preferences window.
  */
 void
 run_prefs_dialog(void)
@@ -144,7 +142,7 @@ run_prefs_dialog(void)
 	 * while new prefs are applied.
 	 */
 	if (resp == GTK_RESPONSE_OK) {
-		/* Popup window, rebuild it from scratch. This is needed in case
+		/* Popup window, we must rebuild it from scratch in case
 		 * the slider orientation was modified.
 		 */
 		popup_window_destroy(popup_window);
@@ -169,7 +167,7 @@ run_prefs_dialog(void)
 }
 
 /**
- * Run the abut dialog.
+ * Run the about dialog.
  */
 void
 run_about_dialog(void)
@@ -188,11 +186,11 @@ run_about_dialog(void)
 /**
  * Report an error, usually via a dialog window or on stderr.
  *
- * @param err the error
+ * @param fmt the error
  * @param ... more string segments in the format of printf
  */
 void
-run_error_dialog(char *fmt, ...)
+run_error_dialog(const char *fmt, ...)
 {
 	GtkWidget *dialog;
 	char err_buf[512];
@@ -223,6 +221,8 @@ run_error_dialog(char *fmt, ...)
  * Emits a warning if the sound connection is lost, usually
  * via a dialog window (with option to reinitialize sound) or stderr.
  * Asks for alsa reload, check the return value to know.
+ * 
+ * @return the response from the dialog window
  */
 gint
 run_audio_error_dialog(void)
@@ -231,7 +231,7 @@ run_audio_error_dialog(void)
 	gint resp;
 
 	ERROR("Connection with audio failed, "
-	      "you probably need to restart pnmixer");
+	      "you probably need to restart pnmixer.");
 
 	if (!main_window)
 		return GTK_RESPONSE_NO;
@@ -257,12 +257,18 @@ run_audio_error_dialog(void)
 	return resp;
 }
 
+/**
+ * Toggle the popup window
+ */
 void
 do_toggle_popup_window(void)
 {
 	popup_window_toggle(popup_window);
 }
 
+/**
+ * Show the popup menu.
+ */
 void
 do_show_popup_menu(GtkMenuPositionFunc func, gpointer data, guint button, guint activate_time)
 {
@@ -270,8 +276,15 @@ do_show_popup_menu(GtkMenuPositionFunc func, gpointer data, guint button, guint 
 	popup_menu_show(popup_menu, func, data, button, activate_time);
 }
 
+/**
+ * Handle signals from the audio subsystem.
+ *
+ * @param audio the Audio instance that emitted the signal.
+ * @param event the AudioEvent containing useful information.
+ * @param data user supplied data.
+ */
 static void
-on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, G_GNUC_UNUSED gpointer data)
+on_audio_changed(Audio *audio, AudioEvent *event, G_GNUC_UNUSED gpointer data)
 {
 	switch (event->signal) {
 	case AUDIO_CARD_DISCONNECTED:
@@ -287,17 +300,19 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, G_GNUC_UNUSED gp
 
 }
 
+/*
+ * Options for command-line invokation.
+ */
 static gboolean version = FALSE;
-static GOptionEntry args[] = {
-	{ "version", 0, 0, G_OPTION_ARG_NONE, &version, "Show version and exit", NULL },
+static GOptionEntry option_entries[] = {
+	{ "version", 'v', 0, G_OPTION_ARG_NONE, &version, "Show version and exit", NULL },
 	{ "debug", 'd', 0, G_OPTION_ARG_NONE, &want_debug, "Run in debug mode", NULL },
 	{ NULL, 0, 0, 0, NULL, NULL, NULL }
 };
 
 /**
  * Program entry point. Initializes gtk+, calls the widget creating
- * functions and starts the main loop. Also connects 'popup-menu',
- * 'activate' and 'button-release-event' to the tray_icon.
+ * functions and starts the main loop.
  *
  * @param argc count of arguments
  * @param argv string array of arguments
@@ -313,7 +328,7 @@ main(int argc, char *argv[])
 
 	/* Parse options */
 	context = g_option_context_new(_("- A mixer for the system tray."));
-	g_option_context_add_main_entries(context, args, GETTEXT_PACKAGE);
+	g_option_context_add_main_entries(context, option_entries, GETTEXT_PACKAGE);
 	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 	g_option_context_parse(context, &argc, &argv, NULL);
 	g_option_context_free(context);

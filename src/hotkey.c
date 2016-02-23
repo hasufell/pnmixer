@@ -10,9 +10,9 @@
 
 /**
  * @file hotkey.c
- * This fine define what's a hotkey.
- * Deals with the low-level XKBlib.
- * @brief hotkey subsystem
+ * This file define what's a hotkey.
+ * Deals with the low-level XKBlib and Gtk/Gdk.
+ * @brief Hotkey subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,8 +42,7 @@ static char grab_error;
 
 /* Helpers */
 
-/*
- * When an Xlib error occurs when grabing the hotkey, this function is called.
+/* When an Xlib error occurs when grabing the hotkey, this function is called.
  * The error handler should not call any functions (directly or indirectly)
  * on the display that will generate protocol requests or that will look for
  * input events.

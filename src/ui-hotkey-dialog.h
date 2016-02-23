@@ -10,8 +10,8 @@
 
 /**
  * @file ui-hotkey-dialog.h
- * Header for ui-hotkey-dialog.c, holding public functions and globals.
- * @brief header for ui-hotkey-dialog.c
+ * Header for ui-hotkey-dialog.c.
+ * @brief Header for ui-hotkey-dialog.c.
  */
 
 #ifndef _UI_HOTKEY_DIALOG_H_

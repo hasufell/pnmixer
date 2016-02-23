@@ -10,8 +10,8 @@
 
 /**
  * @file ui-popup-window.h
- * Header for ui-popup-window.c, holding public functions and globals.
- * @brief header for ui-popup-window.c
+ * Header for ui-popup-window.c.
+ * @brief Header for ui-popup-window.c.
  */
 
 #ifndef _UI_POPUP_WINDOW_H_

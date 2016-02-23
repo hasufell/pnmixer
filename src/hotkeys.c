@@ -10,10 +10,10 @@
 
 /**
  * @file hotkeys.c
- * This file handles the hotkey subsystem, including
- * communcation with Xlib and intercepting key presses
- * before they can be interpreted by gdk/gtk.
- * @brief hotkey subsystem
+ * This file handles the hotkeys subsystem, including
+ * communication with Xlib and intercepting key presses
+ * before they can be interpreted by Gtk/Gdk.
+ * @brief Hotkeys subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -74,7 +74,7 @@ struct hotkeys {
 };
 
 /**
- * This function is called before gdk/gtk can respond
+ * This function is called before Gtk/Gdk can respond
  * to any(!) window event and handles pressed hotkeys.
  *
  * @param gdk_xevent the native event to filter

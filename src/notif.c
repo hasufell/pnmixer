@@ -12,7 +12,7 @@
  * @file notif.c
  * This file handles the notification subsystem
  * via libnotify and mostly reacts to volume changes.
- * @brief libnotify subsystem
+ * @brief Notification subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -117,6 +117,7 @@ struct notif {
 
 };
 
+/* Handle signals coming from the audio subsystem. */
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
@@ -174,6 +175,8 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 /**
  * Reload notif preferences.
  * This has to be called each time the preferences are modified.
+ *
+ * @param notif a Notif instance.
  */
 void
 notif_reload(Notif *notif)
@@ -187,18 +190,17 @@ notif_reload(Notif *notif)
 	notif->tray = prefs_get_boolean("MouseNotifications", TRUE);
 	notif->hotkey = prefs_get_boolean("HotkeyNotifications", TRUE);
 	notif->external = prefs_get_boolean("ExternalNotifications", FALSE);
-
-	/* Create notifications (they depend on timeout) */
 	timeout = prefs_get_integer("NotificationTimeout", 1500);
 
+	/* Create volume notification */
 	notification = NOTIFICATION_NEW("", NULL, NULL);
 	notify_notification_set_timeout(notification, timeout);
 	NOTIFICATION_SET_HINT_STRING(notification, "x-canonical-private-synchronous", "");
-
 	if (notif->volume_notif)
 		g_object_unref(notif->volume_notif);
 	notif->volume_notif = notification;
 
+	/* Create text notification */
 	notification = NOTIFICATION_NEW("", NULL, NULL);
 	notify_notification_set_timeout(notification, timeout * 2);
 	NOTIFICATION_SET_HINT_STRING(notification, "x-canonical-private-synchronous", "");
@@ -208,7 +210,10 @@ notif_reload(Notif *notif)
 }
 
 /**
- * Uninitializes libnotify. This should be called only once at cleanup.
+ * Uninitializes libnotify.
+ * This should be called only once at cleanup.
+ *
+ * @param notif a Notif instance.
  */
 void
 notif_free(Notif *notif)
@@ -216,22 +221,28 @@ notif_free(Notif *notif)
 	if (notif == NULL)
 		return;
 
-	/* Uninit libnotify. This should be run only once */
-	g_assert(notify_is_initted() == TRUE);
-	notify_uninit();
-
-	audio_signals_disconnect(notif->audio, on_audio_changed, notif);
-
+	/* Unref any existing notification */
 	if (notif->volume_notif)
 		g_object_unref(notif->volume_notif);
 	if (notif->text_notif)
 		g_object_unref(notif->text_notif);
 
+	/* Disconnect audio signal handlers */
+	audio_signals_disconnect(notif->audio, on_audio_changed, notif);
+
+	/* Uninit libnotify. This should be done only once */
+	g_assert(notify_is_initted() == TRUE);
+	notify_uninit();
+
 	g_free(notif);
 }
 
 /**
- * Initializes libnotify. This should be called only once at startup.
+ * Initializes libnotify.
+ * This should be called only once at startup.
+ *
+ * @param audio An Audio instance.
+ * @return the newly created Notif instance.
  */
 Notif *
 notif_new(Audio *audio)
@@ -240,7 +251,7 @@ notif_new(Audio *audio)
 
 	notif = g_new0(Notif, 1);
 
-	/* Init libnotify. This should be run once only */
+	/* Init libnotify. This should be done only once */
 	g_assert(notify_is_initted() == FALSE);
 	if (!notify_init(PACKAGE))
 		run_error_dialog("Unable to initialize libnotify. "

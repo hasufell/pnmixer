@@ -10,8 +10,8 @@
 
 /**
  * @file main.h
- * Header for main.c holding high-level public functions.
- * @brief header for main.c
+ * Header for main.c
+ * @brief Header for main.c
  */
 
 #ifndef _MAIN_H_
@@ -23,7 +23,7 @@ void run_mixer_command(void);
 void run_custom_command(void);
 
 void run_about_dialog(void);
-void run_error_dialog(char *, ...);
+void run_error_dialog(const char *, ...);
 void run_prefs_dialog(void);
 
 void do_toggle_popup_window(void);

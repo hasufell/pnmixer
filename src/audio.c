@@ -284,13 +284,18 @@ invoke_handlers(Audio *audio, AudioSignal signal, AudioUser user)
 	AudioEvent *event;
 	GSList *item;
 
-	DEBUG("** Dispatching '%s' signal caused by '%s' user",
-	      audio_signal_to_str(signal), audio_user_to_str(user));
+	/* Nothing to do if there is no handlers */
+	if (audio->handlers == NULL)
+		return;
 
 	/* Create a new event */
 	event = audio_event_new(audio, signal, user);
 
 	/* Invoke the various handlers around */
+	DEBUG("** Dispatching signal '%s' from '%s', vol=%d, muted=%s",
+	      audio_signal_to_str(signal), audio_user_to_str(user),
+	      (int) event->volume, event->muted ? "yes" : "no");
+
 	for (item = audio->handlers; item; item = item->next) {
 		AudioHandler *handler = item->data;
 		handler->callback(audio, event, handler->data);
@@ -374,7 +379,7 @@ audio_signals_disconnect(Audio *audio, AudioCallback callback, gpointer data)
  * Connect a signal handler designed by 'callback' and 'data'.
  * Remember to always pair 'connect' calls with 'disconnect' calls,
  * otherwise you'll be in trouble.
- * 
+ *
  * @param audio an Audio instance.
  * @param callback the callback to connect.
  * @param data the data to pass to the callback.
@@ -416,7 +421,7 @@ audio_get_channel(Audio *audio)
 
 /**
  * Get the mute state, either TRUE or FALSE.
- * 
+ *
  * @param audio an Audio instance.
  * @return TRUE if the card is muted, FALSE otherwise.
  */
@@ -433,7 +438,7 @@ audio_is_muted(Audio *audio)
 
 /**
  * Toggle the mute state.
- * 
+ *
  * @param audio an Audio instance.
  * @param user the user who performs the action.
  */
@@ -459,7 +464,7 @@ audio_toggle_mute(Audio *audio, AudioUser user)
 
 /**
  * Get the volume in percent (value between 0 and 100).
- * 
+ *
  * @param audio an Audio instance.
  * @return the volume in percent.
  */

@@ -12,7 +12,7 @@
  * @file ui-hotkey-dialog.c
  * This file holds the ui-related code for the hotkey dialog,
  * usually run from the preferences window.
- * @brief Hotkey dialog subsystem
+ * @brief Hotkey dialog subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -119,8 +119,12 @@ on_hotkey_dialog_key_release_event(GtkWidget *widget,
 	return FALSE;
 }
 
-/* Runs the hotkey dialog, and returns a string representing the hotkey
+/**
+ * Runs the hotkey dialog, and returns a string representing the hotkey
  * that has been pressed. String must be freed.
+ * 
+ * @param dialog a HotkeyDialog instance.
+ * @return the hotkey pressed, must be freed.
  */
 gchar *
 hotkey_dialog_run(HotkeyDialog *dialog)
@@ -165,7 +169,11 @@ hotkey_dialog_run(HotkeyDialog *dialog)
 	return g_strdup(gtk_label_get_text(key_pressed_label));
 }
 
-/* Destroys a hotkey dialog, freeing any resources. */
+/**
+ * Destroys a hotkey dialog, freeing any resources.
+ *
+ * @param dialog a HotkeyDialog instance.
+ */
 void
 hotkey_dialog_destroy(HotkeyDialog *dialog)
 {
@@ -173,7 +181,13 @@ hotkey_dialog_destroy(HotkeyDialog *dialog)
 	g_free(dialog);
 }
 
-/* Creates a new hotkey dialog and connects all the signals. */
+/**
+ * Creates a new hotkey dialog.
+ *
+ * @param parent a GtkWindow to be used as the parent.
+ * @param hotkey the hotkey concerned.
+ * @return the newly created HotkeyDialog instance.
+ */
 HotkeyDialog *
 hotkey_dialog_create(GtkWindow *parent, const gchar *hotkey)
 {

@@ -10,11 +10,11 @@
 
 /**
  * @file support-log.h
- * Log handlers. Provides various macros to print debug, warning
- * and error messages. Debug messages are enabled by a command-line
- * argument.
+ * Logging support.
+ * Provides various macros to print debug, warning & error messages.
+ * Debug messages are enabled with a command-line argument.
  * This should be included by every file.
- * @brief Logging support, should be included by every file.
+ * @brief Logging support.
  */
 
 #ifndef _SUPPORT_LOG_H_

@@ -726,7 +726,7 @@ alsa_card_get_channel(AlsaCard *card)
 
 /**
  * Get the mute state, either TRUE or FALSE.
- * 
+ *
  * @param card a Card instance.
  * @return TRUE if the card is muted, FALSE otherwise.
  */
@@ -741,7 +741,7 @@ alsa_card_is_muted(AlsaCard *card)
 
 /**
  * Toggle the mute state.
- * 
+ *
  * @param card a Card instance.
  */
 void
@@ -756,7 +756,7 @@ alsa_card_toggle_mute(AlsaCard *card)
 
 /**
  * Get the volume in percent (value between 0 and 100).
- * 
+ *
  * @param card a Card instance.
  * @return the volume in percent.
  */
@@ -777,7 +777,7 @@ alsa_card_get_volume(AlsaCard *card)
 
 /**
  * Set the volume in percent (value between 0 and 100).
- * 
+ *
  * @param card a Card instance.
  * @param value the volume in percent.
  * @param dir the direction of the volume change
@@ -801,7 +801,7 @@ alsa_card_set_volume(AlsaCard *card, gdouble value, int dir)
 
 /**
  * Set a callback invoked on volume/mute changes.
- * 
+ *
  * @param card a Card instance.
  * @param callback the callback to be invoked.
  * @param user_data the user data passed to the callback.
@@ -902,7 +902,7 @@ alsa_card_new(const char *card_name, const char *channel, gboolean normalize)
 	g_free(pollfds);
 
 	/* Sum up the situation */
-	DEBUG("'%s': %s (%s): initialized !",
+	DEBUG("'%s': Card '%s' with channel '%s' initialized !",
 	      card->hctl, card->name, elem_get_name(card->mixer_elem));
 
 	return card;

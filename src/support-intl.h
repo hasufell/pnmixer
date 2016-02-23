@@ -10,7 +10,7 @@
 
 /**
  * @file support-intl.h
- * Internationalization stuff, should be included by every file.
+ * Internationalization support, should be included by every file.
  * @brief Internationalization support.
  */
 

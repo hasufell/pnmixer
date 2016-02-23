@@ -11,7 +11,6 @@
 /**
  * @file support-ui.c
  * Various ui-related functions.
- * This should be included in ui files only.
  * @brief Various ui-related functions.
  */
 

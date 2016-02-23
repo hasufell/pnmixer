@@ -10,8 +10,8 @@
 
 /**
  * @file ui-about-dialog.c
- * This file holds the ui-related code for the about dialog
- * @brief About dialog subsystem
+ * This file holds the ui-related code for the about dialog.
+ * @brief About dialog subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -36,6 +36,11 @@ struct about_dialog {
 	GtkWidget *about_dialog;
 };
 
+/**
+ * Runs the about dialog.
+ *
+ * @param dialog a AboutDialog instance.
+ */
 void
 about_dialog_run(AboutDialog *dialog)
 {
@@ -44,6 +49,11 @@ about_dialog_run(AboutDialog *dialog)
 	gtk_dialog_run(about_dialog);
 }
 
+/**
+ * Destroys the about dialog, freeing any resources.
+ *
+ * @param dialog a AboutDialog instance.
+ */
 void
 about_dialog_destroy(AboutDialog *dialog)
 {
@@ -51,6 +61,12 @@ about_dialog_destroy(AboutDialog *dialog)
 	g_free(dialog);
 }
 
+/**
+ * Creates the about dialog.
+ *
+ * @param parent a GtkWindow to be used as the parent.
+ * @return the newly created AboutDialog instance.
+ */
 AboutDialog *
 about_dialog_create(GtkWindow *parent)
 {

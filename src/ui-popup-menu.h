@@ -10,8 +10,8 @@
 
 /**
  * @file ui-popup-menu.h
- * Header for ui-popup-menu.c, holding public functions and globals.
- * @brief header for ui-popup-menu.c
+ * Header for ui-popup-menu.c.
+ * @brief Header for ui-popup-menu.c.
  */
 
 #ifndef _UI_POPUP_MENU_H_

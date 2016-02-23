@@ -11,7 +11,7 @@
 /**
  * @file ui-tray-icon.c
  * This file holds the ui-related code for the system tray icon.
- * @brief tray icon subsystem
+ * @brief Tray icon subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -474,6 +474,13 @@ on_size_changed(G_GNUC_UNUSED GtkStatusIcon *status_icon, gint size, TrayIcon *i
 	return FALSE;
 }
 
+/**
+ * Handle signals from the audio subsystem.
+ *
+ * @param audio the Audio instance that emitted the signal.
+ * @param event the AudioEvent containing useful information.
+ * @param data user supplied data.
+ */
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {

@@ -11,7 +11,7 @@
 /**
  * @file ui-popup-menu.c
  * This file holds the ui-related code for the popup menu.
- * @brief Popup menu subsystem
+ * @brief Popup menu subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -93,14 +93,14 @@ struct popup_menu {
 /**
  * Handles a click on 'mute_item', toggling the mute audio state.
  *
- * @param menuitem the object which received the signal.
+ * @param item the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
  */
 void
 #ifdef WITH_GTK3
-on_mute_item_activate(G_GNUC_UNUSED GtkMenuItem *menuitem,
+on_mute_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 #else
-on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
+on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *item,
 #endif
                       PopupMenu *menu)
 {
@@ -110,7 +110,7 @@ on_mute_item_activate(G_GNUC_UNUSED GtkCheckMenuItem *menuitem,
 /**
  * Handles a click on 'mixer_item', opening the specified mixer application.
  *
- * @param menuitem the object which received the signal.
+ * @param item the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
  */
 void
@@ -123,7 +123,7 @@ on_mixer_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 /**
  * Handles a click on 'prefs_item', opening the preferences window.
  *
- * @param menuitem the object which received the signal.
+ * @param item the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
  */
 void
@@ -136,7 +136,7 @@ on_prefs_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 /**
  * Handles a click on 'reload_item', re-initializing the audio subsystem.
  *
- * @param menuitem the object which received the signal.
+ * @param item the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
  */
 void
@@ -149,7 +149,7 @@ on_reload_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 /**
  * Handles a click on 'about_item', opening the About dialog.
  *
- * @param menuitem the object which received the signal.
+ * @param item the object which received the signal.
  * @param menu PopupMenu instance set when the signal handler was connected.
  */
 void
@@ -159,6 +159,13 @@ on_about_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
 	run_about_dialog();
 }
 
+/**
+ * Handle signals from the audio subsystem.
+ *
+ * @param audio the Audio instance that emitted the signal.
+ * @param event the AudioEvent containing useful information.
+ * @param data user supplied data.
+ */
 static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
@@ -207,6 +214,7 @@ popup_menu_destroy(PopupMenu *menu)
 /**
  * Creates the popup menu and connects all the signals.
  *
+ * @param audio pointer to this audio subsystem.
  * @return the newly created PopupMenu instance.
  */
 PopupMenu *

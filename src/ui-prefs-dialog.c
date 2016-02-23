@@ -11,7 +11,7 @@
 /**
  * @file ui-prefs-dialog.c
  * This file holds the ui-related code for the preferences window.
- * @brief preferences dialog ui subsystem
+ * @brief Preferences dialog ui subsystem.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -77,16 +77,6 @@ set_label_for_keycode(GtkLabel *label, gint code, GdkModifierType mods)
 }
 
 /**
- * Fills the GtkComboBoxText 'combo' with the currently available
- * channels of the card.
- *
- *
- * @param combo the GtkComboBoxText widget for the channels
- * @param channels list of available channels
- * @param selected the currently selected channel
- */
-
-/**
  * Fills the GtkComboBoxText 'chan_combo' with the currently available channels
  * for a given card.
  * The active channel in the combo box is set to the SELECTED channel found in
@@ -133,6 +123,7 @@ fill_chan_combo(GtkComboBoxText *combo, const gchar *card_name)
  * which may be different from the SELECTED card found in preferences.
  *
  * @param combo the GtkComboBoxText widget for the cards.
+ * @param audio an Audio instance.
  */
 static void
 fill_card_combo(GtkComboBoxText *combo, Audio *audio)
@@ -415,6 +406,13 @@ on_noti_enable_check_toggled(G_GNUC_UNUSED GtkToggleButton *button,
 }
 #endif
 
+/**
+ * Handle signals from the audio subsystem.
+ *
+ * @param audio the Audio instance that emitted the signal.
+ * @param event the AudioEvent containing useful information.
+ * @param data user supplied data.
+ */
 static void
 on_audio_changed(Audio *audio, AudioEvent *event, gpointer data)
 {
@@ -787,6 +785,12 @@ prefs_dialog_populate(PrefsDialog *dialog)
 #endif
 }
 
+/**
+ * Runs the preferences dialog.
+ *
+ * @param dialog a PrefsDialog instance.
+ * @return a GtkResponse code.
+ */
 gint
 prefs_dialog_run(PrefsDialog *dialog)
 {
@@ -798,6 +802,11 @@ prefs_dialog_run(PrefsDialog *dialog)
 	return resp;
 }
 
+/**
+ * Destroys the preferences dialog, freeing any resources.
+ *
+ * @param dialog a PrefsDialog instance.
+ */
 void
 prefs_dialog_destroy(PrefsDialog *dialog)
 {
@@ -810,6 +819,14 @@ prefs_dialog_destroy(PrefsDialog *dialog)
 	g_free(dialog);
 }
 
+/**
+ * Creates the preferences dialog.
+ *
+ * @param parent a GtkWindow to be used as the parent.
+ * @param audio pointer to this audio subsystem.
+ * @param hotkeys pointer to this hotkey subsystem.
+ * @return the newly created PrefsDialog instance.
+ */
 PrefsDialog *
 prefs_dialog_create(GtkWindow *parent, Audio *audio, Hotkeys *hotkeys)
 {
