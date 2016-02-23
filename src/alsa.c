@@ -963,7 +963,7 @@ alsa_list_channels(const char *card_name)
 {
 	AlsaCardIter *iter;
 	char *hctl = NULL;
-	snd_mixer_t *mixer;
+	snd_mixer_t *mixer = NULL;
 	GSList *list = NULL;
 
 	/* Iterate over cards to find the one provided in argument */
@@ -987,11 +987,10 @@ alsa_list_channels(const char *card_name)
 	/* Get a list of playable channels */
 	list = mixer_list_playable(hctl, mixer);
 
-	/* Cleanup */
 exit:
+	/* Cleanup */
 	if (mixer)
 		mixer_close(hctl, mixer);
-
 	if (hctl)
 		g_free(hctl);
 
