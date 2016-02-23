@@ -122,7 +122,7 @@ on_hotkey_dialog_key_release_event(GtkWidget *widget,
 /**
  * Runs the hotkey dialog, and returns a string representing the hotkey
  * that has been pressed. String must be freed.
- * 
+ *
  * @param dialog a HotkeyDialog instance.
  * @return the hotkey pressed, must be freed.
  */
