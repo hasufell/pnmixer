@@ -20,40 +20,21 @@
 #ifndef _SUPPORT_LOG_H_
 #define _SUPPORT_LOG_H_
 
-#include <stdio.h>
 #include <glib.h>
 
 extern gboolean want_debug;
 
-/**
- * Macro to print verbose debug info in case we want debugging.
- */
+enum log_level {
+	LOG_ERROR,
+	LOG_WARN,
+	LOG_DEBUG
+};
 
-#define VT_ESC    "\033"
-#define VT_RESET  "[0m"
-#define VT_RED    "[0;31m"
-#define VT_GREY   "[0;37m"
-#define VT_YELLOW "[1;33m"
+void log_msg_v(enum log_level level, const char *file, const char *format, va_list args);
+void log_msg(enum log_level level, const char *file, const char *format, ...);
 
-#define ERROR(fmt, ...)	  \
-	fprintf(stderr, \
-	        VT_ESC VT_RED "error" VT_ESC VT_RESET ": %s: " fmt "\n", \
-	        __FILE__, ##__VA_ARGS__)
+#define ERROR(...) log_msg(LOG_ERROR, __FILE__, __VA_ARGS__)
+#define WARN(...)  log_msg(LOG_WARN,  __FILE__, __VA_ARGS__)
+#define DEBUG(...) log_msg(LOG_DEBUG, __FILE__, __VA_ARGS__)
 
-#define WARN(fmt, ...)	  \
-	fprintf(stderr, \
-	        VT_ESC VT_YELLOW "warning" VT_ESC VT_RESET ": %s: " fmt "\n",	\
-	        __FILE__, ##__VA_ARGS__)
-
-#define _DEBUG(fmt, ...)	  \
-	fprintf(stderr, \
-	        VT_ESC VT_GREY "debug" VT_ESC VT_RESET ": %s: " fmt "\n", \
-	        __FILE__, ##__VA_ARGS__)
-
-#define DEBUG(fmt, ...)	  \
-	do { \
-		if (want_debug == TRUE) \
-			_DEBUG(fmt, ##__VA_ARGS__); \
-	} while (0) \
- 
 #endif				// _SUPPORT_LOG_H_

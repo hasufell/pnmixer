@@ -38,17 +38,38 @@
  * Alsa log and debug macros.
  */
 
-#define ALSA_ERR(err, fmt, ...)	  \
-	ERROR(fmt ": %s", ##__VA_ARGS__, snd_strerror(err))
+static void
+alsa_log_msg(enum log_level level, const char *card,
+             const char *strerr, const char *format, ...)
+{
+	va_list args;
+	char buf[1024];
 
-#define ALSA_CARD_DEBUG(card, fmt, ...)	  \
-	DEBUG("'%s': " fmt, card, ##__VA_ARGS__)
+	if (!card && !strerr)
+		snprintf(buf, sizeof buf, "%s", format);
+	else if (card && !strerr)
+		snprintf(buf, sizeof buf, "'%s': %s", card, format);
+	else if (!card && strerr)
+		snprintf(buf, sizeof buf, "%s: %s", format, strerr);
+	else // card && strerr
+		snprintf(buf, sizeof buf, "'%s': %s: %s", card, format, strerr);
 
-#define ALSA_CARD_WARN(card, fmt, ...)	  \
-	WARN("'%s': " fmt, card, ##__VA_ARGS__)
+	va_start(args, format);
+	log_msg_v(level, __FILE__, buf, args);
+	va_end(args);
+}
 
-#define ALSA_CARD_ERR(card, err, fmt, ...)	  \
-	ERROR("'%s': " fmt ": %s", card, ##__VA_ARGS__, snd_strerror(err))
+#define ALSA_ERR(err, ...)	  \
+	alsa_log_msg(LOG_ERROR, NULL, snd_strerror(err), __VA_ARGS__)
+
+#define ALSA_CARD_DEBUG(card, ...)	\
+	alsa_log_msg(LOG_DEBUG, card, NULL, __VA_ARGS__)
+
+#define ALSA_CARD_WARN(card, ...)	\
+	alsa_log_msg(LOG_WARN, card, NULL, __VA_ARGS__)
+
+#define ALSA_CARD_ERR(card, err, ...)	\
+	alsa_log_msg(LOG_ERROR, card, snd_strerror(err), __VA_ARGS__)
 
 /*
  * Alsa mixer elem handling (deals with 'snd_mixer_elem_t').
