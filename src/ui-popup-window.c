@@ -182,28 +182,22 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  * FALSE to propagate the signal further.
  */
 gboolean
-on_vol_scale_change_value(GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
+on_vol_scale_change_value(G_GNUC_UNUSED GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
                           gdouble value, PopupWindow *window)
 {
-	GtkAdjustment *gtk_adj;
-
-	/* We must ensure that the new value meets the requirement
-	 * defined by the GtkAdjustment. We have to do that manually,
-	 * because at this moment the value within GtkAdjustment
-	 * has not been updated yet, so using gtk_adjustment_get_value()
-	 * returns a wrong value.
-	 */
-
-	gtk_adj = gtk_range_get_adjustment(range);
-
-	if (value < gtk_adjustment_get_lower(gtk_adj))
-		value = gtk_adjustment_get_lower(gtk_adj);
-	if (value > gtk_adjustment_get_upper(gtk_adj))
-		value = gtk_adjustment_get_upper(gtk_adj);
-
 	audio_set_volume(window->audio, AUDIO_USER_POPUP, value);
 
-	return FALSE;
+	/* We must return TRUE and stop signal propagation here.
+	 * This is because we set the value for the GtkRange ourselves,
+	 * when the audio callback is invoked.
+	 * Therefore the value in the slider represents the true volume
+	 * as reported by the sound system. For example, we may set the
+	 * volume to 75, but the real volume will be 77, since audio cards
+	 * may have less than 100 volume steps (mine has 42 steps).
+	 * If we don't stop signal propagation, Gtk will change again the
+	 * slider value after we did it, and set it to the 'theorical value'.
+	 */
+	return TRUE;
 }
 
 /**

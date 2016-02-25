@@ -292,9 +292,9 @@ invoke_handlers(Audio *audio, AudioSignal signal, AudioUser user)
 	event = audio_event_new(audio, signal, user);
 
 	/* Invoke the various handlers around */
-	DEBUG("** Dispatching signal '%s' from '%s', vol=%d, muted=%s",
+	DEBUG("** Dispatching signal '%s' from '%s', vol=%lg, muted=%s",
 	      audio_signal_to_str(signal), audio_user_to_str(user),
-	      (int) event->volume, event->muted ? "yes" : "no");
+	      event->volume, event->muted ? "yes" : "no");
 
 	for (item = audio->handlers; item; item = item->next) {
 		AudioHandler *handler = item->data;
@@ -502,6 +502,7 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 	audio->last_action = audio_action_new(user);
 
 	/* Set the volume */
+	DEBUG("Setting volume to %lg (dir:%d)", volume, dir);
 	alsa_card_set_volume(soundcard, volume, dir);
 
 	/* Automatically unmute the volume */
@@ -522,7 +523,20 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 void
 audio_set_volume(Audio *audio, AudioUser user, gdouble volume)
 {
-	_audio_set_volume(audio, user, volume, 0);
+	AlsaCard *soundcard = audio->soundcard;
+	gdouble cur_volume;
+	gint dir;
+
+	cur_volume = alsa_card_get_volume(soundcard);
+
+	if (cur_volume < volume)
+		dir = +1;
+	else if (cur_volume > volume)
+		dir = -1;
+	else
+		dir = 0;
+
+	_audio_set_volume(audio, user, volume, dir);
 }
 
 /**
@@ -647,6 +661,8 @@ end:
 
 	/* Finish making everything ready */
 	if (soundcard == NULL) {
+		DEBUG("No soundcard could be hooked !");
+
 		/* Card and channel names set to emptry string */
 		g_free(audio->card);
 		audio->card = g_strdup("");
@@ -656,6 +672,9 @@ end:
 		/* Tell the world */
 		invoke_handlers(audio, AUDIO_NO_CARD, AUDIO_USER_UNKNOWN);
 	} else {
+		DEBUG("Soundcard successfully hooked (scroll step: %lg, normalize: %s)",
+		      audio->scroll_step, audio->normalize ? "true" : "false");
+
 		/* Card and channel names must match the truth.
 		 * Indeed, in case of failure, we may end up using a soundcard
 		 * different from the one specified in the preferences.
