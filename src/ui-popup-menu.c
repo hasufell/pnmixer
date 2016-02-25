@@ -43,14 +43,14 @@
 
 /* Updates the mute checkbox according to the current audio state. */
 static void
-update_mute_check(GtkToggleButton *mute_check, gboolean active)
+update_mute_check(GtkToggleButton *mute_check, gboolean muted)
 {
 	/* On Gtk3 version, we listen for the signal sent by the GtkMenuItem.
 	 * So, when we change the value of the GtkToggleButton, we don't have
 	 * to block the signal handlers, since there's nobody listening to the
 	 * GtkToggleButton anyway.
 	 */
-	gtk_toggle_button_set_active(mute_check, active);
+	gtk_toggle_button_set_active(mute_check, muted);
 }
 
 #else
@@ -58,21 +58,21 @@ update_mute_check(GtkToggleButton *mute_check, gboolean active)
 /* Updates the mute item according to the current audio state. */
 static void
 update_mute_item(GtkCheckMenuItem *mute_item, GCallback handler_func,
-                 gpointer handler_data, gboolean active)
+                 gpointer handler_data, gboolean muted)
 {
 	/* On Gtk2 version, we must block the signals sent by the GtkCheckMenuItem
 	 * before we update it manually.
 	 */
-	gint n_handlers_blocked;
+	gint n_blocked;
 
-	n_handlers_blocked = g_signal_handlers_block_by_func
-	                     (G_OBJECT(mute_item), handler_func, handler_data);
-	g_assert(n_handlers_blocked == 1);
+	n_blocked = g_signal_handlers_block_by_func
+		    (G_OBJECT(mute_item), DATA_PTR(handler_func), handler_data);
+	g_assert(n_blocked == 1);
 
-	gtk_check_menu_item_set_active(mute_item, active);
+	gtk_check_menu_item_set_active(mute_item, muted);
 
 	g_signal_handlers_unblock_by_func
-	(G_OBJECT(mute_item), handler_func, handler_data);
+	(G_OBJECT(mute_item),  DATA_PTR(handler_func), handler_data);
 }
 
 #endif
@@ -175,7 +175,10 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 	update_mute_check(GTK_TOGGLE_BUTTON(menu->mute_check), event->muted);
 #else
 	update_mute_item(GTK_CHECK_MENU_ITEM(menu->mute_item),
-	                 (GCallback) on_mute_item_activate, menu, event->muted);
+//	                 *((void **) (&(G_CALLBACK(on_mute_item_activate)))),
+//	                 *((void **) (&on_mute_item_activate)),
+	                 G_CALLBACK(on_mute_item_activate),
+	                 menu, event->muted);
 #endif
 }
 

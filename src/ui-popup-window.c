@@ -92,16 +92,16 @@ static void
 update_mute_check(GtkToggleButton *mute_check, GCallback handler_func,
                   gpointer handler_data, gboolean muted)
 {
-	gint n_handlers_blocked;
+	gint n_blocked;
 
-	n_handlers_blocked = g_signal_handlers_block_by_func
-	                     (G_OBJECT(mute_check), handler_func, handler_data);
-	g_assert(n_handlers_blocked == 1);
+	n_blocked = g_signal_handlers_block_by_func
+		    (G_OBJECT(mute_check), DATA_PTR(handler_func), handler_data);
+	g_assert(n_blocked == 1);
 
 	gtk_toggle_button_set_active(mute_check, muted);
 
 	g_signal_handlers_unblock_by_func
-	(G_OBJECT(mute_check), handler_func, handler_data);
+	(G_OBJECT(mute_check), DATA_PTR(handler_func), handler_data);
 }
 
 /* Update the volume slider according to the current audio state. */
@@ -246,7 +246,7 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 	PopupWindow *window = (PopupWindow *) data;
 
 	update_mute_check(GTK_TOGGLE_BUTTON(window->mute_check),
-	                  (GCallback) on_mute_check_toggled, window, event->muted);
+	                  G_CALLBACK(on_mute_check_toggled), window, event->muted);
 	update_volume_slider(window->vol_scale_adj, event->volume);
 }
 

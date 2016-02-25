@@ -20,6 +20,30 @@
 
 #include <gtk/gtk.h>
 
+#ifndef WITH_GTK3
+
+/*
+ * Simple functions lacking in Gtk2
+ */
+
+GtkBuilder *gtk_builder_new_from_file(const gchar *filename);
+void gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box);
+
+#endif
+
+/*
+ * Cast a pointer (that may be a function pointer) to a data pointer,
+ * suppressing any warnings from the compilator.
+ * We need that to suppress pedantic warnings when using
+ * g_signal_handlers_block_by_func(). Indeed, we must feed it a
+ * function pointer, but the signature expects a data pointer.
+ * Aparently Glib doesn't respect ISO C here.
+ * For more details, see this discussion:
+ * http://compgroups.net/comp.lang.c/cast-function-pointer-to-void/722812
+ */
+
+#define DATA_PTR(ptr) (*((void **)(&ptr)))
+
 /*
  * GtkBuilder helpers
  */
@@ -52,13 +76,6 @@
 		container->name = gtk_builder_get_adjustment(builder, #name); \
 		g_assert(GTK_IS_ADJUSTMENT(container->name)); \
 	} while (0)
-
-
-/* Define some simple functions lacking in Gtk2 */
-#ifndef WITH_GTK3
-GtkBuilder *gtk_builder_new_from_file(const gchar *filename);
-void gtk_combo_box_text_remove_all(GtkComboBoxText *combo_box);
-#endif
 
 /*
  * File helpers
