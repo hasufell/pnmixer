@@ -257,12 +257,15 @@ audio_handler_list_remove(GSList *list, AudioHandler *handler)
 
 struct audio {
 	/* Preferences */
-	gchar *card;
-	gchar *channel;
 	gdouble scroll_step;
 	gboolean normalize;
 	/* Underlying sound card */
 	AlsaCard *soundcard;
+	/* Cached value (to avoid querying the underlying
+	 * sound card each time we need the info).
+	 */
+	gchar *card;
+	gchar *channel;
 	/* Last action performed */
 	AudioAction *last_action;
 	/* User signal handlers, to be invoked
@@ -323,7 +326,7 @@ on_alsa_event(enum alsa_event event, gpointer data)
 		 * the volume/mute state), there should be a 'last_action'
 		 * defined and valid. We just need to consume it.
 		 * There's no handler to invoke, we've done that already
-		 * when we changed the vloume/mute.
+		 * when we changed the volume/mute.
 		 */
 		if (audio_action_is_still_valid(last_action)) {
 			audio_action_free(last_action);
@@ -489,7 +492,8 @@ audio_get_volume(Audio *audio)
  *        (-1: lowering, +1: raising, 0: setting).
  */
 void
-audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
+_audio_set_volume(Audio *audio, AudioUser user, gdouble cur_volume,
+                  gdouble new_volume, gint dir)
 {
 	AlsaCard *soundcard = audio->soundcard;
 
@@ -497,20 +501,38 @@ audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 	if (!soundcard)
 		return;
 
-	/* Create a new action (the callback will dispose of it) */
-	audio_action_free(audio->last_action);
-	audio->last_action = audio_action_new(user);
-
 	/* Set the volume */
-	DEBUG("Setting volume to %lg (dir:%d)", volume, dir);
-	alsa_card_set_volume(soundcard, volume, dir);
+	DEBUG("Setting volume from %lg to %lg (dir: %d)",
+	      cur_volume, new_volume, dir);
+	alsa_card_set_volume(soundcard, new_volume, dir);
 
 	/* Automatically unmute the volume */
 	if (alsa_card_is_muted(soundcard))
 		alsa_card_toggle_mute(soundcard);
 
-	/* Invoke the handlers */
+	/* Check if the volume really changed */
+	new_volume = alsa_card_get_volume(soundcard);
+	if (new_volume == cur_volume)
+		return;
+
+	/* Create a new action and invoke the handlers.
+	 * The new action will be disposed... TODO.
+	 */
+	audio_action_free(audio->last_action);
+	audio->last_action = audio_action_new(user);
+
+	/* Invoke handlers */
 	invoke_handlers(audio, AUDIO_VALUES_CHANGED, user);
+}
+
+void
+audio_set_volume(Audio *audio, AudioUser user, gdouble new_volume, gint dir)
+{
+	AlsaCard *soundcard = audio->soundcard;
+	gdouble cur_volume;
+
+	cur_volume = alsa_card_get_volume(soundcard);	
+	_audio_set_volume(audio, user, cur_volume, new_volume, dir);
 }
 
 /**
@@ -524,13 +546,13 @@ audio_lower_volume(Audio *audio, AudioUser user)
 {
 	AlsaCard *soundcard = audio->soundcard;
 	gdouble scroll_step = audio->scroll_step;
-	gdouble volume;
+	gdouble cur_volume, new_volume;
 
-	volume = alsa_card_get_volume(soundcard);
-	volume -= scroll_step;
-	if (volume < 0)
-		volume = 0;
-	audio_set_volume(audio, user, volume, -1);
+	cur_volume = alsa_card_get_volume(soundcard);
+	new_volume = cur_volume - scroll_step;
+	if (new_volume < 0)
+		new_volume = 0;
+	_audio_set_volume(audio, user, cur_volume, new_volume, -1);
 }
 
 /**
@@ -544,13 +566,13 @@ audio_raise_volume(Audio *audio, AudioUser user)
 {
 	AlsaCard *soundcard = audio->soundcard;
 	gdouble scroll_step = audio->scroll_step;
-	gdouble volume;
+	gdouble cur_volume, new_volume;
 
-	volume = alsa_card_get_volume(soundcard);
-	volume += scroll_step;
-	if (volume > 100)
-		volume = 100;
-	audio_set_volume(audio, user, volume, +1);
+	cur_volume = alsa_card_get_volume(soundcard);
+	new_volume = cur_volume + scroll_step;
+	if (new_volume > 100)
+		new_volume = 100;
+	_audio_set_volume(audio, user, cur_volume, new_volume, +1);
 }
 
 /**
