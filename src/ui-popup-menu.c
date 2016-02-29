@@ -82,6 +82,7 @@ update_mute_item(GtkCheckMenuItem *mute_item, GCallback handler_func,
 struct popup_menu {
 	/* Audio system */
 	Audio *audio;
+	/* Widgets */
 	GtkWidget *menu_window;
 	GtkWidget *menu;
 #ifdef WITH_GTK3

@@ -115,7 +115,9 @@ update_volume_slider(GtkAdjustment *vol_scale_adj, gdouble volume)
 /* Public functions & signal handlers */
 
 struct popup_window {
+	/* Audio system */
 	Audio *audio;
+	/* Widgets */
 	GtkWidget *popup_window;
 	GtkWidget *vol_scale;
 	GtkAdjustment *vol_scale_adj;
@@ -357,9 +359,14 @@ popup_window_cleanup(PopupWindow *window)
 {
 	DEBUG("Destroying");
 
+	/* Disconnect audio signals */
 	audio_signals_disconnect(window->audio, on_audio_changed, window);
+
+	/* Destroy the Gtk window, freeing any resources */
 	gtk_widget_destroy(window->popup_window);
-	memset(window, 0, sizeof(PopupWindow)); // for cleanliness
+
+	/* Set the struct value to zero since it will be re-used */
+	memset(window, 0, sizeof(PopupWindow));
 }
 
 /* Initialize a popup window.
