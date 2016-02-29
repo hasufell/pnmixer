@@ -480,7 +480,7 @@ audio_get_volume(Audio *audio)
 }
 
 /**
- * Actually set the volume.
+ * Set the volume.
  *
  * @param audio an Audio instance.
  * @param user the user who performs the action.
@@ -488,8 +488,8 @@ audio_get_volume(Audio *audio)
  * @param dir the direction for the volume change
  *        (-1: lowering, +1: raising, 0: setting).
  */
-static void
-_audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
+void
+audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 {
 	AlsaCard *soundcard = audio->soundcard;
 
@@ -514,32 +514,6 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint dir)
 }
 
 /**
- * Set the volume.
- *
- * @param audio an Audio instance.
- * @param user the user who performs the action.
- * @param volume the volume value to set, in percent.
- */
-void
-audio_set_volume(Audio *audio, AudioUser user, gdouble volume)
-{
-	AlsaCard *soundcard = audio->soundcard;
-	gdouble cur_volume;
-	gint dir;
-
-	cur_volume = alsa_card_get_volume(soundcard);
-
-	if (cur_volume < volume)
-		dir = +1;
-	else if (cur_volume > volume)
-		dir = -1;
-	else
-		dir = 0;
-
-	_audio_set_volume(audio, user, volume, dir);
-}
-
-/**
  * Lower the volume.
  *
  * @param audio an Audio instance.
@@ -556,7 +530,7 @@ audio_lower_volume(Audio *audio, AudioUser user)
 	volume -= scroll_step;
 	if (volume < 0)
 		volume = 0;
-	_audio_set_volume(audio, user, volume, -1);
+	audio_set_volume(audio, user, volume, -1);
 }
 
 /**
@@ -576,7 +550,7 @@ audio_raise_volume(Audio *audio, AudioUser user)
 	volume += scroll_step;
 	if (volume > 100)
 		volume = 100;
-	_audio_set_volume(audio, user, volume, +1);
+	audio_set_volume(audio, user, volume, +1);
 }
 
 /**

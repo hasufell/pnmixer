@@ -175,6 +175,15 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  * Handles the 'change-value' signal on the GtkRange 'vol_scale',
  * changing the voume accordingly.
  *
+ * There are many ways for the user to change the slider value.
+ * Think about testing them all if you touch this function.
+ * Here's a list of actions you can do to trigger this callback:
+ *  - click somewhere on the slider
+ *  - click on the slider's knob and drag it
+ *  - mouse scroll on the slider
+ *  - keyboard (when the slider has focus), here's a list of keys:
+ *      Up, Down, Left, Right, Page Up, Page Down, Home, End
+ *
  * @param range the GtkRange that received the signal.
  * @param scroll the type of scroll action that was performed.
  * @param value the new value resulting from the scroll action.
@@ -183,20 +192,35 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  * FALSE to propagate the signal further.
  */
 gboolean
-on_vol_scale_change_value(G_GNUC_UNUSED GtkRange *range, G_GNUC_UNUSED GtkScrollType scroll,
+on_vol_scale_change_value(G_GNUC_UNUSED GtkRange *range, GtkScrollType scroll,
                           gdouble value, PopupWindow *window)
 {
-	audio_set_volume(window->audio, AUDIO_USER_POPUP, value);
+	gint direction;
 
-	/* We must return TRUE and stop signal propagation here.
-	 * This is because we set the value for the GtkRange ourselves,
-	 * when the audio callback is invoked.
-	 * Therefore the value in the slider represents the true volume
-	 * as reported by the sound system. For example, we may set the
-	 * volume to 75, but the real volume will be 77, since audio cards
-	 * may have less than 100 volume steps (mine has 42 steps).
-	 * If we don't stop signal propagation, Gtk will change again the
-	 * slider value after we did it, and set it to the 'theorical value'.
+	/* Find out in which direction the volume is changed.
+	 * It's needed in order to handle keyboard shortcuts properly.
+	 */
+	switch (scroll) {
+	case GTK_SCROLL_STEP_BACKWARD:
+	case GTK_SCROLL_PAGE_BACKWARD:
+		direction = -1;
+		break;
+	case GTK_SCROLL_STEP_FORWARD:
+	case GTK_SCROLL_PAGE_FORWARD:
+		direction = +1;
+		break;
+	default:
+		direction = 0;
+	}
+
+	/* Set the volume */
+	audio_set_volume(window->audio, AUDIO_USER_POPUP, value, direction);
+
+	/* The slider value represents the TRUE volume value, as given by
+	 * the audio callback after the volume has been effectively changed.
+	 * We rely on this callback to set the value of the GtkRange manually.
+	 * As a consequence, we DON'T WANT Gtk to update the GtkRange value.
+	 * To prevent it, we MUST return TRUE.
 	 */
 	return TRUE;
 }

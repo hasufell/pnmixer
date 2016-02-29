@@ -50,7 +50,7 @@ const char *audio_get_channel(Audio *audio);
 gboolean audio_is_muted(Audio *audio);
 void audio_toggle_mute(Audio *audio, AudioUser user);
 gdouble audio_get_volume(Audio *audio);
-void audio_set_volume(Audio *audio, AudioUser user, gdouble volume);
+void audio_set_volume(Audio *audio, AudioUser user, gdouble volume, gint direction);
 void audio_lower_volume(Audio *audio, AudioUser user);
 void audio_raise_volume(Audio *audio, AudioUser user);
 
