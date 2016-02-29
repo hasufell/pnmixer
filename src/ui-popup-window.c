@@ -19,6 +19,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
@@ -248,7 +249,13 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 
 /**
  * Return a pointer toward the internal GtkWindow instance.
- * Some parts of the code needs to know about it.
+ * Some parts of the code needs to know about it, since this window
+ * is use as the main window (the parent) for all the other windows.
+ *
+ * DO NOT SAVE this pointer, just use it and forget about it.
+ * This is because the value returned may change with time,
+ * since the whole PopupWindow is rebuild when the reload() function
+ * is called.
  *
  * @param window a PopupWindow instance.
  */
@@ -338,33 +345,26 @@ popup_window_toggle(PopupWindow *window)
 		popup_window_show(window);
 }
 
-/**
- * Destroys the popup window, freeing any resources.
- *
- * @param window a PopupWindow instance.
+/*
+ * Cleanup a popup window.
  */
-void
-popup_window_destroy(PopupWindow *window)
+static void
+popup_window_cleanup(PopupWindow *window)
 {
 	audio_signals_disconnect(window->audio, on_audio_changed, window);
 	gtk_widget_destroy(window->popup_window);
-	g_free(window);
+	/* Reset memory to zero for cleanliness */
+	memset(window, 0, sizeof(PopupWindow));
 }
 
-/**
- * Creates the popup window and connects all the signals.
- *
- * @param audio pointer to this audio subsystem.
- * @return the newly created PopupWindow instance.
+/* Initialize a popup window.
+ * The struct is supposed to be empty at this point.
  */
-PopupWindow *
-popup_window_create(Audio *audio)
+static void
+popup_window_init(PopupWindow *window, Audio *audio)
 {
 	gchar *uifile;
 	GtkBuilder *builder;
-	PopupWindow *window;
-
-	window = g_new0(PopupWindow, 1);
 
 	/* Build UI file depending on slider orientation */
 	gchar *orientation;
@@ -398,6 +398,51 @@ popup_window_create(Audio *audio)
 	/* Cleanup */
 	g_object_unref(builder);
 	g_free(uifile);
+}
+
+/**
+ * Update the popup window according to the current preferences.
+ * This has to be called each time the preferences are modified.
+ *
+ * @param window a PopupWindow instance.
+ */
+void
+popup_window_reload(PopupWindow *window)
+{
+	Audio *audio;
+
+	/* Keep track of this pointer before cleaning up, we need it */
+	audio = window->audio;
+
+	popup_window_cleanup(window);
+	popup_window_init(window, audio);
+}
+
+/**
+ * Destroys the popup window, freeing any resources.
+ *
+ * @param window a PopupWindow instance.
+ */
+void
+popup_window_destroy(PopupWindow *window)
+{
+	popup_window_cleanup(window);
+	g_free(window);
+}
+
+/**
+ * Creates the popup window and connects all the signals.
+ *
+ * @param audio pointer to this audio subsystem.
+ * @return the newly created PopupWindow instance.
+ */
+PopupWindow *
+popup_window_create(Audio *audio)
+{
+	PopupWindow *window;
+
+	window = g_new0(PopupWindow, 1);
+	popup_window_init(window, audio);
 
 	return window;
 }

@@ -44,11 +44,6 @@ static TrayIcon *tray_icon;
 static Hotkeys *hotkeys;
 static Notif *notif;
 
-/* Pointer toward the main window.
- * We need it as a parent for dialogs.
- */
-static GtkWindow *main_window;
-
 /* Temporary instances */
 static PrefsDialog *prefs_dialog;
 static AboutDialog *about_dialog;
@@ -118,6 +113,9 @@ void
 run_prefs_dialog(void)
 {
 	gint resp;
+	GtkWindow *main_window;
+
+	main_window = popup_window_get_gtk_window(popup_window);
 
 	/* Ensure there's no dialog already running */
 	if (prefs_dialog)
@@ -145,9 +143,7 @@ run_prefs_dialog(void)
 		/* Popup window, we must rebuild it from scratch in case
 		 * the slider orientation was modified.
 		 */
-		popup_window_destroy(popup_window);
-		popup_window = popup_window_create(audio);
-		main_window = popup_window_get_gtk_window(popup_window);
+		popup_window_reload(popup_window);
 
 		/* Tray icon preferences */
 		tray_icon_reload(tray_icon);
@@ -172,11 +168,14 @@ run_prefs_dialog(void)
 void
 run_about_dialog(void)
 {
+	GtkWindow *main_window;
+
 	/* Ensure there's no dialog already running */
 	if (about_dialog)
 		return;
 
 	/* Run the about dialog */
+	main_window = popup_window_get_gtk_window(popup_window);
 	about_dialog = about_dialog_create(main_window);
 	about_dialog_run(about_dialog);
 	about_dialog_destroy(about_dialog);
@@ -192,6 +191,7 @@ run_about_dialog(void)
 void
 run_error_dialog(const char *fmt, ...)
 {
+	GtkWindow *main_window;
 	GtkWidget *dialog;
 	char err_buf[512];
 	va_list ap;
@@ -202,6 +202,7 @@ run_error_dialog(const char *fmt, ...)
 
 	ERROR("%s", err_buf);
 
+	main_window = popup_window_get_gtk_window(popup_window);
 	if (!main_window)
 		return;
 
@@ -227,12 +228,14 @@ run_error_dialog(const char *fmt, ...)
 gint
 run_audio_error_dialog(void)
 {
+	GtkWindow *main_window;
 	GtkWidget *dialog;
 	gint resp;
 
 	ERROR("Connection with audio failed, "
 	      "you probably need to restart pnmixer.");
 
+	main_window = popup_window_get_gtk_window(popup_window);
 	if (!main_window)
 		return GTK_RESPONSE_NO;
 
@@ -355,9 +358,6 @@ main(int argc, char *argv[])
 	popup_menu = popup_menu_create(audio);
 	popup_window = popup_window_create(audio);
 	tray_icon = tray_icon_create(audio);
-
-	/* Get a pointer toward the main window (needed to run dialogs) */
-	main_window = popup_window_get_gtk_window(popup_window);
 
 	/* Init what's left */
 	hotkeys = hotkeys_new(audio);

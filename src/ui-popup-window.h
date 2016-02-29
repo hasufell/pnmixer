@@ -23,6 +23,7 @@ typedef struct popup_window PopupWindow;
 
 PopupWindow *popup_window_create(Audio *audio);
 void popup_window_destroy(PopupWindow *window);
+void popup_window_reload(PopupWindow *window);
 void popup_window_show(PopupWindow *window);
 void popup_window_hide(PopupWindow *window);
 void popup_window_toggle(PopupWindow *window);
