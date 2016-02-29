@@ -26,4 +26,7 @@ void popup_menu_destroy(PopupMenu *menu);
 void popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
                      guint button, guint activate_time);
 
+#include <gtk/gtk.h>
+GtkWindow *popup_menu_get_window(PopupMenu *menu);
+
 #endif				// _UI_POPUP_MENU_H_

@@ -28,7 +28,4 @@ void popup_window_show(PopupWindow *window);
 void popup_window_hide(PopupWindow *window);
 void popup_window_toggle(PopupWindow *window);
 
-#include <gtk/gtk.h>
-GtkWindow *popup_window_get_gtk_window(PopupWindow *window);
-
 #endif				// _UI_POPUP_WINDOW_H_

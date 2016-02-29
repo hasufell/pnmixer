@@ -82,6 +82,7 @@ update_mute_item(GtkCheckMenuItem *mute_item, GCallback handler_func,
 struct popup_menu {
 	/* Audio system */
 	Audio *audio;
+	GtkWidget *menu_window;
 	GtkWidget *menu;
 #ifdef WITH_GTK3
 	GtkWidget *mute_check;
@@ -183,6 +184,17 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 }
 
 /**
+ * Return a pointer toward the internal GtkWindow instance.
+ *
+ * @param menu a PopupMenu instance.
+ */
+GtkWindow *
+popup_menu_get_window(PopupMenu *menu)
+{
+	return GTK_WINDOW(menu->menu_window);
+}
+
+/**
  * Shows the popup menu.
  * The weird prototype of this function comes from the underlying
  * gtk_menu_popup() that is used to display the popup menu.
@@ -209,8 +221,10 @@ popup_menu_show(PopupMenu *menu, GtkMenuPositionFunc func, gpointer data,
 void
 popup_menu_destroy(PopupMenu *menu)
 {
+	DEBUG("Destroying");
+
 	audio_signals_disconnect(menu->audio, on_audio_changed, menu);
-	gtk_widget_destroy(menu->menu);
+	gtk_widget_destroy(menu->menu_window);
 	g_free(menu);
 }
 
@@ -237,6 +251,7 @@ popup_menu_create(Audio *audio)
 	builder = gtk_builder_new_from_file(uifile);
 
 	/* Save some widgets for later use */
+	assign_gtk_widget(builder, menu, menu_window);
 	assign_gtk_widget(builder, menu, menu);
 #ifdef WITH_GTK3
 	assign_gtk_widget(builder, menu, mute_check);

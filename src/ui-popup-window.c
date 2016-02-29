@@ -245,26 +245,6 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 	update_volume_slider(window->vol_scale_adj, event->volume);
 }
 
-/* Public functions */
-
-/**
- * Return a pointer toward the internal GtkWindow instance.
- * Some parts of the code needs to know about it, since this window
- * is use as the main window (the parent) for all the other windows.
- *
- * DO NOT SAVE this pointer, just use it and forget about it.
- * This is because the value returned may change with time,
- * since the whole PopupWindow is rebuild when the reload() function
- * is called.
- *
- * @param window a PopupWindow instance.
- */
-GtkWindow *
-popup_window_get_gtk_window(PopupWindow *window)
-{
-	return GTK_WINDOW(window->popup_window);
-}
-
 /**
  * Shows the popup window, and grab the focus.
  *
@@ -351,10 +331,11 @@ popup_window_toggle(PopupWindow *window)
 static void
 popup_window_cleanup(PopupWindow *window)
 {
+	DEBUG("Destroying");
+
 	audio_signals_disconnect(window->audio, on_audio_changed, window);
 	gtk_widget_destroy(window->popup_window);
-	/* Reset memory to zero for cleanliness */
-	memset(window, 0, sizeof(PopupWindow));
+	memset(window, 0, sizeof(PopupWindow)); // for cleanliness
 }
 
 /* Initialize a popup window.

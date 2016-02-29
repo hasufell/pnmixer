@@ -529,6 +529,8 @@ tray_icon_reload(TrayIcon *icon)
 void
 tray_icon_destroy(TrayIcon *icon)
 {
+	DEBUG("Destroying");
+
 	audio_signals_disconnect(icon->audio, on_audio_changed, icon);
 	g_object_unref(icon->status_icon);
 	pixbuf_array_free(icon->pixbufs);
