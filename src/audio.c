@@ -66,67 +66,6 @@ audio_signal_to_str(AudioSignal signal)
 }
 
 /*
- * Audio Actions.
- * An audio action is created each time the volume/mute is changed.
- * It contains the user who made the action, and a timestamp.
- * It is recorded, and will be user later on, since every volume/mute
- * change will trigger a callback afterward. This callback will deal
- * with this 'audio action'.
- */
-
-struct audio_action {
-	AudioUser user;
-	gint64 time;
-};
-
-typedef struct audio_action AudioAction;
-
-/* Decide if the action is still valid, that's to say,
- * if the timestamp is not too old.
- */
-static gboolean
-audio_action_is_still_valid(AudioAction *action)
-{
-	gint64 now, last, delay;
-
-	now = g_get_monotonic_time();
-	last = action->time;
-	delay = now - last;
-
-	//DEBUG("delay: %ld", delay);
-
-	/* Ensure the delay is not too big. The delay here is the time
-	 * between the action was performed and the moment the callback
-	 * is invoked. It is supposed to be very quick, a matter of
-	 * milliseconds.
-	 * We set the maximum delay to 1 second, it's probably far too much.
-	 * However it doesn't hurt to set it too long. Setting it too short
-	 * could hurt.
-	 */
-	return delay < 1000000 ? TRUE : FALSE;
-}
-
-/* Free an audio action */
-static void
-audio_action_free(AudioAction *action)
-{
-	g_free(action);
-}
-
-/* Create a new audio action */
-static AudioAction *
-audio_action_new(AudioUser user)
-{
-	AudioAction *action;
-
-	action = g_new0(AudioAction, 1);
-	action->user = user;
-	action->time = g_get_monotonic_time();
-
-	return action;
-}
-
-/*
  * Audio Event.
  * An audio event is a struct that contains the current audio status.
  * It's passed in parameters of the user signal handlers, so that
@@ -266,10 +205,10 @@ struct audio {
 	 */
 	gchar *card;
 	gchar *channel;
-	/* Last action performed */
-	AudioAction *last_action;
-	/* User signal handlers, to be invoked
-	 * when the audio status changes.
+	/* Last action performed (volume/mute change) */
+	gint64 last_action_timestamp;
+	/* User signal handlers.
+	 * To be invoked when the audio status changes.
 	 */
 	GSList *handlers;
 };
@@ -318,29 +257,35 @@ static void
 on_alsa_event(enum alsa_event event, gpointer data)
 {
 	Audio *audio = (Audio *) data;
-	AudioAction *last_action = audio->last_action;
 
-	/* Check if we expected this event */
-	if (last_action) {
-		/* If we are responsible for this event (aka we changed
-		 * the volume/mute state), there should be a 'last_action'
-		 * defined and valid. We just need to consume it.
-		 * There's no handler to invoke, we've done that already
-		 * when we changed the volume/mute.
+	/* If we are responsible for this event (aka we changed the volume/mute
+	 * values beforehand), we know that we left a timestamp to indicate
+	 * when the action was performed.
+	 */
+	if (audio->last_action_timestamp != 0) {
+		gint64 last, now, delay;
+
+		last = audio->last_action_timestamp;
+		now = g_get_monotonic_time();
+
+		/* Discard the timestamp */
+		audio->last_action_timestamp = 0;
+		
+		/* The delay here is the time between the moment the action
+		 * was performed and the moment the callback was invoked.
 		 */
-		if (audio_action_is_still_valid(last_action)) {
-			audio_action_free(last_action);
-			audio->last_action = NULL;
+		delay = now - last;
+
+		/* The delay is supposed to be very quick, a matter of milliseconds.
+		 * We set its maximum delay to 1 second, it's probably far too much.
+		 * However it doesn't hurt to set it too long. On the other hand,
+		 * setting it too short could hurt.
+		 */
+		if (delay < 1000000)
 			return;
-		}
-
-		/* In some situation we can find a pending 'last_action' that
-		 * was never consumed. This happens for example when we try
-		 * to raise the volume and it's already at its maximum value.
-		 */
-		DEBUG("Discarding last action, too old");
-		audio_action_free(last_action);
-		audio->last_action = NULL;
+		 
+		/* In some situation we can find a timestamp that was never used */
+		DEBUG("Discarding last timestamp, too old");
 	}
 
 	/* Here, we are not at the origin of this change.
@@ -454,9 +399,8 @@ audio_toggle_mute(Audio *audio, AudioUser user)
 	if (!soundcard)
 		return;
 
-	/* Create a new action (the callback will dispose of it) */
-	audio_action_free(audio->last_action);
-	audio->last_action = audio_action_new(user);
+	/* Leave a trace */
+	audio->last_action_timestamp = g_get_real_time();
 
 	/* Toggle mute state */
 	alsa_card_toggle_mute(soundcard);
@@ -510,18 +454,26 @@ _audio_set_volume(Audio *audio, AudioUser user, gdouble cur_volume,
 	if (alsa_card_is_muted(soundcard))
 		alsa_card_toggle_mute(soundcard);
 
-	/* Check if the volume really changed */
+	/* Check if the volume really changed. If it doesn't,
+	 * there's no need to invoke any handlers. It also means
+	 * that no alsa callback will be triggered, so we don't
+	 * save the 'last_action_timestamp'.
+	 */
 	new_volume = alsa_card_get_volume(soundcard);
 	if (new_volume == cur_volume)
 		return;
 
-	/* Create a new action and invoke the handlers.
-	 * The new action will be disposed... TODO.
-	 */
-	audio_action_free(audio->last_action);
-	audio->last_action = audio_action_new(user);
+	/* Leave a trace */
+	audio->last_action_timestamp = g_get_real_time();
 
-	/* Invoke handlers */
+	/* Invoke handlers manually.
+	 * In theory, we could skip this step, since the Alsa callback
+	 * will be triggered anyway after the volume change is effective,
+	 * and we could invoke the handlers at this moment.
+	 * In practice, relying on the Alsa callback is not so reliable.
+	 * It seems that it's kind of broken if PulseAudio is running.
+	 * So, invoking the handlers at this point makes PNMixer more robust.
+	 */
 	invoke_handlers(audio, AUDIO_VALUES_CHANGED, user);
 }
 
