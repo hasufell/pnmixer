@@ -19,6 +19,7 @@
 #include "config.h"
 #endif
 
+#include <math.h>
 #include <glib.h>
 #include <libnotify/notify.h>
 
@@ -72,11 +73,11 @@ show_volume_notif(NotifyNotification *notification,
 	if (muted)
 		summary = g_strdup("Volume muted");
 	else
-		summary = g_strdup_printf("%s (%s)\nVolume: %d%%\n",
-		                          card, channel, (gint) volume);
+		summary = g_strdup_printf("%s (%s)\nVolume: %ld%%\n",
+		                          card, channel, lround(volume));
 
 	notify_notification_update(notification, summary, NULL, icon);
-	NOTIFICATION_SET_HINT_INT32(notification, "value", (gint) volume);
+	NOTIFICATION_SET_HINT_INT32(notification, "value", lround(volume));
 
 	if (!notify_notification_show(notification, &error)) {
 		ERROR("Could not send notification: %s", error->message);

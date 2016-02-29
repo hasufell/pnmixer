@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <glib.h>
 #include <gtk/gtk.h>
 
@@ -327,11 +328,11 @@ update_status_icon_tooltip(GtkStatusIcon *status_icon,
 	char tooltip[64];
 
 	if (!muted)
-		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%"),
-		         card, channel, _("Volume"), (gint) volume);
+		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %ld %%"),
+		         card, channel, _("Volume"), lround(volume));
 	else
-		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %d %%\n%s"),
-		         card, channel, _("Volume"), (gint) volume, _("Muted"));
+		snprintf(tooltip, sizeof tooltip, _("%s (%s)\n%s: %ld %%\n%s"),
+		         card, channel, _("Volume"), lround(volume), _("Muted"));
 
 	gtk_status_icon_set_tooltip_text(status_icon, tooltip);
 }
