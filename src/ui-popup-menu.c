@@ -176,8 +176,6 @@ on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 	update_mute_check(GTK_TOGGLE_BUTTON(menu->mute_check), event->muted);
 #else
 	update_mute_item(GTK_CHECK_MENU_ITEM(menu->mute_item),
-//	                 *((void **) (&(G_CALLBACK(on_mute_item_activate)))),
-//	                 *((void **) (&on_mute_item_activate)),
 	                 G_CALLBACK(on_mute_item_activate),
 	                 menu, event->muted);
 #endif
