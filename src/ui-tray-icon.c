@@ -67,14 +67,14 @@ pixbuf_new_from_file(const gchar *filename)
 	pathname = get_pixmap_file(filename);
 
 	if (!pathname) {
-		ERROR("Couldn't find pixmap file '%s'", filename);
+		WARN("Couldn't find pixmap file '%s'", filename);
 		return NULL;
 	}
 
 	pixbuf = gdk_pixbuf_new_from_file(pathname, &error);
 	if (!pixbuf) {
-		ERROR("Could not create pixbuf from file '%s': %s",
-		      pathname, error->message);
+		WARN("Could not create pixbuf from file '%s': %s",
+		     pathname, error->message);
 		g_error_free(error);
 	}
 
@@ -102,7 +102,7 @@ pixbuf_new_from_stock(const gchar *iconname, gint size)
 
 	pixbuf = gtk_icon_theme_load_icon(icon_theme, iconname, size, 0, &err);
 	if (!pixbuf) {
-		ERROR("Unable to load icon '%s': %s", iconname, err->message);
+		WARN("Unable to load icon '%s': %s", iconname, err->message);
 		g_error_free(err);
 	}
 
