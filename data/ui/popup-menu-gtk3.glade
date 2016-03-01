@@ -50,7 +50,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAccelLabel" id="accellabel0">
+                          <object class="GtkAccelLabel" id="mute_accellabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>
@@ -77,18 +77,17 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkImage" id="image1">
+                          <object class="GtkImage" id="mixer_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="icon_name">system-run</property>
-                            <property name="icon_size">1</property>
                           </object>
                           <packing>
                             <property name="position">0</property>
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAccelLabel" id="accellabel1">
+                          <object class="GtkAccelLabel" id="mixer_accellabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>
@@ -115,7 +114,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkImage" id="image2">
+                          <object class="GtkImage" id="prefs_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="icon_name">preferences-desktop</property>
@@ -126,7 +125,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAccelLabel" id="accellabel2">
+                          <object class="GtkAccelLabel" id="prefs_accellabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>
@@ -153,7 +152,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkImage" id="image3">
+                          <object class="GtkImage" id="reload_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="icon_name">gtk-refresh</property>
@@ -164,7 +163,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAccelLabel" id="accellabel3">
+                          <object class="GtkAccelLabel" id="reload_accellabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>
@@ -191,7 +190,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkImage" id="image4">
+                          <object class="GtkImage" id="about_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="icon_name">help-about</property>
@@ -202,7 +201,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAccelLabel" id="accellabel4">
+                          <object class="GtkAccelLabel" id="about_accellabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>
@@ -236,7 +235,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkImage" id="image5">
+                          <object class="GtkImage" id="quit_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="icon_name">gtk-quit</property>
@@ -247,7 +246,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkAccelLabel" id="accellabel5">
+                          <object class="GtkAccelLabel" id="quit_accellabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_start">4</property>

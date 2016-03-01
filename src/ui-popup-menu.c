@@ -258,6 +258,51 @@ popup_menu_create(Audio *audio)
 	assign_gtk_widget(builder, menu, mute_item);
 #endif
 
+#ifdef WITH_GTK3
+	/* Gtk3 doesn't seem to scale images enclosed in a GtkMenuItem.
+	 * If the theme has several icon sizes (32x32, 48x48, 64x64, ...),
+	 * it looks like Gtk3 picks up the right size, and it works.
+	 * But if the theme has only one icon size (let's say 128x128),
+	 * Gtk3 displays it as it, without scaling, which screws up the menu.
+	 * So yes, we need to do that manually... Yes, that sucks.
+	 * Not really hoping for a better solution though...
+	 */
+	GtkRequisition label_req;
+	GtkRequisition image_req;
+	GtkWidget *mute_accellabel;
+	GtkWidget *mixer_image;
+	GtkWidget *prefs_image;
+	GtkWidget *reload_image;
+	GtkWidget *about_image;
+	GtkWidget *quit_image;
+
+	mute_accellabel = gtk_builder_get_widget(builder, "mute_accellabel");
+	mixer_image = gtk_builder_get_widget(builder, "mixer_image");
+	prefs_image = gtk_builder_get_widget(builder, "prefs_image");
+	reload_image = gtk_builder_get_widget(builder, "reload_image");
+	about_image = gtk_builder_get_widget(builder, "about_image");
+	quit_image = gtk_builder_get_widget(builder, "quit_image");
+
+	gtk_widget_get_preferred_size(mute_accellabel, &label_req, NULL);
+	gtk_widget_get_preferred_size(mixer_image, &image_req, NULL);
+
+	/* We only care about height. We want the image to stick to the text height. */
+	if (image_req.height > (label_req.height + 1)) {
+		gint new_height = label_req.height;
+
+		if (new_height % 2)
+			new_height++; // make it even
+
+		DEBUG("Gtk3 workaround: resizing images from %dpx to %dpx",
+		      image_req.height, new_height);
+		gtk_image_set_pixel_size(GTK_IMAGE(mixer_image), new_height);
+		gtk_image_set_pixel_size(GTK_IMAGE(prefs_image), new_height);
+		gtk_image_set_pixel_size(GTK_IMAGE(reload_image), new_height);
+		gtk_image_set_pixel_size(GTK_IMAGE(about_image), new_height);
+		gtk_image_set_pixel_size(GTK_IMAGE(quit_image), new_height);
+	}
+#endif
+
 	/* Connect ui signal handlers */
 	gtk_builder_connect_signals(builder, menu);
 
