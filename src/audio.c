@@ -431,7 +431,8 @@ audio_get_volume(Audio *audio)
  *
  * @param audio an Audio instance.
  * @param user the user who performs the action.
- * @param volume the volume value to set, in percent.
+ * @param cur_volume the current volume value, in percent.
+ * @param new_volume the volume value to set, in percent.
  * @param dir the direction for the volume change
  *        (-1: lowering, +1: raising, 0: setting).
  */
