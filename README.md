@@ -66,11 +66,14 @@ To install this program cd to this directory and run:
 
 Documentation
 -------------
-Run:
+Needed dependencies:
+- doxygen
+- graphviz
+
+To build the documentation, run:
 
     make doc
 
-to build the documentation. It's in src/html. You can install
-it via:
+The documentation is built in `src/html`. To install it, run:
 
     make install-doc
