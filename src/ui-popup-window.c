@@ -199,10 +199,11 @@ on_vol_scale_change_value(G_GNUC_UNUSED GtkRange *range, GtkScrollType scroll,
 {
 	gint direction;
 
-	/* Find out in which direction the volume is changed.
+	/* Find out in which direction the volume was changed.
 	 * It's needed in order to handle keyboard shortcuts properly.
 	 */
 	switch (scroll) {
+	// Keyboard actions
 	case GTK_SCROLL_STEP_BACKWARD:
 	case GTK_SCROLL_PAGE_BACKWARD:
 		direction = -1;
@@ -211,8 +212,43 @@ on_vol_scale_change_value(G_GNUC_UNUSED GtkRange *range, GtkScrollType scroll,
 	case GTK_SCROLL_PAGE_FORWARD:
 		direction = +1;
 		break;
-	default:
+	// Mouse actions
+	case GTK_SCROLL_JUMP:
 		direction = 0;
+		break;
+	// What's that ?
+	default:
+		DEBUG("Unexpected scroll type");
+		direction = 0;
+	}
+
+	/* Handling mouse actions is a royal pain in the ass.
+	 * If we change the volume without giving a direction, we break mouse
+	 * scrolling. Indeed, on scroll up, as soon as the real (hardware)
+	 * volume steps are bigger than the user-defined scroll step,
+	 * volume will be stuck and won't raise anymore.
+	 * On the other hand, if we give a direction, we break the
+	 * drag-n-drop on the knob. Try it if you want to understand why ;)
+	 * So, somehow we must distinguish between drag-n-drop and scroll.
+	 * And in case of scrolling, we must find which direction the volume
+	 * is changing.
+	 */
+	if (scroll == GTK_SCROLL_JUMP) {
+		GtkAdjustment *adj;
+		gdouble adj_inc;
+		gdouble cur_volume, diff;
+
+		adj = gtk_range_get_adjustment(range);
+		adj_inc = gtk_adjustment_get_page_increment(adj);
+
+		cur_volume = audio_get_volume(window->audio);
+		diff = value - cur_volume;
+
+		/* If the difference between new and old volume is exactly
+		 * the same as slider's page increment, we assume mouse scrolling.
+		 */
+		if (diff == adj_inc)
+			direction = diff < 0 ? -1 : +1;
 	}
 
 	/* Set the volume */
