@@ -129,6 +129,9 @@ run_prefs_dialog(void)
 
 	/* Run it */
 	resp = prefs_dialog_run(prefs_dialog);
+
+	DEBUG("Dialog response: %d", resp);
+
 	if (resp == GTK_RESPONSE_OK)
 		prefs_dialog_retrieve(prefs_dialog);
 
