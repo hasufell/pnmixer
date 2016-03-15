@@ -66,7 +66,7 @@ update_mute_item(GtkCheckMenuItem *mute_item, GCallback handler_func,
 	gint n_blocked;
 
 	n_blocked = g_signal_handlers_block_by_func
-		    (G_OBJECT(mute_item), DATA_PTR(handler_func), handler_data);
+	            (G_OBJECT(mute_item), DATA_PTR(handler_func), handler_data);
 	g_assert(n_blocked == 1);
 
 	gtk_check_menu_item_set_active(mute_item, muted);

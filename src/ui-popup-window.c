@@ -22,13 +22,13 @@
  * I tried both ways. The second one is a real pain in the ass. A few
  * unexpected problems arise, it makes things complex, and ends up with
  * dirty workarounds. So, trust me, don't try it.
- * 
+ *
  * The first way is much simpler, works great.
  *
  * So, here's the current behavior for the slider.
  * When you open it, it queries the audio system, and display the real
  * volume value. Then, when you change the volume, it displays the volume
- * as you ask it to be, not as it is. So if volume is 60, and you move it 
+ * as you ask it to be, not as it is. So if volume is 60, and you move it
  * to 61, then 61 is displayed. But the truth may be that the volume is
  * still 60, because your hardware doesn't have such fine capabilities,
  * and the next real step will be 65.
@@ -118,7 +118,7 @@ update_mute_check(GtkToggleButton *mute_check, GCallback handler_func,
 	gint n_blocked;
 
 	n_blocked = g_signal_handlers_block_by_func
-		    (G_OBJECT(mute_check), DATA_PTR(handler_func), handler_data);
+	            (G_OBJECT(mute_check), DATA_PTR(handler_func), handler_data);
 	g_assert(n_blocked == 1);
 
 	gtk_toggle_button_set_active(mute_check, muted);
@@ -209,11 +209,7 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  *      Up, Down, Left, Right, Page Up, Page Down, Home, End
  *
  * @param range the GtkRange that received the signal.
- * @param scroll the type of scroll action that was performed.
- * @param value the new value resulting from the scroll action.
  * @param window user data set when the signal handler was connected.
- * @return TRUE to prevent other handlers from being invoked for the signal.
- * FALSE to propagate the signal further.
  */
 void
 on_vol_scale_value_changed(GtkRange *range, PopupWindow *window)

@@ -270,7 +270,7 @@ on_alsa_event(enum alsa_event event, gpointer data)
 
 		/* Discard the timestamp */
 		audio->last_action_timestamp = 0;
-		
+
 		/* The delay here is the time between the moment the action
 		 * was performed and the moment the callback was invoked.
 		 */
@@ -283,7 +283,7 @@ on_alsa_event(enum alsa_event event, gpointer data)
 		 */
 		if (delay < 1000000)
 			return;
-		 
+
 		/* In some situation we can find a timestamp that was never used */
 		DEBUG("Discarding last timestamp, too old");
 	}
@@ -484,7 +484,7 @@ audio_set_volume(Audio *audio, AudioUser user, gdouble new_volume, gint dir)
 	AlsaCard *soundcard = audio->soundcard;
 	gdouble cur_volume;
 
-	cur_volume = alsa_card_get_volume(soundcard);	
+	cur_volume = alsa_card_get_volume(soundcard);
 	_audio_set_volume(audio, user, cur_volume, new_volume, dir);
 }
 
