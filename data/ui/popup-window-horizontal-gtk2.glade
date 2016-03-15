@@ -37,7 +37,7 @@
                 <property name="can_focus">True</property>
                 <property name="adjustment">vol_scale_adj</property>
                 <property name="digits">0</property>
-                <signal name="change-value" handler="on_vol_scale_change_value" swapped="no"/>
+                <signal name="value-changed" handler="on_vol_scale_value_changed" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>

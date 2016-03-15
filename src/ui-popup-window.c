@@ -11,6 +11,28 @@
 /**
  * @file ui-popup-window.c
  * This file holds the ui-related code for the popup window.
+ *
+ * There are two ways to handle the slider value.
+ * - It can reflect the value set by the user.
+ * It means that we ignore the volume value reported by the audio system.
+ * - It can reflect the value reported by the audio system.
+ * It means that we prevent Gtk from updating the slider, and we do it
+ * ourselves when the audio system invoke the callback.
+ *
+ * I tried both ways. The second one is a real pain in the ass. A few
+ * unexpected problems arise, it makes things complex, and ends up with
+ * dirty workarounds. So, trust me, don't try it.
+ * 
+ * The first way is much simpler, works great.
+ *
+ * So, here's the current behavior for the slider.
+ * When you open it, it queries the audio system, and display the real
+ * volume value. Then, when you change the volume, it displays the volume
+ * as you ask it to be, not as it is. So if volume is 60, and you move it 
+ * to 61, then 61 is displayed. But the truth may be that the volume is
+ * still 60, because your hardware doesn't have such fine capabilities,
+ * and the next real step will be 65.
+ *
  * @brief Popup window subsystem.
  */
 
@@ -174,7 +196,7 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
 }
 
 /**
- * Handles the 'change-value' signal on the GtkRange 'vol_scale',
+ * Handles the 'value-changed' signal on the GtkRange 'vol_scale',
  * changing the voume accordingly.
  *
  * There are many ways for the user to change the slider value.
@@ -193,74 +215,13 @@ on_popup_window_event(G_GNUC_UNUSED GtkWidget *widget, GdkEvent *event,
  * @return TRUE to prevent other handlers from being invoked for the signal.
  * FALSE to propagate the signal further.
  */
-gboolean
-on_vol_scale_change_value(G_GNUC_UNUSED GtkRange *range, GtkScrollType scroll,
-                          gdouble value, PopupWindow *window)
+void
+on_vol_scale_value_changed(GtkRange *range, PopupWindow *window)
 {
-	gint direction;
+	gdouble value;
 
-	/* Find out in which direction the volume was changed.
-	 * It's needed in order to handle keyboard shortcuts properly.
-	 */
-	switch (scroll) {
-	// Keyboard actions
-	case GTK_SCROLL_STEP_BACKWARD:
-	case GTK_SCROLL_PAGE_BACKWARD:
-		direction = -1;
-		break;
-	case GTK_SCROLL_STEP_FORWARD:
-	case GTK_SCROLL_PAGE_FORWARD:
-		direction = +1;
-		break;
-	// Mouse actions
-	case GTK_SCROLL_JUMP:
-		direction = 0;
-		break;
-	// What's that ?
-	default:
-		DEBUG("Unexpected scroll type");
-		direction = 0;
-	}
-
-	/* Handling mouse actions is a royal pain in the ass.
-	 * If we change the volume without giving a direction, we break mouse
-	 * scrolling. Indeed, on scroll up, as soon as the real (hardware)
-	 * volume steps are bigger than the user-defined scroll step,
-	 * volume will be stuck and won't raise anymore.
-	 * On the other hand, if we give a direction, we break the
-	 * drag-n-drop on the knob. Try it if you want to understand why ;)
-	 * So, somehow we must distinguish between drag-n-drop and scroll.
-	 * And in case of scrolling, we must find which direction the volume
-	 * is changing.
-	 */
-	if (scroll == GTK_SCROLL_JUMP) {
-		GtkAdjustment *adj;
-		gdouble adj_inc;
-		gdouble cur_volume, diff;
-
-		adj = gtk_range_get_adjustment(range);
-		adj_inc = gtk_adjustment_get_page_increment(adj);
-
-		cur_volume = audio_get_volume(window->audio);
-		diff = value - cur_volume;
-
-		/* If the difference between new and old volume is exactly
-		 * the same as slider's page increment, we assume mouse scrolling.
-		 */
-		if (diff == adj_inc)
-			direction = diff < 0 ? -1 : +1;
-	}
-
-	/* Set the volume */
-	audio_set_volume(window->audio, AUDIO_USER_POPUP, value, direction);
-
-	/* The slider value represents the TRUE volume value, as given by
-	 * the audio callback after the volume has been effectively changed.
-	 * We rely on this callback to set the value of the GtkRange manually.
-	 * As a consequence, we DON'T WANT Gtk to update the GtkRange value.
-	 * To prevent it, we MUST return TRUE.
-	 */
-	return TRUE;
+	value = gtk_range_get_value(range);
+	audio_set_volume(window->audio, AUDIO_USER_POPUP, value, 0);
 }
 
 /**
@@ -301,7 +262,24 @@ static void
 on_audio_changed(G_GNUC_UNUSED Audio *audio, AudioEvent *event, gpointer data)
 {
 	PopupWindow *window = (PopupWindow *) data;
+	GtkWidget *popup_window = window->popup_window;
 
+	/* Nothing to do if the window is hidden.
+	 * The window will be updated anyway when shown.
+	 */
+	if (!gtk_widget_get_visible(popup_window))
+		return;
+
+	/* If the user changes the volume through the popup window,
+	 * we MUST NOT update the slider value, it's been done already.
+	 * It means that, as long as the popup window is visible,
+	 * the slider value reflects the value set by user,
+	 * and not the real value reported by the audio system.
+	 */
+	if (event->user == AUDIO_USER_POPUP)
+		return;
+
+	/* Let's update now */
 	update_mute_check(GTK_TOGGLE_BUTTON(window->mute_check),
 	                  G_CALLBACK(on_mute_check_toggled), window, event->muted);
 	update_volume_slider(window->vol_scale_adj, event->volume);
@@ -318,13 +296,20 @@ popup_window_show(PopupWindow *window)
 	GtkWidget *popup_window = window->popup_window;
 	GtkWidget *vol_scale = window->vol_scale;
 
+	/* Update window elements at first */
+	update_mute_check(GTK_TOGGLE_BUTTON(window->mute_check),
+	                  G_CALLBACK(on_mute_check_toggled), window,
+	                  audio_is_muted(window->audio));
+	update_volume_slider(window->vol_scale_adj,
+	                     audio_get_volume(window->audio));
+
 	/* Show the window */
 	gtk_widget_show_now(popup_window);
 
 	/* Give focus to volume scale */
 	gtk_widget_grab_focus(vol_scale);
 
-	/* Now grab keyboard */
+	/* Grab keyboard */
 #ifdef WITH_GTK3
 	GdkDevice *pointer_dev = gtk_get_current_event_device();
 
